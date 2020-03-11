@@ -159,6 +159,8 @@ private:
     TGeoCombiTrans* combitrans[540];
     TGeoVolume *TRD_boxes[540];
 
+    UShort_t NumTracks_event = 0;
+
     TEveLine* z_BeamLine;
     TEveLine* x_BeamLine;
     TEveLine* y_BeamLine;
@@ -200,6 +202,7 @@ public:
     vector<TEveLine*> get_PL3D_tracklets() {return vec_TPL3D_tracklets;}
     vector<TEveLine*> get_PL3D_tracklets_match() {return vec_TPL3D_tracklets_match;}
     void Draw_track(Int_t i_track);
+    void Draw_all_tracks();
     void Draw_2D_track(Int_t i_track);
     void Draw_line(Int_t i_track);
     void Draw_tracklets_line(Int_t i_track);
@@ -1601,6 +1604,26 @@ void TBase_TRD_Calib::Draw_track(Int_t i_track)
 
 
 //----------------------------------------------------------------------------------------
+void TBase_TRD_Calib::Draw_all_tracks()
+{
+    printf("TBase_TRD_Calib::Draw_all_tracks \n");
+    for(Int_t i_track = 0; i_track < NumTracks_event; i_track++)
+    {
+        TPL3D_helix = get_helix_polyline(i_track);
+
+        TPL3D_helix    ->SetLineStyle(1);
+        //TPL3D_helix    ->SetLineColor(kRed);
+        TPL3D_helix    ->SetLineWidth(5);
+        TPL3D_helix    ->DrawClone("ogl");
+        TPL3D_helix    ->SetMainColor(kRed);
+        gEve->AddElement(TPL3D_helix);
+    }
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
 void TBase_TRD_Calib::Draw_2D_track(Int_t i_track){
     printf("TBase_TRD_Calib::Draw_2D_track \n");
 
@@ -1842,12 +1865,23 @@ Int_t TBase_TRD_Calib::Loop_event(Long64_t event)
 {
     printf("Loop event number: %lld \n",event);
 
+
     for(Int_t i_layer = 0; i_layer < 6; i_layer++)
     {
         delete vec_TEve3D_all_digits[i_layer];
         vec_TEve3D_all_digits[i_layer] = new TEvePointSet();
         gEve->AddElement(vec_TEve3D_all_digits[i_layer]);
     }
+
+
+    for(Int_t i_TRD_track = 0; i_TRD_track < (Int_t)vec_TEveLine_cluster_tracks.size(); i_TRD_track++)
+    {
+        if(vec_TEveLine_cluster_tracks[i_TRD_track])
+        {
+            delete vec_TEveLine_cluster_tracks[i_TRD_track];
+        }
+    }
+    vec_TEveLine_cluster_tracks.clear();
 
 #if 0
     //----------------
@@ -1892,6 +1926,7 @@ Int_t TBase_TRD_Calib::Loop_event(Long64_t event)
 
     //---------------------------------------------------------------------------
     UShort_t NumTracks            = AS_Event ->getNumTracks(); // number of tracks in this event
+    NumTracks_event = NumTracks;
     Double_t EventVertexX         = AS_Event ->getx();
     Double_t EventVertexY         = AS_Event ->gety();
     Double_t EventVertexZ         = AS_Event ->getz();
@@ -2329,10 +2364,14 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
     //
     //}
 
+    //cout << "Test A" << endl;
+
     TEve_clusters ->SetMarkerColor(kRed);
     TEve_clusters ->SetMarkerSize(1.2);
     TEve_clusters ->SetMarkerStyle(20);
     //gEve->AddElement(TEve_clusters);
+
+    //cout << "Test B" << endl;
 }
 //----------------------------------------------------------------------------------------
 
@@ -2342,6 +2381,8 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
 void TBase_TRD_Calib::Draw_TRD_tracks()
 {
     Make_clusters_from_all_digits();
+    //cout << "Test C" << endl;
+    gEve->Redraw3D(kTRUE);
 }
 //----------------------------------------------------------------------------------------
 

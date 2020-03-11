@@ -24,9 +24,9 @@ class TGUI_TRD_Calib : public TGMainFrame
 private:
     TRootEmbeddedCanvas *fCanvas_HV_vs_time        = NULL;
     TGMainFrame* Frame_Main;
-    TGHorizontalFrame *hframe_Main[4];
-    TGVerticalFrame   *vframe_Main[4];
-    TGVerticalFrame   *vframe_stat_Main[4];
+    TGHorizontalFrame *hframe_Main[6];
+    TGVerticalFrame   *vframe_Main[6];
+    TGVerticalFrame   *vframe_stat_Main[6];
 
     TGNumberEntry*     arr_NEntry_ana_params[4];
     TGLabel*           arr_Label_NEntry_ana_params[4];
@@ -44,6 +44,7 @@ private:
     TGTextButton *Button_draw2D_track;
     TGTextButton *Button_draw_digits;
     TGTextButton *Button_draw_TRD_tracks;
+    TGTextButton *Button_draw_all_tracks;
 
     TBase_TRD_Calib *Base_TRD_Calib;
     vector<TEvePointSet*> vec_TPM3D_digits;
@@ -79,6 +80,7 @@ public:
     void  Draw_TRD_tracks();
     Int_t Draw_online_tracklets();
     Int_t Draw_offline_tracklets();
+    Int_t Draw_all_tracks();
     Int_t Calibrate();
     Int_t Track_Tracklets();
     ClassDef(TGUI_TRD_Calib, 0)
@@ -174,6 +176,17 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
     Frame_Main ->AddFrame(hframe_Main[0], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
     //--------------
 
+    //--------------
+    // A horizontal frame
+    hframe_Main[4]  = new TGHorizontalFrame(Frame_Main,200,100);
+
+    // draw 3D button
+    Button_draw_all_tracks = new TGTextButton(hframe_Main[4], "&Draw all tracks ",10);
+    Button_draw_all_tracks->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_all_tracks()");
+    hframe_Main[4]->AddFrame(Button_draw_all_tracks, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
+
+    Frame_Main ->AddFrame(hframe_Main[4], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+    //--------------
 
 
     //--------------
@@ -557,6 +570,22 @@ Int_t TGUI_TRD_Calib::Draw_offline_tracklets()
     gClient->GetColorByName("green", green);
     Button_draw3D_offline_tracklets->ChangeBackground(green);
     Base_TRD_Calib ->Draw_offline_tracklets();
+
+    return 1;
+}
+//---------------------------------------------------------------------------------
+
+
+
+//---------------------------------------------------------------------------------
+Int_t TGUI_TRD_Calib::Draw_all_tracks()
+{
+    Pixel_t green;
+    gClient->GetColorByName("green", green);
+    Button_draw_all_tracks->ChangeBackground(green);
+    Base_TRD_Calib ->Draw_all_tracks();
+
+    gEve->Redraw3D(kTRUE);
 
     return 1;
 }
