@@ -43,6 +43,7 @@ private:
     TGTextButton *Button_Track_Tracklets;
     TGTextButton *Button_draw2D_track;
     TGTextButton *Button_draw_digits;
+    TGTextButton *Button_draw_TRD_tracks;
 
     TBase_TRD_Calib *Base_TRD_Calib;
     vector<TEvePointSet*> vec_TPM3D_digits;
@@ -75,6 +76,7 @@ public:
     Int_t Draw3D_track();
     Int_t Draw_2D_track();
     void  Draw_digits();
+    void  Draw_TRD_tracks();
     Int_t Draw_online_tracklets();
     Int_t Draw_offline_tracklets();
     Int_t Calibrate();
@@ -163,6 +165,11 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
     Button_draw_digits->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_digits()");
     hframe_Main[0]->AddFrame(Button_draw_digits, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
 
+    // draw 3D button
+    Button_draw_TRD_tracks = new TGTextButton(hframe_Main[0], "&Draw TRD tracks ",10);
+    Button_draw_TRD_tracks->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_TRD_tracks()");
+    hframe_Main[0]->AddFrame(Button_draw_TRD_tracks, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
+
 
     Frame_Main ->AddFrame(hframe_Main[0], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
     //--------------
@@ -229,10 +236,10 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
 
 
 
-    Frame_Main ->Resize(650,300); // size of frame
+    Frame_Main ->Resize(750,300); // size of frame
     Frame_Main ->MapSubwindows();
     Frame_Main ->MapWindow();
-    Frame_Main ->Move(1150,50); // position of frame
+    Frame_Main ->Move(1050,50); // position of frame
     //-------------------------------------
 
     Base_TRD_Calib = new TBase_TRD_Calib();
@@ -293,16 +300,16 @@ Int_t TGUI_TRD_Calib::LoadData()
     arr_Label_NEntry_stat[1] ->SetText(Form("# tracks: %lld",N_Tracks));
     arr_Label_NEntry_stat[2] ->SetText(Form("# digits: %lld",N_Digits));
 
-   vec_track_info       = Base_TRD_Calib ->get_track_info();
-   vec_digit_track_info = Base_TRD_Calib ->get_digit_track_info();
+    vec_track_info       = Base_TRD_Calib ->get_track_info();
+    vec_digit_track_info = Base_TRD_Calib ->get_digit_track_info();
 
 #if 0
-   for(Int_t i_track = 0; i_track < (Int_t)vec_digit_track_info.size(); i_track++)
-   {
-       Int_t n_digits_track = (Int_t)vec_digit_track_info[i_track].size();
+    for(Int_t i_track = 0; i_track < (Int_t)vec_digit_track_info.size(); i_track++)
+    {
+        Int_t n_digits_track = (Int_t)vec_digit_track_info[i_track].size();
 
-       printf("TGUI_TRD_Calib::LoadData(), i_track: %d, n_digits_track: %d \n",i_track,n_digits_track);
-   }
+        printf("TGUI_TRD_Calib::LoadData(), i_track: %d, n_digits_track: %d \n",i_track,n_digits_track);
+    }
 #endif
 
     return 1;
@@ -406,6 +413,20 @@ void TGUI_TRD_Calib::Draw_digits()
     Button_draw_digits->ChangeBackground(green);
 
     Base_TRD_Calib ->Draw_digits();
+}
+//---------------------------------------------------------------------------------
+
+
+
+//---------------------------------------------------------------------------------
+void TGUI_TRD_Calib::Draw_TRD_tracks()
+{
+    printf("TGUI_TRD_Calib::Draw_TRD_tracks() \n");
+    Pixel_t green;
+    gClient->GetColorByName("green", green);
+    Button_draw_TRD_tracks->ChangeBackground(green);
+
+    Base_TRD_Calib ->Draw_TRD_tracks();
 }
 //---------------------------------------------------------------------------------
 

@@ -307,7 +307,7 @@ public:
 	{
 	    if (fNumOfflineTracklets == fOfflineTracklets->GetSize())
 		fOfflineTracklets->Expand( fNumOfflineTracklets + 10 );
-	    if (fNumOfflineTracklets >= 100000)
+	    if (fNumOfflineTracklets >= 65000)
 	    {
 		Fatal( "Ali_AS_Event::createOfflineTracklet()", "ERROR: Too many tracklets (>100000)!" );
 		exit( 2 );
@@ -561,7 +561,7 @@ public:
 	{
 	    if (fNumTracklets == fTracklets->GetSize())
 		fTracklets->Expand( fNumTracklets + 10 );
-	    if (fNumTracklets >= 100000)
+	    if (fNumTracklets >= 65000)
 	    {
 		Fatal( "Ali_AS_Event::createTracklet()", "ERROR: Too many tracklets (>100000)!" );
 		exit( 2 );
@@ -592,7 +592,7 @@ public:
 	{
 	    if (fNumTRDdigits == fTRD_digits->GetSize())
 		fTRD_digits->Expand( fNumTRDdigits + 10 );
-	    if (fNumTRDdigits >= 1000000)
+	    if (fNumTRDdigits >= 65000)
 	    {
 		Fatal( "Ali_AS_Track::createTRD_digit()", "ERROR: Too many TRD digits (>10000)!" );
 		exit( 2 );

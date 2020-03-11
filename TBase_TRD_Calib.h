@@ -99,6 +99,8 @@ private:
     vector<TPolyLine*> vec_TPL_online_tracklets;
     vector<TPolyLine*> vec_TPL_offline_tracklets;
 
+    vector<TEveLine*> vec_TEveLine_cluster_tracks;
+
     AliHelix aliHelix;
     TEveLine* TPL3D_helix;
     TEveLine* fit_line;
@@ -207,6 +209,7 @@ public:
     void Draw_offline_tracklets();
     TGLViewer* Draw_TRD();
     void Draw_digits();
+    void Draw_TRD_tracks();
     void Make_clusters_from_all_digits();
     void set_dca_to_track(Double_t dca_r, Double_t dca_z) {max_dca_r_to_track = dca_r; max_dca_z_to_track = dca_z;}
     void set_merged_time_bins(vector<Int_t> vec_merge_time_bins_in) {vec_merge_time_bins = vec_merge_time_bins_in;}
@@ -1839,6 +1842,13 @@ Int_t TBase_TRD_Calib::Loop_event(Long64_t event)
 {
     printf("Loop event number: %lld \n",event);
 
+    for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+    {
+        delete vec_TEve3D_all_digits[i_layer];
+        vec_TEve3D_all_digits[i_layer] = new TEvePointSet();
+        gEve->AddElement(vec_TEve3D_all_digits[i_layer]);
+    }
+
 #if 0
     //----------------
     // Check which event has offline tracklet information from friends
@@ -1870,6 +1880,11 @@ Int_t TBase_TRD_Calib::Loop_event(Long64_t event)
     {
         delete vec_TPM3D_digits[i_layer];
         vec_TPM3D_digits[i_layer] = new TEvePointSet();
+    }
+
+    for(Int_t i_tracklet = 0; i_tracklet < (Int_t)vec_TPL3D_tracklets.size(); i_tracklet++)
+    {
+        delete vec_TPL3D_tracklets[i_tracklet];
     }
 
     vec_TPL3D_tracklets.clear();
@@ -2056,6 +2071,9 @@ Int_t TBase_TRD_Calib::Loop_event(Long64_t event)
 
     } // end of track loop
 
+    //printf(" --> Redraw3D \n");
+    gEve->Redraw3D(kTRUE);
+
     return 1;
 }
 //----------------------------------------------------------------------------------------
@@ -2067,13 +2085,20 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
 {
     printf("TBase_TRD_Calib::Make_clusters_from_all_digits() \n");
     vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits;
+
+    vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits_clusters;
+
     vec_all_TRD_digits.resize(540);
+    vec_all_TRD_digits_clusters.resize(540);
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
         vec_all_TRD_digits[i_det].resize(24); // time bins
+        vec_all_TRD_digits_clusters[i_det].resize(24); // time bins
     }
     vector<Double_t> vec_digit_data; // x,y,z,ADC
+    vector<Double_t> vec_digit_cluster_data; // x,y,z,ADC
     vec_digit_data.resize(4);
+    vec_digit_cluster_data.resize(4);
 
     // Fill all the information in the hierachy of detectors and time bins
     Int_t    N_TRD_digits  = AS_Event ->getNumTRD_digits();
@@ -2125,6 +2150,7 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
 
 
             vector<Int_t> arr_used_digits;
+            arr_used_digits.clear();
             arr_used_digits.resize((Int_t)vec_all_TRD_digits[i_det][i_time].size());
             for(Int_t i_digit_max = 0; i_digit_max < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit_max++)
             {
@@ -2169,15 +2195,153 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
                 }
 
                 TEve_clusters ->SetNextPoint(pos_ADC_sum[0],pos_ADC_sum[1],pos_ADC_sum[2]);
+                for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+                {
+                    vec_digit_cluster_data[i_xyzADC] = pos_ADC_sum[i_xyzADC];
+                }
+
+                vec_all_TRD_digits_clusters[i_det][i_time].push_back(vec_digit_cluster_data);
             }
 
         }
     }
 
+
+    // Tracking
+    //Int_t sector = (Int_t)(i_det/30);
+    //Int_t stack  = (Int_t)(i_det%30/6);
+    //Int_t layer  = i_det%6;
+    //Int_t i_det = layer + 6*stack + 30*sector;
+
+    Double_t delta_dist_XY = 3.0;
+    Double_t delta_dist_Z  = 10.0;
+
+    for(Int_t i_TRD_track = 0; i_TRD_track < (Int_t)vec_TEveLine_cluster_tracks.size(); i_TRD_track++)
+    {
+        delete vec_TEveLine_cluster_tracks[i_TRD_track];
+    }
+    vec_TEveLine_cluster_tracks.clear();
+
+
+    for(Int_t i_sector = 0; i_sector < 18; i_sector++)
+    {
+        printf("Tracking -> i_sector: %d \n",i_sector);
+        for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+
+        {
+            Int_t i_layer = 5;
+            Int_t i_det   = i_layer + 6*i_stack + 30*i_sector;
+            Int_t i_time  = 0;
+
+            Int_t N_clusters = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time].size();
+
+
+            for(Int_t i_cls = 0; i_cls < N_clusters; i_cls++)
+            {
+                Int_t n_clusters_attached = 0;
+                Double_t pos_ADC_max[4] = {vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][3]};
+
+                vec_TEveLine_cluster_tracks.push_back(new TEveLine());
+
+                for(Int_t i_layer_sub = 5; i_layer_sub >= 0; i_layer_sub--)
+                {
+                    Int_t i_det_sub   = i_layer_sub + 6*i_stack + 30*i_sector;
+                    Int_t i_time_start = 0;
+                    if(i_layer_sub == i_layer) i_time_start = 1;
+                    for(Int_t i_time_sub = i_time_start; i_time_sub < 24; i_time_sub++)
+                    {
+                        Double_t scale_fac = 1.0;
+                        if(i_time_sub == 0) scale_fac = 6.0;
+                        Int_t N_clusters_sub = (Int_t)vec_all_TRD_digits_clusters[i_det_sub][i_time_sub].size();
+
+                        Int_t best_sub_cluster = -1;
+                        Double_t best_cluster_quality = 1000000.0;
+
+                        for(Int_t i_cls_sub = 0; i_cls_sub < N_clusters_sub; i_cls_sub++)
+                        {
+                            Double_t pos_ADC_sub[4] = {vec_all_TRD_digits_clusters[i_det_sub][i_time_sub][i_cls_sub][0],vec_all_TRD_digits_clusters[i_det_sub][i_time_sub][i_cls_sub][1],vec_all_TRD_digits_clusters[i_det_sub][i_time_sub][i_cls_sub][2],vec_all_TRD_digits_clusters[i_det_sub][i_time_sub][i_cls_sub][3]};
+
+                            Double_t dist_clusters_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
+                            Double_t dist_clusters_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
+
+                            if(dist_clusters_XY > scale_fac*3.0)  continue;
+                            if(dist_clusters_Z  > 10.0) continue;
+
+                            Double_t sub_cluster_quality = (0.7*dist_clusters_XY + 7.5*dist_clusters_Z)/(0.7 + 7.5);
+                            if(sub_cluster_quality < best_cluster_quality)
+                            {
+                                best_cluster_quality = sub_cluster_quality;
+                                best_sub_cluster     = i_cls_sub;
+                            }
+                        }
+
+
+                        //cout << "best_sub_cluster: " << best_sub_cluster << ", i_time_sub: " << i_time_sub << ", i_layer_sub: " << i_layer_sub << endl;
+                        if(best_sub_cluster < 0) continue;
+                        // Define new pos_ADC_max
+                        for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+                        {
+                            pos_ADC_max[i_xyzADC] = vec_all_TRD_digits_clusters[i_det_sub][i_time_sub][best_sub_cluster][i_xyzADC];
+                        }
+
+                        vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetNextPoint((Float_t)pos_ADC_max[0],(Float_t)pos_ADC_max[1],(Float_t)pos_ADC_max[2]);
+
+                        n_clusters_attached++;
+
+                    }
+                }
+
+
+                if(n_clusters_attached > 50 && n_clusters_attached <= 80)
+                {
+                    vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineColor(kGreen-4);
+                    vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineWidth(4);
+                    vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineStyle(1);
+                    gEve->AddElement(vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1]);
+                }
+
+                if(n_clusters_attached > 80 && n_clusters_attached <= 120)
+                {
+                    vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineColor(kMagenta-7);
+                    vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineWidth(4);
+                    vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineStyle(1);
+                    gEve->AddElement(vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1]);
+                }
+
+                if(n_clusters_attached > 120)
+                {
+                    vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineColor(kRed);
+                    vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineWidth(4);
+                    vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineStyle(1);
+                    gEve->AddElement(vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1]);
+                }
+
+                printf("i_det: %d, i_cls: %d, n_clusters_attached: %d \n",i_det,i_cls,n_clusters_attached);
+            } // end of main cluster loop
+
+        }
+    }
+
+
+
+    //for(Int_t i_time = 0; i_time < 24; i_time++)
+    //{
+    //
+    //}
+
     TEve_clusters ->SetMarkerColor(kRed);
     TEve_clusters ->SetMarkerSize(1.2);
     TEve_clusters ->SetMarkerStyle(20);
-    gEve->AddElement(TEve_clusters);
+    //gEve->AddElement(TEve_clusters);
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void TBase_TRD_Calib::Draw_TRD_tracks()
+{
+    Make_clusters_from_all_digits();
 }
 //----------------------------------------------------------------------------------------
 
@@ -2186,7 +2350,6 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
 //----------------------------------------------------------------------------------------
 void TBase_TRD_Calib::Draw_digits()
 {
-    Make_clusters_from_all_digits();
 
     for(Int_t i_layer = 0; i_layer < 6; i_layer++)
     {
