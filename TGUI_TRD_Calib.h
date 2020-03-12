@@ -206,13 +206,22 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
 
 
     //--------------
-    TString arr_label_params_ana[4] = {"Event","Track","blubb B","blubb C"};
+    TString arr_label_params_ana[4] = {"Event","Track","min pT","max pT"};
     hframe_Main[2]  = new TGHorizontalFrame(Frame_Main,200,100);
+    Double_t min_max_pT_start[2] = {0.5,5.0};
     for(Int_t i_param = 0; i_param < 4; i_param++)
     {
         vframe_Main[i_param] = new TGVerticalFrame(hframe_Main[2], 200,200);
-        arr_NEntry_ana_params[i_param] = new TGNumberEntry(vframe_Main[i_param], 0.0, 12,(TGNumberFormat::EStyle) 0);
-        arr_NEntry_ana_params[i_param] ->SetNumStyle( TGNumberFormat::kNESInteger); // https://root.cern.ch/doc/master/classTGNumberFormat.html#a8a0f81aac8ac12d0461aef554c6271ad
+        if(i_param < 2)
+        {
+            arr_NEntry_ana_params[i_param] = new TGNumberEntry(vframe_Main[i_param], 0.0, 12,(TGNumberFormat::EStyle) 0);
+            arr_NEntry_ana_params[i_param] ->SetNumStyle( TGNumberFormat::kNESInteger); // https://root.cern.ch/doc/master/classTGNumberFormat.html#a8a0f81aac8ac12d0461aef554c6271ad
+        }
+        else
+        {
+            arr_NEntry_ana_params[i_param] = new TGNumberEntry(vframe_Main[i_param], min_max_pT_start[i_param - 2], 12,(TGNumberFormat::EStyle) 1);
+            arr_NEntry_ana_params[i_param] ->SetNumStyle( TGNumberFormat::kNESRealTwo); // https://root.cern.ch/doc/master/classTGNumberFormat.html#a8a0f81aac8ac12d0461aef554c6271ad
+        }
         vframe_Main[i_param]->AddFrame(arr_NEntry_ana_params[i_param], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
         TString label_entry = arr_label_params_ana[i_param];
@@ -583,7 +592,11 @@ Int_t TGUI_TRD_Calib::Draw_all_tracks()
     Pixel_t green;
     gClient->GetColorByName("green", green);
     Button_draw_all_tracks->ChangeBackground(green);
-    Base_TRD_Calib ->Draw_all_tracks();
+
+    Double_t min_pT = arr_NEntry_ana_params[2] ->GetNumberEntry()->GetNumber();
+    Double_t max_pT = arr_NEntry_ana_params[3] ->GetNumberEntry()->GetNumber();
+
+    Base_TRD_Calib ->Draw_all_tracks(min_pT,max_pT);
 
     gEve->Redraw3D(kTRUE);
 

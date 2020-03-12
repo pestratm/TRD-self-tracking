@@ -102,7 +102,8 @@ private:
     vector<TEveLine*> vec_TEveLine_cluster_tracks;
 
     AliHelix aliHelix;
-    TEveLine* TPL3D_helix;
+    TEveLine* TPL3D_helix = NULL;
+    vector<TEveLine*> vec_TPL3D_helix;
     TEveLine* fit_line;
     TEveLine* vec_tracklets_line = NULL;
     vector<TPolyLine*> vec_tracklets_line_2D;
@@ -202,7 +203,7 @@ public:
     vector<TEveLine*> get_PL3D_tracklets() {return vec_TPL3D_tracklets;}
     vector<TEveLine*> get_PL3D_tracklets_match() {return vec_TPL3D_tracklets_match;}
     void Draw_track(Int_t i_track);
-    void Draw_all_tracks();
+    void Draw_all_tracks(Double_t min_pT, Double_t max_pT);
     void Draw_2D_track(Int_t i_track);
     void Draw_line(Int_t i_track);
     void Draw_tracklets_line(Int_t i_track);
@@ -216,7 +217,7 @@ public:
     void Make_clusters_from_all_digits();
     void set_dca_to_track(Double_t dca_r, Double_t dca_z) {max_dca_r_to_track = dca_r; max_dca_z_to_track = dca_z;}
     void set_merged_time_bins(vector<Int_t> vec_merge_time_bins_in) {vec_merge_time_bins = vec_merge_time_bins_in;}
-    TEveLine* get_helix_polyline(Int_t i_track);
+    TEveLine* get_helix_polyline(Int_t i_track, Double_t &pT);
     TPolyLine* get_helix_polyline_2D(Int_t i_track);
     TEveLine* get_straight_line_fit(Int_t i_track);
     void get_tracklets_fit(Int_t i_track);
@@ -1523,10 +1524,21 @@ void TBase_TRD_Calib::Draw_tracklets_line(Int_t i_track)
 
 
 //----------------------------------------------------------------------------------------
-TEveLine* TBase_TRD_Calib::get_helix_polyline(Int_t i_track)
+TEveLine* TBase_TRD_Calib::get_helix_polyline(Int_t i_track, Double_t &pT)
 {
     TEveLine* TPL3D_helix_track = new TEveLine();
     AS_Track      = AS_Event ->getTrack( i_track ); // take the track
+
+    TLorentzVector TLV_part = AS_Track ->get_TLV_part();
+    Float_t momentum        = TLV_part.P();
+    Float_t eta_track       = TLV_part.Eta();
+    Float_t pT_track        = TLV_part.Pt();
+    Float_t theta_track     = TLV_part.Theta();
+    Float_t phi_track       = TLV_part.Phi();
+
+    pT = pT_track;
+
+
     for(Int_t i_param = 0; i_param < 9; i_param++)
     {
         aliHelix.fHelix[i_param] = AS_Track ->getHelix_param(i_param);
@@ -1590,13 +1602,18 @@ TPolyLine* TBase_TRD_Calib::get_helix_polyline_2D(Int_t i_track)
 void TBase_TRD_Calib::Draw_track(Int_t i_track)
 {
     printf("TBase_TRD_Calib::Draw_track \n");
-    TPL3D_helix = get_helix_polyline(i_track);
+    if(TPL3D_helix) delete TPL3D_helix;
+    Double_t pT_track = 0.0;
+    TPL3D_helix = get_helix_polyline(i_track,pT_track);
+    HistName = "track ";
+    HistName += i_track;
+    TPL3D_helix ->SetName(HistName.Data());
 
     TPL3D_helix    ->SetLineStyle(1);
     //TPL3D_helix    ->SetLineColor(kRed);
-    TPL3D_helix    ->SetLineWidth(5);
+    TPL3D_helix    ->SetLineWidth(2);
     TPL3D_helix    ->DrawClone("ogl");
-    TPL3D_helix->SetMainColor(kRed);
+    TPL3D_helix    ->SetMainColor(kRed);
     gEve->AddElement(TPL3D_helix);
 }
 //----------------------------------------------------------------------------------------
@@ -1604,19 +1621,31 @@ void TBase_TRD_Calib::Draw_track(Int_t i_track)
 
 
 //----------------------------------------------------------------------------------------
-void TBase_TRD_Calib::Draw_all_tracks()
+void TBase_TRD_Calib::Draw_all_tracks(Double_t min_pT, Double_t max_pT)
 {
     printf("TBase_TRD_Calib::Draw_all_tracks \n");
+    for(Int_t i_track = 0; i_track < (Int_t)vec_TPL3D_helix.size(); i_track++)
+    {
+        if(vec_TPL3D_helix[i_track]) delete vec_TPL3D_helix[i_track];
+    }
+    vec_TPL3D_helix.clear();
+
+    Double_t pT_track = 0.0;
     for(Int_t i_track = 0; i_track < NumTracks_event; i_track++)
     {
-        TPL3D_helix = get_helix_polyline(i_track);
+        vec_TPL3D_helix.push_back((TEveLine*)get_helix_polyline(i_track,pT_track));
 
-        TPL3D_helix    ->SetLineStyle(1);
-        //TPL3D_helix    ->SetLineColor(kRed);
-        TPL3D_helix    ->SetLineWidth(5);
-        TPL3D_helix    ->DrawClone("ogl");
-        TPL3D_helix    ->SetMainColor(kRed);
-        gEve->AddElement(TPL3D_helix);
+        if(!(pT_track >= min_pT && pT_track <= max_pT)) continue;
+
+        HistName = "track ";
+        HistName += i_track;
+        vec_TPL3D_helix[i_track] ->SetName(HistName.Data());
+
+        vec_TPL3D_helix[i_track]    ->SetLineStyle(1);
+        vec_TPL3D_helix[i_track]    ->SetLineWidth(2);
+        vec_TPL3D_helix[i_track]    ->DrawClone("ogl");
+        vec_TPL3D_helix[i_track]    ->SetMainColor(kRed);
+        gEve->AddElement(vec_TPL3D_helix[i_track]);
     }
 }
 //----------------------------------------------------------------------------------------
@@ -1759,7 +1788,8 @@ void TBase_TRD_Calib::Draw_neighbor_tracks(Int_t i_track_sel)
             if(flag_exist)
             {
                 printf("Added track: %d to neighbor tracks \n",i_track);
-                vec_TPL3D_helix_neighbor.push_back(get_helix_polyline(i_track));
+                Double_t pT_track = 0.0;
+                vec_TPL3D_helix_neighbor.push_back(get_helix_polyline(i_track,pT_track));
                 break;
             }
         }
@@ -1882,6 +1912,13 @@ Int_t TBase_TRD_Calib::Loop_event(Long64_t event)
         }
     }
     vec_TEveLine_cluster_tracks.clear();
+
+
+    for(Int_t i_track = 0; i_track < (Int_t)vec_TPL3D_helix.size(); i_track++)
+    {
+        if(vec_TPL3D_helix[i_track]) delete vec_TPL3D_helix[i_track];
+    }
+    vec_TPL3D_helix.clear();
 
 #if 0
     //----------------
