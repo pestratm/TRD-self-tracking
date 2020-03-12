@@ -60,6 +60,7 @@
 
 #include "AliESDTrdTracklet.h"
 #include "TProfile.h"
+#include "TGraph.h"
 
 //------------------------
 #include <sys/types.h>
@@ -82,6 +83,11 @@ static TString HistName;
 
 static TFile* dfile;
 static TFile* TRD_alignment_file;
+static TFile* TRD_calibration_file_AA;
+static TGraph* tg_v_fit_vs_det;
+static TGraph* tg_LA_factor_fit_vs_det;
+static TH1D* h_v_fit_vs_det;
+static TH1D* h_LA_factor_fit_vs_det;
 static TGeoHMatrix TM_TRD_rotation_det[540];
 static TGeoHMatrix TM_TRD_rotation_sector[18];
 static TVector3    TV3_TRD_translation[540];
@@ -432,6 +438,34 @@ Bool_t Ali_AS_analysis_TRD_digits::UserNotify()
         cout << "Alignment file from database loaded" << endl;
     }
 
+    cout << "Open calibration file" << endl;
+    TRD_calibration_file_AA = TFile::Open("alien::///alice/cern.ch/user/a/aschmah/Data/TRD_Calib_vDfit_and_LAfit.root");
+    tg_v_fit_vs_det         = (TGraph*)TRD_calibration_file_AA ->Get("tg_v_fit_vs_det");
+    h_v_fit_vs_det = new TH1D("h_v_fit_vs_det","h_v_fit_vs_det",540,0,540);
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        h_v_fit_vs_det ->SetBinContent(i_det+1,-1.0);
+    }
+    for(Int_t i_point = 0; i_point < tg_v_fit_vs_det->GetN(); i_point++)
+    {
+        Double_t det, vD;
+        tg_v_fit_vs_det->GetPoint(i_point,det,vD);
+        h_v_fit_vs_det ->SetBinContent(det,vD);
+    }
+    tg_LA_factor_fit_vs_det = (TGraph*)TRD_calibration_file_AA ->Get("tg_LA_factor_fit_vs_det");
+    h_LA_factor_fit_vs_det = new TH1D("h_LA_factor_fit_vs_det","h_LA_factor_fit_vs_det",540,0,540);
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+         h_LA_factor_fit_vs_det->SetBinContent(i_det+1,-1.0);
+    }
+    for(Int_t i_point = 0; i_point < tg_LA_factor_fit_vs_det->GetN(); i_point++)
+    {
+        Double_t det, LA;
+        tg_LA_factor_fit_vs_det->GetPoint(i_point,det,LA);
+        h_LA_factor_fit_vs_det ->SetBinContent(det,LA);
+    }
+    cout << "Calibration file opened" << endl;
+
     AliCDBEntry* align_cdb = (AliCDBEntry*)TRD_alignment_file->Get("AliCDBEntry");
     TClonesArray* TRD_align_array = (TClonesArray*)align_cdb->GetObject();
     // Alignment is stored for every INSTALLED chamber. Array does NOT got to 540!
@@ -697,6 +731,22 @@ void Ali_AS_analysis_TRD_digits::UserExec(Option_t *)
     //printf("There are %d TRD tracklets in this event\n", N_TRD_tracklets);
 
 
+    TClonesArray* TC_tofHits = fESD->GetESDTOFHits();
+    printf(" \n");
+    printf("   ------------> TC_tofHits: \n");
+    // AliCDBEntry->GetObject()->IsA()->GetName()   only root 5
+    Int_t N_entries_TOF = TC_tofHits ->GetEntries();
+    Double_t TOF_R = ((AliESDTOFHit*)TC_tofHits ->First())->GetR();
+    cout << "N_tracks: " << N_tracks <<  ", TC_tofHits: " << TC_tofHits << ", IsA: " << TC_tofHits ->First()->IsA()->GetName() << ", TOF_R: " << TOF_R << ", N_entries_TOF: " << N_entries_TOF << endl;
+    for(Int_t i_tof = 0; i_tof < N_entries_TOF; i_tof++)
+    {
+        Double_t TOF_Z       = ((AliESDTOFHit*)TC_tofHits->At(i_tof))->GetZ();
+        Int_t    TOF_channel = ((AliESDTOFHit*)TC_tofHits->At(i_tof))->GetTOFchannel();
+        Double_t TOF_time    = ((AliESDTOFHit*)TC_tofHits->At(i_tof))->GetTime();
+        printf("i_tof: %d, TOF_Z: %4.3f, TOF_channel: %d, TOF_time: %d \n",i_tof,TOF_Z,TOF_channel,TOF_time);
+    }
+    printf(" \n");
+
 
     //-----------------------------------------------------------------
     // TRD online tracklet loop
@@ -809,7 +859,10 @@ void Ali_AS_analysis_TRD_digits::UserExec(Option_t *)
 
 	Int_t i_sector = fGeo->GetSector(i_det);
 	Int_t i_stack  = fGeo->GetStack(i_det);
-	Int_t i_layer  = fGeo->GetLayer(i_det);
+        Int_t i_layer  = fGeo->GetLayer(i_det);
+
+        Double_t vD_calib = h_v_fit_vs_det         ->GetBinContent(i_det + 1);
+        Double_t LA_calib = h_LA_factor_fit_vs_det ->GetBinContent(i_det + 1);
 
 	//printf("i_det: %d, N_columns: %d, N_rows: %d, N_times: %d, i_sector: %d, i_stack: %d, i_layer: %d \n",i_det,N_columns,N_rows,N_times,i_sector,i_stack,i_layer);
 
@@ -869,13 +922,17 @@ void Ali_AS_analysis_TRD_digits::UserExec(Option_t *)
 			Double_t             TRD_row_size             = padplane     ->GetRowSize(i_row);
                         Float_t              TRD_loc_Y                = TRD_col_pos + 0.5*TRD_col_size;
                         Float_t              TRD_loc_Y_uncalib        = TRD_loc_Y;
-                        Double_t             TRD_drift_time           = ((Double_t)i_time)*TRD_time_per_bin*ChamberVdrift->GetValue(i_det); // 100 ns per time bin, 1.56 cm/mus drift velocity, 3 cm drift length at maximum
+                        //Double_t             TRD_drift_time           = ((Double_t)i_time)*TRD_time_per_bin*ChamberVdrift->GetValue(i_det); // 100 ns per time bin, 1.56 cm/mus drift velocity, 3 cm drift length at maximum
+                        Double_t             TRD_drift_time           = ((Double_t)i_time)*TRD_time_per_bin*vD_calib; // 100 ns per time bin, 1.56 cm/mus drift velocity, 3 cm drift length at maximum
                         Double_t             TRD_drift_time_uncalib   = ((Double_t)i_time)*TRD_time_per_bin*1.56; // 100 ns per time bin, 1.56 cm/mus drift velocity, 3 cm drift length at maximum
+
 
                         //printf("TRD_tim0: %4.3f, vdrift: %4.3f \n",TRD_time0,ChamberVdrift->GetValue(i_det));
 
-			Float_t lorentz_angle_corr_y = ChamberExB->GetValue(i_det)*TRD_drift_time;
-			TRD_loc_Y -= Sign_magnetic_field*lorentz_angle_corr_y;
+                        //Float_t lorentz_angle_corr_y = ChamberExB->GetValue(i_det)*TRD_drift_time;
+                        Float_t lorentz_angle_corr_y = -LA_calib*TRD_drift_time;
+                        TRD_loc_Y -= Sign_magnetic_field*lorentz_angle_corr_y;
+
 			//cout << "i_time: " << i_time << ", magF: " << magF << ", x: " << TRD_drift_time << ", lorentz_angle_corr_y: " << lorentz_angle_corr_y << endl;
 
 			//Float_t              TRD_loc_Z        = (Float_t)i_row*8.5+8.5/2.0;
@@ -883,8 +940,11 @@ void Ali_AS_analysis_TRD_digits::UserExec(Option_t *)
 			//Double_t             loc[3]           = {TRD_time0,TRD_loc_Y,TRD_loc_Z+TRD_row_end};
 
 			// Determine global position of TRD hit
-                        Double_t             loc[3]           = {TRD_time0 - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0};
-                        Double_t             loc_uncalib[3]   = {TRD_time0 - TRD_drift_time_uncalib,TRD_loc_Y_uncalib,TRD_row_pos - TRD_row_size/2.0};
+                        //Double_t             loc[3]           = {TRD_time0 - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0};
+                        //Double_t             loc_uncalib[3]   = {TRD_time0 - TRD_drift_time_uncalib,TRD_loc_Y_uncalib,TRD_row_pos - TRD_row_size/2.0};
+                        Double_t             loc_uncalib[3]  = {TRD_time0 - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0};
+                        Double_t             loc[3]          = {TRD_time0 - TRD_drift_time_uncalib,TRD_loc_Y_uncalib,TRD_row_pos - TRD_row_size/2.0};
+
                         Double_t             glb[3]           = {0.0,0.0,0.0};
                         Double_t             glb_uncalib[3]   = {0.0,0.0,0.0};
                         fGeo ->RotateBack(i_det,loc,glb);
