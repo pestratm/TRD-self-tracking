@@ -24,12 +24,15 @@ class TGUI_TRD_Calib : public TGMainFrame
 private:
     TRootEmbeddedCanvas *fCanvas_HV_vs_time        = NULL;
     TGMainFrame* Frame_Main;
-    TGHorizontalFrame *hframe_Main[6];
-    TGVerticalFrame   *vframe_Main[6];
+    TGHorizontalFrame *hframe_Main[8];
+    TGVerticalFrame   *vframe_Main[8];
+    TGVerticalFrame   *vframe_Matching[8];
     TGVerticalFrame   *vframe_stat_Main[6];
 
     TGNumberEntry*     arr_NEntry_ana_params[4];
+    TGNumberEntry*     arr_NEntry_matching_params[4];
     TGLabel*           arr_Label_NEntry_ana_params[4];
+    TGLabel*           arr_Label_NEntry_matching_params[4];
     TGLabel*           arr_Label_NEntry_stat[3];
 
     TGTextButton *Button_exit;
@@ -45,6 +48,8 @@ private:
     TGTextButton *Button_draw_digits;
     TGTextButton *Button_draw_TRD_tracks;
     TGTextButton *Button_draw_all_tracks;
+
+    TGCheckButton* fCheckBox_sel[3];
 
     TBase_TRD_Calib *Base_TRD_Calib;
     vector<TEvePointSet*> vec_TPM3D_digits;
@@ -185,6 +190,12 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
     Button_draw_all_tracks->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_all_tracks()");
     hframe_Main[4]->AddFrame(Button_draw_all_tracks, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
 
+
+    fCheckBox_sel[0]  = new TGCheckButton(hframe_Main[4], new TGHotString("Clust."), -1);
+    fCheckBox_sel[0] ->SetState(kButtonDown);
+    fCheckBox_sel[0] ->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_TRD_tracks()");
+    hframe_Main[4]->AddFrame(fCheckBox_sel[0], new TGLayoutHints(kLHintsTop | kLHintsLeft,0, 0, 5, 0));
+
     Frame_Main ->AddFrame(hframe_Main[4], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
     //--------------
 
@@ -230,6 +241,27 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
         hframe_Main[2]->AddFrame(vframe_Main[i_param], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
     }
     Frame_Main ->AddFrame(hframe_Main[2], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+    //--------------
+
+
+    //--------------
+    // Matching window
+    TString arr_label_params_matching[4] = {"Dx","Dz","fL","fS"};
+    hframe_Main[5]  = new TGHorizontalFrame(Frame_Main,200,100);
+    Double_t matching_values_start[4] = {3.0,10.0,6.0,1.0};
+    for(Int_t i_param = 0; i_param < 4; i_param++)
+    {
+        vframe_Matching[i_param] = new TGVerticalFrame(hframe_Main[5], 200,200);
+        arr_NEntry_matching_params[i_param] = new TGNumberEntry(vframe_Matching[i_param], matching_values_start[i_param], 12,(TGNumberFormat::EStyle) 1);
+        arr_NEntry_matching_params[i_param] ->SetNumStyle( TGNumberFormat::kNESRealTwo); // https://root.cern.ch/doc/master/classTGNumberFormat.html#a8a0f81aac8ac12d0461aef554c6271ad
+        vframe_Matching[i_param]->AddFrame(arr_NEntry_matching_params[i_param], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+
+        TString label_entry = arr_label_params_matching[i_param];
+        arr_Label_NEntry_ana_params[i_param] = new TGLabel(vframe_Matching[i_param], label_entry.Data(), myGC(), myfont->GetFontStruct());
+        vframe_Matching[i_param]->AddFrame(arr_Label_NEntry_ana_params[i_param], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+        hframe_Main[5]->AddFrame(vframe_Matching[i_param], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+    }
+    Frame_Main ->AddFrame(hframe_Main[5], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
     //--------------
 
 
@@ -449,7 +481,15 @@ void TGUI_TRD_Calib::Draw_TRD_tracks()
     gClient->GetColorByName("green", green);
     Button_draw_TRD_tracks->ChangeBackground(green);
 
-    Base_TRD_Calib ->Draw_TRD_tracks();
+    Double_t Delta_x        = arr_NEntry_matching_params[0]->GetNumberEntry()->GetNumber();
+    Double_t Delta_z        = arr_NEntry_matching_params[1]->GetNumberEntry()->GetNumber();
+    Double_t factor_layer   = arr_NEntry_matching_params[2]->GetNumberEntry()->GetNumber();
+    Double_t factor_missing = arr_NEntry_matching_params[3]->GetNumberEntry()->GetNumber();
+
+    Int_t flag_draw_clusters = 0;
+    if(fCheckBox_sel[0]->GetState() == kButtonDown) flag_draw_clusters = 1;
+
+    Base_TRD_Calib ->Draw_TRD_tracks(Delta_x, Delta_z, factor_layer, factor_missing, flag_draw_clusters);
 }
 //---------------------------------------------------------------------------------
 

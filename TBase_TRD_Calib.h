@@ -213,8 +213,8 @@ public:
     void Draw_offline_tracklets();
     TGLViewer* Draw_TRD();
     void Draw_digits();
-    void Draw_TRD_tracks();
-    void Make_clusters_from_all_digits();
+    void Draw_TRD_tracks(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing, Int_t flag_draw_clusters);
+    void Make_clusters_from_all_digits(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing, Int_t flag_draw_clusters);
     void set_dca_to_track(Double_t dca_r, Double_t dca_z) {max_dca_r_to_track = dca_r; max_dca_z_to_track = dca_z;}
     void set_merged_time_bins(vector<Int_t> vec_merge_time_bins_in) {vec_merge_time_bins = vec_merge_time_bins_in;}
     TEveLine* get_helix_polyline(Int_t i_track, Double_t &pT);
@@ -2153,9 +2153,12 @@ Int_t TBase_TRD_Calib::Loop_event(Long64_t event)
 
 
 //----------------------------------------------------------------------------------------
-void TBase_TRD_Calib::Make_clusters_from_all_digits()
+void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing, Int_t flag_draw_clusters)
 {
     printf("TBase_TRD_Calib::Make_clusters_from_all_digits() \n");
+
+    Reset();
+
     vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits;
 
     vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits_clusters;
@@ -2247,8 +2250,8 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
                     Double_t pos_ADC_sub[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_sub][0],vec_all_TRD_digits[i_det][i_time][i_digit_sub][1],vec_all_TRD_digits[i_det][i_time][i_digit_sub][2],vec_all_TRD_digits[i_det][i_time][i_digit_sub][3]};
                     Double_t dist_digits_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
                     Double_t dist_digits_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
-                    if(dist_digits_XY > 3.0)  continue;
-                    if(dist_digits_Z  > 10.0) continue;
+                    if(dist_digits_XY > 5.0)  continue;
+                    if(dist_digits_Z  > 15.0) continue;
 
                     for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
                     {
@@ -2285,8 +2288,6 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
     //Int_t layer  = i_det%6;
     //Int_t i_det = layer + 6*stack + 30*sector;
 
-    Double_t delta_dist_XY = 3.0;
-    Double_t delta_dist_Z  = 10.0;
 
     for(Int_t i_TRD_track = 0; i_TRD_track < (Int_t)vec_TEveLine_cluster_tracks.size(); i_TRD_track++)
     {
@@ -2294,6 +2295,7 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
     }
     vec_TEveLine_cluster_tracks.clear();
 
+    printf("Delta_x: %4.3f, Delta_z: %4.3f, factor_layer: %4.3f, factor_missing: %4.3f \n",Delta_x,Delta_z,factor_layer,factor_missing);
 
     for(Int_t i_sector = 0; i_sector < 18; i_sector++)
     {
@@ -2320,10 +2322,12 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
                     Int_t i_det_sub   = i_layer_sub + 6*i_stack + 30*i_sector;
                     Int_t i_time_start = 0;
                     if(i_layer_sub == i_layer) i_time_start = 1;
+
+                    Double_t scale_fac_add = 1.0;
                     for(Int_t i_time_sub = i_time_start; i_time_sub < 24; i_time_sub++)
                     {
-                        Double_t scale_fac = 1.0;
-                        if(i_time_sub == 0) scale_fac = 6.0;
+                        Double_t scale_fac = 1.0*scale_fac_add;
+                        if(i_time_sub == 0) scale_fac = factor_layer*scale_fac_add;
                         Int_t N_clusters_sub = (Int_t)vec_all_TRD_digits_clusters[i_det_sub][i_time_sub].size();
 
                         Int_t best_sub_cluster = -1;
@@ -2336,10 +2340,16 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
                             Double_t dist_clusters_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
                             Double_t dist_clusters_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
 
-                            if(dist_clusters_XY > scale_fac*3.0)  continue;
-                            if(dist_clusters_Z  > 10.0) continue;
+                            if(dist_clusters_XY > scale_fac*Delta_x)  continue;
+                            if(dist_clusters_Z  > Delta_z) continue;
+                            //if(dist_clusters_XY > scale_fac*3.0)  continue;
+                            //if(dist_clusters_Z  > 10.0) continue;
 
-                            Double_t sub_cluster_quality = (0.7*dist_clusters_XY + 7.5*dist_clusters_Z)/(0.7 + 7.5);
+                            // Matching quality - chi2 like
+                            //Double_t sub_cluster_quality = (0.7*dist_clusters_XY + 7.5*dist_clusters_Z)/(0.7 + 7.5);
+                            Double_t sub_cluster_quality = TMath::Power(dist_clusters_XY/0.7,2.0) + TMath::Power(dist_clusters_Z/7.5,2.0);
+
+
                             if(sub_cluster_quality < best_cluster_quality)
                             {
                                 best_cluster_quality = sub_cluster_quality;
@@ -2349,7 +2359,13 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
 
 
                         //cout << "best_sub_cluster: " << best_sub_cluster << ", i_time_sub: " << i_time_sub << ", i_layer_sub: " << i_layer_sub << endl;
-                        if(best_sub_cluster < 0) continue;
+                        if(best_sub_cluster < 0)
+                        {
+                            scale_fac_add *= factor_missing; // one time bin was missing, increase matching window
+                            continue;
+                        }
+                        scale_fac_add = 1.0; // reset additional matching window factor once a match was found
+
                         // Define new pos_ADC_max
                         for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
                         {
@@ -2406,7 +2422,7 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
     TEve_clusters ->SetMarkerColor(kRed);
     TEve_clusters ->SetMarkerSize(1.2);
     TEve_clusters ->SetMarkerStyle(20);
-    //gEve->AddElement(TEve_clusters);
+    if(flag_draw_clusters) gEve->AddElement(TEve_clusters);
 
     //cout << "Test B" << endl;
 }
@@ -2415,9 +2431,9 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits()
 
 
 //----------------------------------------------------------------------------------------
-void TBase_TRD_Calib::Draw_TRD_tracks()
+void TBase_TRD_Calib::Draw_TRD_tracks(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing, Int_t flag_draw_clusters)
 {
-    Make_clusters_from_all_digits();
+    Make_clusters_from_all_digits(Delta_x,Delta_z,factor_layer,factor_missing,flag_draw_clusters);
     //cout << "Test C" << endl;
     gEve->Redraw3D(kTRUE);
 }
