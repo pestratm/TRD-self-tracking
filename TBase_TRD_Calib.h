@@ -100,6 +100,7 @@ private:
     vector<TPolyLine*> vec_TPL_offline_tracklets;
 
     vector<TEveLine*> vec_TEveLine_cluster_tracks;
+    vector< vector< vector<TPolyLine*> > > vec_TPL_cluster_tracks; //[i_sector][i_stack][i_track]
 
     AliHelix aliHelix;
     TEveLine* TPL3D_helix = NULL;
@@ -117,6 +118,10 @@ private:
     vector <TCanvas*> ADC_vs_time;
 
     vector<TEveLine*> vec_TPL3D_helix_neighbor;
+
+    vector< vector<TPolyLine*> > vec_TPL_helix_in_sector;
+
+
     vector< vector<TEveLine*> > vec_TPL3D_TRD_center;
     vector<TVector3> vec_TV3_TRD_center_offset; // 540 chambers
     vector< vector<TVector3> >     vec_TV3_TRD_center; // 540 chambers, 3 axes
@@ -231,6 +236,7 @@ public:
     void Track_Tracklets(); // for online tracklets
     void Draw_2D_circle_3points(vector<TVector2>);
     void Reset();
+    void Draw_2D_TRD_track(Int_t Sector, Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing, Int_t flag_draw_clusters);
 
     ClassDef(TBase_TRD_Calib, 1)
 };
@@ -430,6 +436,7 @@ TBase_TRD_Calib::TBase_TRD_Calib()
             arr_pos_glb[2] += glb[2];
             */
             if(TRD_detector == 106)
+            //if(TRD_detector < 100)
             {
                 printf("i_vertex: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_vertex,arr_pos_glb[0],arr_pos_glb[1],arr_pos_glb[2]);
 
@@ -457,6 +464,13 @@ TBase_TRD_Calib::TBase_TRD_Calib()
     {
         printf("layer: %i_det, radius: %4.3f cm \n",i_det,vec_TV3_TRD_center_offset[i_det].Perp());
     }
+
+#if 0
+    for(Int_t i_det = 0; i_det < 106; i_det++)
+    {
+        printf("detector: %i_det, X: %4.3f cm, Y: %4.3f cm, Z: %4.3f cm \n",i_det,vec_TV3_TRD_center_offset[i_det].X(),vec_TV3_TRD_center_offset[i_det].Y(),vec_TV3_TRD_center_offset[i_det].Z());
+    }
+#endif
 
     for(Int_t TRD_detector = 0; TRD_detector < 540; TRD_detector++)
     {
@@ -1569,6 +1583,7 @@ TPolyLine* TBase_TRD_Calib::get_helix_polyline_2D(Int_t i_track)
 {
     printf("TBase_TRD_Calib::get_helix_polyline_2D \n");
     TPolyLine* TPL_helix_track = new TPolyLine();
+
     AS_Track      = AS_Event ->getTrack( i_track ); // take the track
 
     for(Int_t i_param = 0; i_param < 9; i_param++)
@@ -1591,7 +1606,6 @@ TPolyLine* TBase_TRD_Calib::get_helix_polyline_2D(Int_t i_track)
         //printf("i_step: %d, pos: {%4.3f, %4.3f, %4.3f}, radius: %4.3f \n",i_step,helix_point[0],helix_point[1],helix_point[2],radius);
         if(radius > 368.0) break;
     }
-
     return TPL_helix_track;
 }
 //----------------------------------------------------------------------------------------
@@ -2295,11 +2309,20 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
     }
     vec_TEveLine_cluster_tracks.clear();
 
+    vec_TPL_cluster_tracks.clear();
+    vec_TPL_cluster_tracks.resize(18);
+
+    //save into something else than TEveLine
+    // create TPL[sector][stack]
+
     printf("Delta_x: %4.3f, Delta_z: %4.3f, factor_layer: %4.3f, factor_missing: %4.3f \n",Delta_x,Delta_z,factor_layer,factor_missing);
 
     for(Int_t i_sector = 0; i_sector < 18; i_sector++)
     {
         printf("Tracking -> i_sector: %d \n",i_sector);
+
+        vec_TPL_cluster_tracks[i_sector].resize(5);
+
         for(Int_t i_stack = 0; i_stack < 5; i_stack++)
 
         {
@@ -2316,6 +2339,7 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                 Double_t pos_ADC_max[4] = {vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][3]};
 
                 vec_TEveLine_cluster_tracks.push_back(new TEveLine());
+                vec_TPL_cluster_tracks[i_sector][i_stack].push_back(new TPolyLine());
 
                 for(Int_t i_layer_sub = 5; i_layer_sub >= 0; i_layer_sub--)
                 {
@@ -2323,10 +2347,12 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                     Int_t i_time_start = 0;
                     if(i_layer_sub == i_layer) i_time_start = 1;
 
-                    Double_t scale_fac_add = 1.0;
+                    Double_t scale_fac_add   = 1.0;
+                    Int_t    missed_time_bin = 0;
                     for(Int_t i_time_sub = i_time_start; i_time_sub < 24; i_time_sub++)
                     {
                         Double_t scale_fac = 1.0*scale_fac_add;
+                        printf("i_time_sub: %d, scale_fac: %4.3f \n",i_time_sub,scale_fac);
                         if(i_time_sub == 0) scale_fac = factor_layer*scale_fac_add;
                         Int_t N_clusters_sub = (Int_t)vec_all_TRD_digits_clusters[i_det_sub][i_time_sub].size();
 
@@ -2362,8 +2388,11 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                         if(best_sub_cluster < 0)
                         {
                             scale_fac_add *= factor_missing; // one time bin was missing, increase matching window
+                            missed_time_bin++;
                             continue;
                         }
+
+                        if(missed_time_bin > 3) break;
                         scale_fac_add = 1.0; // reset additional matching window factor once a match was found
 
                         // Define new pos_ADC_max
@@ -2373,6 +2402,7 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                         }
 
                         vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetNextPoint((Float_t)pos_ADC_max[0],(Float_t)pos_ADC_max[1],(Float_t)pos_ADC_max[2]);
+                        vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetNextPoint((Float_t)pos_ADC_max[0],(Float_t)pos_ADC_max[1]);
 
                         n_clusters_attached++;
 
@@ -2386,6 +2416,10 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                     vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineWidth(4);
                     vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineStyle(1);
                     gEve->AddElement(vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1]);
+
+                    vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineColor(kGreen);  //-4
+                    vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineWidth(4);
+                    vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineStyle(1);
                 }
 
                 if(n_clusters_attached > 80 && n_clusters_attached <= 120)
@@ -2394,6 +2428,10 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                     vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineWidth(4);
                     vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineStyle(1);
                     gEve->AddElement(vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1]);
+
+                    vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineColor(kMagenta); //-7
+                    vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineWidth(4);
+                    vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineStyle(1);
                 }
 
                 if(n_clusters_attached > 120)
@@ -2402,6 +2440,10 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                     vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineWidth(4);
                     vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetLineStyle(1);
                     gEve->AddElement(vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1]);
+
+                    vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineColor(kRed);
+                    vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineWidth(4);
+                    vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineStyle(1);
                 }
 
                 printf("i_det: %d, i_cls: %d, n_clusters_attached: %d \n",i_det,i_cls,n_clusters_attached);
@@ -2996,7 +3038,261 @@ void TBase_TRD_Calib::Draw_2D_circle_3points(vector<TVector2> vec_TV2_points)
 }
 //----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
 
+
+void TBase_TRD_Calib::Draw_2D_TRD_track(Int_t Sector, Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing, Int_t flag_draw_clusters) // ?
+{
+
+    //--SELECT TRACKS BELONGING TO SECTOR AND STACK --------------------------------
+
+    //part i stole to seacrh for tracks within sector
+    // Draws all tracks with hits in the same TRD module(s)
+
+    //loop over all events
+
+    //printf("test 0 \n");
+
+    vector< vector<Int_t> > vec_detectors_sector; //HERE CHOoSE TRACKS FROM [stack]
+    vec_detectors_sector.resize(5);
+    vec_TPL_helix_in_sector.resize(5);
+
+    for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+    {
+        vec_detectors_sector[i_stack].resize(6);
+        for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+        {
+            vec_detectors_sector[i_stack][i_layer] = i_layer + 6*i_stack + 6*5*Sector;
+            //printf("vec_detectors_sector[%d][%d] = %d \n",i_stack,i_layer,vec_detectors_sector[i_stack][i_layer]);
+        }
+    }
+
+    //printf("test 1 \n");
+
+    //vec_TPL_helix_in_sector.clear();
+    //if(vec_TPL_helix_in_sector) delete vec_TPL_helix_in_sector;
+    //Int_t i_track_in_sector[5];
+
+    //for(Int_t i_sector = 0; i_sector < 5; i_sector++)
+    //{
+    //    i_track_in_sector[i_sector]= 0;
+    //}
+
+    //for(Long64_t i_event = 0; i_event < 10; i_event++)
+    for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
+    {
+        //if(i_event % 100 == 0) printf("i_event: %lld out of %lld \n",i_event,file_entries_total);
+        if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
+
+        UShort_t NumTracks = AS_Event ->getNumTracks(); // number of tracks in this event
+
+        // Loop over all tracks and find those with hits in vec_detectors_sector
+        for(UShort_t i_track = 0; i_track < NumTracks; ++i_track) // loop over all tracks of the actual event
+        {
+            //if(i_track == i_track_sel) continue; // Don't use the selected track twice
+            AS_Track      = AS_Event ->getTrack( i_track ); // take the track
+            UShort_t fNumTRDdigits = AS_Track ->getNumTRD_digits();
+
+            for(UShort_t i_digits = 0; i_digits < fNumTRDdigits; i_digits++)
+            {
+                //cout << "i_digits: " << i_digits << ", of " << fNumTRDdigits << endl;
+                AS_Digit              = AS_Track ->getTRD_digit(i_digits);
+                Int_t    layer        = AS_Digit ->get_layer();
+                Int_t    sector       = AS_Digit ->get_sector();
+                Int_t    stack        = AS_Digit ->get_stack();
+                Int_t    detector     = AS_Digit ->get_detector(layer,stack,sector);
+
+                Int_t flag_exist = 0;
+                //Int_t stack = 0;
+
+                for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+                {
+                    for(Int_t i_ele = 0; i_ele < (Int_t)vec_detectors_sector.size(); i_ele++)
+                    {
+                        if(vec_detectors_sector[i_stack][i_ele] == detector)
+                        {
+                            flag_exist = 1;
+
+                            break;
+                        }
+                    }
+                }
+                if(flag_exist)
+                {
+                    printf("Added track: %d to tracks in sector %d \n",i_track,Sector);
+                    //Double_t pT_track = 0.0;
+                    //vec_TPL_helix_in_sector[stack][i_track_in_sector[stack]] = new TPolyLine();
+                    //vec_TPL_offline_tracklets[(Int_t)vec_TPL_offline_tracklets.size()-1]
+                    //vec_TPL_helix_in_sector[stack][i_track_in_sector[stack]] = get_helix_polyline_2D(i_track);
+                    //i_track_in_sector[stack]++;
+                    vec_TPL_helix_in_sector[stack].push_back(get_helix_polyline_2D(i_track));
+
+                    break;
+                }
+            }
+        }
+
+        for(Int_t i_stack = 0; i_stack < (Int_t)vec_TPL_helix_in_sector.size(); i_stack++)
+        {
+            for(Int_t i_track_sector = 0; i_track_sector < (Int_t)vec_TPL_helix_in_sector[i_stack].size(); i_track_sector++)
+            {
+                vec_TPL_helix_in_sector[i_stack][i_track_sector]->SetLineStyle(1);
+                vec_TPL_helix_in_sector[i_stack][i_track_sector]->SetLineWidth(2);
+                vec_TPL_helix_in_sector[i_stack][i_track_sector]->SetLineColor(kGray);
+                //gEve->AddElement(vec_TPL3D_helix_neighbor[i_track_neighbor]);
+            }
+        }
+    }
+    //--TRACKS SELECTED AND STORED IN vec_TPL_helix_in_sector[i_stack][i_track_sector]---------------------------------
+
+    //-GET TRD CLUSTER TRACKS----vec_TPL_cluster_tracks[Sector][i_stack][i_track]------------
+
+    Make_clusters_from_all_digits(Delta_x,Delta_z,factor_layer,factor_missing,flag_draw_clusters);
+
+    //---------------------------------------
+    //--PREPARE CANVAS AND SUBCANVAS--------------
+
+    Double_t x_start = 0.0;
+    Double_t y_start = 0.0;
+    Double_t x_stop  = 0.0;
+    Double_t y_stop  = 0.0;
+
+#if 0
+    for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+    {
+        //printf("i_stack: %d, i_stack_notempty: %d \n",i_stack,i_stack_notempty);
+
+        if((Int_t)vec_TPL_helix_in_sector[i_stack].size()==0) continue;
+
+        Int_t n_points   = vec_TPL_helix_in_sector[i_stack][0]->GetN();
+        Double_t *x_vals = vec_TPL_helix_in_sector[i_stack][0]->GetX();
+        Double_t *y_vals = vec_TPL_helix_in_sector[i_stack][0]->GetY();
+
+        Int_t n_points_use = 0;
+        for(Int_t i_point = 0; i_point < n_points; i_point++)
+        {
+            if(x_vals[i_point] == 0.0 && y_vals[i_point] == 0.0) continue;
+            if(n_points_use == 0)
+            {
+                x_start[i_stack] = x_vals[i_point];
+                x_stop[i_stack]  = x_vals[i_point];
+                y_start[i_stack] = y_vals[i_point];
+                y_stop[i_stack]  = y_vals[i_point];
+            }
+            else
+            {
+                if(x_vals[i_point] < x_start[i_stack]) x_start[i_stack] = x_vals[i_point];
+                if(y_vals[i_point] < y_start[i_stack]) y_start[i_stack] = y_vals[i_point];
+                if(x_vals[i_point] > x_stop[i_stack])  x_stop[i_stack] = x_vals[i_point];
+                if(y_vals[i_point] > y_stop[i_stack])  y_stop[i_stack] = y_vals[i_point];
+            }
+            n_points_use++;
+            //printf("i_point: %d, pos: {%4.3f, %4.3f} \n",i_point,x_vals[i_point],y_vals[i_point]);
+        }
+        //i_stack++;
+    }
+#endif
+
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() < 0 && vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() != 0.0)
+    {
+        x_stop = -1*(abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X()) - 60.0);
+        x_start  = -1*(abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].X()) + 60.0);
+    }
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() > 0 && vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() != 0.0)
+    {
+        x_start = (abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X()) - 60.0);
+        x_stop  = (abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].X()) + 60.0);
+    }
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() == 0)
+    {
+        x_start = -60.0;
+        x_stop  = 60.0;
+    }
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y() < 0)
+    {
+        y_stop = -1*(abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y()) - 60.0);
+        y_start  = -1*(abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].Y()) + 60.0);
+
+    }
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y() > 0)
+    {
+        y_start = (abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y()) - 60.0);
+        y_stop  = (abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].Y()) + 60.0);
+    }
+
+    //printf("x_start: %4.3f, x_stop: %4.3f, y_start: %4.3f, y_stop: %4.3f \n",x_start,x_stop,y_start,y_stop);
+    //printf("vec_detectors_sector[i_stack][0]: %d, vec_detectors_sector[i_stack][5]: %d, \n",vec_detectors_sector[0][0],vec_detectors_sector[0][5]);
+    //printf("abs(vec_TV3_TRD_center_offset[vec_detectors_sector[i_stack][0]].X()): %4.3f, abs(vec_TV3_TRD_center_offset[vec_detectors_sector[i_stack][5]].X()): %4.3f \n",abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X()),abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].X()));
+    //printf("abs(vec_TV3_TRD_center_offset[vec_detectors_sector[i_stack][0]].Y()): %4.3f, abs(vec_TV3_TRD_center_offset[vec_detectors_sector[i_stack][5]].Y()): %4.3f \n",abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y()),abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].Y()));
+    //printf("\n");
+
+
+    vector<TH1F*> vec_h_frame;
+    vec_h_frame.resize(5);
+
+    for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+    {
+        vec_h_frame[i_stack] = new TH1F();
+    }
+
+    TCanvas* can_2D_TRD_track = new TCanvas("can_2D_TRD_track","can_2D_TRD_track",10,10,1500,300);
+
+    can_2D_TRD_track ->Divide(5,1); // x = stack, y = sector
+
+    for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+    {
+        Int_t iPad = i_stack+1;
+        can_2D_TRD_track ->cd(iPad)->SetTicks(1,1);
+        can_2D_TRD_track ->cd(iPad)->SetGrid(0,0);
+        can_2D_TRD_track ->cd(iPad)->SetFillColor(10);
+        can_2D_TRD_track ->cd(iPad)->SetRightMargin(0.01);
+        can_2D_TRD_track ->cd(iPad)->SetTopMargin(0.01);
+        can_2D_TRD_track ->cd(iPad)->SetBottomMargin(0.2);
+        can_2D_TRD_track ->cd(iPad)->SetLeftMargin(0.2);
+        can_2D_TRD_track ->cd(iPad);
+        //                h_dummy_Delta_vs_impact->Draw("h");
+
+        vec_h_frame[i_stack] = can_2D_TRD_track ->cd(iPad)->DrawFrame(x_start,y_start,x_stop,y_stop,Form("vec_h_frame_%d",iPad));
+
+        vec_h_frame[i_stack]->SetStats(0);
+        vec_h_frame[i_stack]->SetTitle("");
+        vec_h_frame[i_stack]->GetXaxis()->SetTitleOffset(1.1);
+        vec_h_frame[i_stack]->GetYaxis()->SetTitleOffset(1.8);
+        vec_h_frame[i_stack]->GetXaxis()->SetLabelOffset(0.0);
+        vec_h_frame[i_stack]->GetYaxis()->SetLabelOffset(0.01);
+        vec_h_frame[i_stack]->GetXaxis()->SetLabelSize(0.05);
+        vec_h_frame[i_stack]->GetYaxis()->SetLabelSize(0.05);
+        vec_h_frame[i_stack]->GetXaxis()->SetTitleSize(0.05);
+        vec_h_frame[i_stack]->GetYaxis()->SetTitleSize(0.05);
+        vec_h_frame[i_stack]->GetXaxis()->SetNdivisions(505,'N');
+        vec_h_frame[i_stack]->GetYaxis()->SetNdivisions(505,'N');
+        vec_h_frame[i_stack]->GetXaxis()->CenterTitle();
+        vec_h_frame[i_stack]->GetYaxis()->CenterTitle();
+        vec_h_frame[i_stack]->GetXaxis()->SetTitle("x (cm)");
+        vec_h_frame[i_stack]->GetYaxis()->SetTitle("y (cm)");
+
+        can_2D_TRD_track ->cd(iPad);
+
+        for(Int_t i_track_sector = 0; i_track_sector < (Int_t)vec_TPL_helix_in_sector[i_stack].size(); i_track_sector++)
+        {
+            //if(x_start[i_stack]==0.0) continue;
+            vec_TPL_helix_in_sector[i_stack][i_track_sector]->DrawClone("l");
+        }
+        for(Int_t i_TRD_track = 0; i_TRD_track < (Int_t)vec_TPL_cluster_tracks[Sector][i_stack].size(); i_TRD_track++)
+        {
+            vec_TPL_cluster_tracks[Sector][i_stack][i_TRD_track]->Draw();
+        }
+    }
+
+    for(Int_t i_stack = 0; i_stack < (Int_t)vec_TPL_helix_in_sector.size(); i_stack++)
+    {
+        vec_TPL_helix_in_sector[i_stack].clear();
+        vec_TPL_cluster_tracks[Sector][i_stack].clear();
+    }
+
+}
+
+//----------------------------------------------------------------------------------------
 
 
 #endif // __TBASE_TRD_CALIB_H__

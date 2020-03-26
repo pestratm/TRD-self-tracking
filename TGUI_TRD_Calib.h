@@ -27,11 +27,18 @@ private:
     TGHorizontalFrame *hframe_Main[8];
     TGVerticalFrame   *vframe_Main[8];
     TGVerticalFrame   *vframe_Matching[8];
+    TGVerticalFrame   *vframe_sector;
+
     TGVerticalFrame   *vframe_stat_Main[6];
 
     TGNumberEntry*     arr_NEntry_ana_params[4];
+    TGNumberEntry*     NEntry_sector;
+
+
     TGNumberEntry*     arr_NEntry_matching_params[4];
     TGLabel*           arr_Label_NEntry_ana_params[4];
+    TGLabel*           Label_NEntry_sector;
+
     TGLabel*           arr_Label_NEntry_matching_params[4];
     TGLabel*           arr_Label_NEntry_stat[3];
 
@@ -45,6 +52,7 @@ private:
     TGTextButton *Button_Calibrate;
     TGTextButton *Button_Track_Tracklets;
     TGTextButton *Button_draw2D_track;
+    TGTextButton *Button_draw2D_TRD_track;
     TGTextButton *Button_draw_digits;
     TGTextButton *Button_draw_TRD_tracks;
     TGTextButton *Button_draw_all_tracks;
@@ -81,6 +89,7 @@ public:
     Int_t Draw3D();
     Int_t Draw3D_track();
     Int_t Draw_2D_track();
+    Int_t Draw_2D_TRD_track();
     void  Draw_digits();
     void  Draw_TRD_tracks();
     Int_t Draw_online_tracklets();
@@ -284,6 +293,42 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
     Button_draw2D_track->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_2D_track()");
     hframe_Main[3]->AddFrame(Button_draw2D_track, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
 
+    // draw TRD tracks (I_sector?) button
+    Button_draw2D_TRD_track = new TGTextButton(hframe_Main[3], "&Draw 2D TRD tracks ",10);
+    Button_draw2D_TRD_track->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_2D_TRD_track()");
+    hframe_Main[3]->AddFrame(Button_draw2D_TRD_track, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
+
+    //choose sector number for plot
+    TString label_sector = {"Sector to plot"};
+
+    vframe_sector = new TGVerticalFrame(hframe_Main[3], 200,200);
+
+    NEntry_sector = new TGNumberEntry(vframe_sector, 0.0, 12,(TGNumberFormat::EStyle) 0);
+    NEntry_sector ->SetNumStyle( TGNumberFormat::kNESInteger); // https://root.cern.ch/doc/master/classTGNumberFormat.html#a8a0f81aac8ac12d0461aef554c6271ad
+
+    vframe_sector->AddFrame(NEntry_sector, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+
+    TString label_entry = label_sector;
+    Label_NEntry_sector = new TGLabel(vframe_sector, label_entry.Data(), myGC(), myfont->GetFontStruct());
+    vframe_sector->AddFrame(Label_NEntry_sector, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+    hframe_Main[3]->AddFrame(vframe_sector, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+
+#if 0
+    //choose N events for plot
+    TString label_sector = {"num. of ev. to plot"};
+
+    vframe_sector = new TGVerticalFrame(hframe_Main[3], 200,200);
+
+    NEntry_sector = new TGNumberEntry(vframe_sector, 0.0, 12,(TGNumberFormat::EStyle) 0);
+    NEntry_sector ->SetNumStyle( TGNumberFormat::kNESInteger); // https://root.cern.ch/doc/master/classTGNumberFormat.html#a8a0f81aac8ac12d0461aef554c6271ad
+
+    vframe_sector->AddFrame(NEntry_sector, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+
+    TString label_entry = label_sector;
+    Label_NEntry_sector = new TGLabel(vframe_sector, label_entry.Data(), myGC(), myfont->GetFontStruct());
+    vframe_sector->AddFrame(Label_NEntry_sector, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+    hframe_Main[3]->AddFrame(vframe_sector, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+#endif
 
     Frame_Main ->AddFrame(hframe_Main[3], new TGLayoutHints(kLHintsCenterX,2,2,2,2));
     //--------------
@@ -598,6 +643,28 @@ Int_t TGUI_TRD_Calib::Draw_2D_track()
 //---------------------------------------------------------------------------------
 
 
+//---------------------------------------------------------------------------------
+Int_t TGUI_TRD_Calib::Draw_2D_TRD_track()
+{
+
+    printf("TGUI_TRD_Calib::Draw_2D_TRD_track() \n");
+    Pixel_t green;
+    gClient->GetColorByName("green", green);
+    Button_draw2D_TRD_track->ChangeBackground(green);
+
+    Int_t Sector = NEntry_sector->GetNumberEntry()->GetNumber();
+    Double_t Delta_x        = arr_NEntry_matching_params[0]->GetNumberEntry()->GetNumber();
+    Double_t Delta_z        = arr_NEntry_matching_params[1]->GetNumberEntry()->GetNumber();
+    Double_t factor_layer   = arr_NEntry_matching_params[2]->GetNumberEntry()->GetNumber();
+    Double_t factor_missing = arr_NEntry_matching_params[3]->GetNumberEntry()->GetNumber();
+    Int_t flag_draw_clusters = 0;
+    if(fCheckBox_sel[0]->GetState() == kButtonDown) flag_draw_clusters = 1;
+
+    Base_TRD_Calib ->Draw_2D_TRD_track(Sector,Delta_x,Delta_z,factor_layer,factor_missing,flag_draw_clusters);
+
+    return 1;
+}
+//---------------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------------
 Int_t TGUI_TRD_Calib::Draw_online_tracklets()
