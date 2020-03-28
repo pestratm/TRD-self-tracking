@@ -53,6 +53,7 @@ private:
     TGTextButton *Button_Track_Tracklets;
     TGTextButton *Button_draw2D_track;
     TGTextButton *Button_draw2D_TRD_track;
+    TGTextButton *Button_draw2D_TRD_tracklets;
     TGTextButton *Button_draw_digits;
     TGTextButton *Button_draw_TRD_tracks;
     TGTextButton *Button_draw_all_tracks;
@@ -90,6 +91,7 @@ public:
     Int_t Draw3D_track();
     Int_t Draw_2D_track();
     Int_t Draw_2D_TRD_track();
+    Int_t Draw_2D_self_tracklets();
     void  Draw_digits();
     void  Draw_TRD_tracks();
     Int_t Draw_online_tracklets();
@@ -297,6 +299,11 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
     Button_draw2D_TRD_track = new TGTextButton(hframe_Main[3], "&Draw 2D TRD tracks ",10);
     Button_draw2D_TRD_track->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_2D_TRD_track()");
     hframe_Main[3]->AddFrame(Button_draw2D_TRD_track, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
+
+    // draw TRD tracklets (I_sector?) button
+    Button_draw2D_TRD_tracklets = new TGTextButton(hframe_Main[3], "&Draw 2D TRD trkl ",10);
+    Button_draw2D_TRD_tracklets->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_2D_self_tracklets()");
+    hframe_Main[3]->AddFrame(Button_draw2D_TRD_tracklets, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
 
     //choose sector number for plot
     TString label_sector = {"Sector to plot"};
@@ -665,6 +672,24 @@ Int_t TGUI_TRD_Calib::Draw_2D_TRD_track()
     return 1;
 }
 //---------------------------------------------------------------------------------
+
+Int_t TGUI_TRD_Calib::Draw_2D_self_tracklets()
+{
+    printf("TGUI_TRD_Calib::Draw_2D_self_tracklets() \n");
+    Pixel_t green;
+    gClient->GetColorByName("green", green);
+    Button_draw2D_TRD_tracklets->ChangeBackground(green);
+
+    Int_t Sector = NEntry_sector->GetNumberEntry()->GetNumber();
+    Double_t Delta_x        = arr_NEntry_matching_params[0]->GetNumberEntry()->GetNumber();
+    Double_t Delta_z        = arr_NEntry_matching_params[1]->GetNumberEntry()->GetNumber();
+    Double_t factor_layer   = arr_NEntry_matching_params[2]->GetNumberEntry()->GetNumber();
+    Double_t factor_missing = arr_NEntry_matching_params[3]->GetNumberEntry()->GetNumber();
+
+    Base_TRD_Calib ->Draw_self_tracklets_line_2D(Sector,Delta_x,Delta_z,factor_layer,factor_missing);
+
+    return 1;
+}
 
 //---------------------------------------------------------------------------------
 Int_t TGUI_TRD_Calib::Draw_online_tracklets()
