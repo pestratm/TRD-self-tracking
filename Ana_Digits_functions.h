@@ -155,6 +155,11 @@ using namespace std;
 static vector< vector< vector<Double_t> > > vec_Dt_digit_pos_cluster;    // layer, merged time bin. xyzADC
 static Int_t global_layer;
 
+static vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points; //i_det i_trkl i_time i_xyz
+       
+static Int_t Det;
+static Int_t Trkl;
+
 static const Double_t TRD_res_XY = 0.725/TMath::Sqrt(12.0);
 static const Double_t TRD_res_Z  = 8.5/TMath::Sqrt(12.0);
 
@@ -529,6 +534,67 @@ void SumDistance2_X_tr(Int_t &, Double_t *, Double_t & sum, Double_t * par, Int_
         if(vec_Dt_digit_pos_cluster[global_layer][i][3] == -999.0) continue;
         Double_t ADC_val = vec_Dt_digit_pos_cluster[global_layer][i][3];
         Double_t d       = distance2_X(vec_Dt_digit_pos_cluster[global_layer][i][0],vec_Dt_digit_pos_cluster[global_layer][i][1],vec_Dt_digit_pos_cluster[global_layer][i][2],par);
+        sum             += d*ADC_val;
+        //if(global_layer == 1) printf("i: %d, dist: %4.3f, ADC: %4.3f, sum: %4.3f, pos: {%4.3f, %4.3f, %4.3f} \n",i,d,ADC_val,sum,vec_Dt_digit_pos_cluster[global_layer][i][0],vec_Dt_digit_pos_cluster[global_layer][i][1],vec_Dt_digit_pos_cluster[global_layer][i][2]);
+        sum_weight += ADC_val;
+    }
+    if(sum_weight > 0.0) sum /= sum_weight;
+    //printf("sum: %4.3f \n",sum);
+}
+
+//-------------FUNCTION FOR SELF TRACKLET FIT---------------------------------------------------------------------------
+
+// function to be minimized
+void SumDistance2_self_tr(Int_t &, Double_t *, Double_t & sum, Double_t * par, Int_t )
+{
+    //printf("Det: %d, Trkl: %d, \n",Det,Trkl);
+
+    sum = 0;
+
+    // global layer 0-5 -> TRD individual layer, global layer = 6 -> all first clusters
+    Double_t sum_weight = 0.0;
+
+    //printf("test 001 \n");
+
+    //printf("(Int_t)vec_self_tracklet_points[Det][Trkl].size(): \n",(Int_t)vec_self_tracklet_points[Det][Trkl].size());
+
+    for(Int_t i = 0; i < (Int_t)vec_self_tracklet_points[Det][Trkl].size(); ++i)
+    {
+        //printf("test 002 \n");
+        if(i < 5) continue; // remove amplification region
+        if(vec_self_tracklet_points[Det][Trkl][i][3] == -999.0) continue;
+        Double_t ADC_val = vec_self_tracklet_points[Det][Trkl][i][3];
+        Double_t d       = distance2(vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2],par);
+        sum             += d*ADC_val;
+        //if(global_layer == 1) printf("i: %d, dist: %4.3f, ADC: %4.3f, sum: %4.3f, pos: {%4.3f, %4.3f, %4.3f} \n",i,d,ADC_val,sum,vec_Dt_digit_pos_cluster[global_layer][i][0],vec_Dt_digit_pos_cluster[global_layer][i][1],vec_Dt_digit_pos_cluster[global_layer][i][2]);
+        sum_weight += ADC_val;
+    }
+    if(sum_weight > 0.0) sum /= sum_weight;
+    //printf("sum: %4.3f \n",sum);
+}
+
+//------------------------------------------------------------------------------------
+// function to be minimized
+void SumDistance2_self_X_tr(Int_t &, Double_t *, Double_t & sum, Double_t * par, Int_t )
+{
+
+    //printf("Det: %d, Trkl: %d, \n",Det,Trkl);
+
+    sum = 0;
+
+    // global layer 0-5 -> TRD individual layer, global layer = 6 -> all first clusters
+    Double_t sum_weight = 0.0;
+
+    //printf("test 001 \n");
+
+    //printf("(Int_t)vec_self_tracklet_points[Det][Trkl].size(): \n",(Int_t)vec_self_tracklet_points[Det][Trkl].size());
+
+    for(Int_t i = 0; i < (Int_t)vec_self_tracklet_points[Det][Trkl].size(); ++i)
+    {
+        if(i < 5) continue; // remove amplification region
+        if(vec_self_tracklet_points[Det][Trkl][i][3] == -999.0) continue;
+        Double_t ADC_val = vec_self_tracklet_points[Det][Trkl][i][3];
+        Double_t d       = distance2_X(vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2],par);
         sum             += d*ADC_val;
         //if(global_layer == 1) printf("i: %d, dist: %4.3f, ADC: %4.3f, sum: %4.3f, pos: {%4.3f, %4.3f, %4.3f} \n",i,d,ADC_val,sum,vec_Dt_digit_pos_cluster[global_layer][i][0],vec_Dt_digit_pos_cluster[global_layer][i][1],vec_Dt_digit_pos_cluster[global_layer][i][2]);
         sum_weight += ADC_val;

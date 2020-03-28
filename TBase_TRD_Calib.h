@@ -76,6 +76,7 @@ private:
 
     Long64_t Event_active = 0;
     Double_t tracklets_min[7] = {-1.0};
+    vector< vector<Double_t> > self_tracklets_min;
 
     TChain* input_SE;
     TString JPsi_TREE   = "Tree_AS_Event";
@@ -108,6 +109,8 @@ private:
     TEveLine* fit_line;
     TEveLine* vec_tracklets_line = NULL;
     vector<TPolyLine*> vec_tracklets_line_2D;
+    vector< vector< vector <TPolyLine*> > > vec_self_tracklet_line_2D;
+
 
     TPolyLine* TPL_helix;
 
@@ -188,6 +191,8 @@ private:
     Int_t line_width_layer[7] = {3,3,3,3,3,3,2};
     vector<Int_t> vec_layer_in_fit;
     vector< vector< vector<Double_t> > > vec_tracklet_fit_points;
+    vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_fit_points;
+
     vector<TProfile*> vec_tp_Delta_vs_impact;
     vector<TH2D*> vec_TH2D_Delta_vs_impact;
 
@@ -237,6 +242,9 @@ public:
     void Draw_2D_circle_3points(vector<TVector2>);
     void Reset();
     void Draw_2D_TRD_track(Int_t Sector, Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing, Int_t flag_draw_clusters);
+    void Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
+    void Draw_self_tracklets_line_2D(Int_t Sector,Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
+
 
     ClassDef(TBase_TRD_Calib, 1)
 };
@@ -309,6 +317,28 @@ TBase_TRD_Calib::TBase_TRD_Calib()
             vec_tracklet_fit_points[i_layer][i_start_stop].resize(3); // x,y,z
         }
     }
+
+#if 0
+    vec_self_tracklet_points.resize(540); // detector
+    for(Int_t i_layer = 0; i_det < 540; i_layer++)
+    {
+        vec_self_tracklet_points[i_det].resize(24); // time bin
+        for(Int_t i_time = 0; i_time < 24; i_time++)
+        {
+            vec_self_tracklet_points[i_det][i_time].resize(3); // x,y,z
+        }
+    }
+    vec_self_tracklet_fit_points.resize(540); // detector
+    for(Int_t i_det = 0; i_det < 540; i_layer++)
+    {
+        vec_self_tracklet_fit_points[i_det].resize(2); // start, stop point
+        for(Int_t i_start_stop = 0; i_start_stop < 2; i_start_stop++)
+        {
+            vec_self_tracklet_fit_points[i_det][i_start_stop].resize(3); // x,y,z
+        }
+    }
+#endif
+
 
     TPL3D_helix = new TEveLine();
     fit_line    = new TEveLine();
@@ -617,6 +647,8 @@ vector< vector<TVector3> >  TBase_TRD_Calib::make_clusters(Int_t i_track)
                 for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
                 {
                     TV3_digit_pos[i_xyz] = AS_Digit ->get_pos(i_time,i_xyz); // get original digit space point
+                    //if(detector == 0) printf("layer: %d, TV3_digit_pos[x]: %4.3f \n",layer,TV3_digit_pos[0]);
+
                     vec_pos_merge[layer][i_time_merge][i_xyz] += ADC*TV3_digit_pos[i_xyz]; // use ADC value as weight
                 }
                 vec_weight_digits_merged[layer][i_time_merge] += ADC; // keep track of the weights used
@@ -643,6 +675,7 @@ vector< vector<TVector3> >  TBase_TRD_Calib::make_clusters(Int_t i_track)
                     {
                         vec_TV3_digit_pos_cluster[i_layer][i_time_merge][i_xyzADC] = vec_pos_merge[i_layer][i_time_merge][i_xyzADC]/vec_weight_digits_merged[i_layer][i_time_merge];
                         vec_Dt_digit_pos_cluster[i_layer][i_time_merge][i_xyzADC]  = vec_pos_merge[i_layer][i_time_merge][i_xyzADC]/vec_weight_digits_merged[i_layer][i_time_merge];
+                        // if(i_layer == 0) printf("vec_Dt_digit_pos_cluster[i_layer][%d][x]: %4.3f,  vec_Dt_digit_pos_cluster[i_layer][%d][y]: %4.3f \n",i_time_merge,vec_TV3_digit_pos_cluster[i_layer][i_time_merge][0],i_time_merge,vec_TV3_digit_pos_cluster[i_layer][i_time_merge][1]);
                     }
                     if(i_xyzADC == 3)  //ADC value
                     {
@@ -1265,6 +1298,9 @@ void TBase_TRD_Calib::get_tracklets_fit(Int_t i_track)
         vec_AB[1].SetXYZ(-999.0,-999.0,-999.0);
         vec_AB_2D[0].SetXYZ(-999.0,-999.0,-999.0);
         vec_AB_2D[1].SetXYZ(-999.0,-999.0,-999.0);
+
+        //if (i_layer == 0) printf("layer_dist_min_max[i_layer][0]: %4.3f, layer_dist_min_max[i_layer][1]: %4.3f \n",layer_dist_min_max[i_layer][0],layer_dist_min_max[i_layer][1]);
+
         for(int i = 0; i < n; ++i)
         {
             Double_t t = t0 + dt*i;
@@ -1282,6 +1318,7 @@ void TBase_TRD_Calib::get_tracklets_fit(Int_t i_track)
                 TVector3 TV3_diff = vec_TV3_digit_pos_cluster - TV3_line_point;
                 Double_t distance_layer = TV3_diff.Mag();
                 if(distance_layer < distance) distance = distance_layer;
+
             }
             //if(i_layer == 5) printf("point: {%4.3f, %4.3f, %4.3f}, perp: %4.3f, layer min/max: {%4.3f, %4.3f}, distance: %4.3f \n",x,y,z,TV3_line_point.Perp(),layer_dist_min_max[i_layer][0],layer_dist_min_max[i_layer][1],distance);
             //if(TV3_line_point.Perp() > 270.0 && TV3_line_point.Perp() < 380.0 && distance < 100.0)  // 100 just in case
@@ -1298,7 +1335,7 @@ void TBase_TRD_Calib::get_tracklets_fit(Int_t i_track)
                     vec_AB[1].SetXYZ(x,y,z);
                     vec_AB_2D[1].SetXYZ(x,y,0.0);
                 }
-                //printf("i_layer: %d, i: %d, point line: {%4.3f, %4.3f, %4.3f} \n",i_layer,i,x,y,z);
+                //if (i_layer==0) printf("i_layer: %d, i: %d, point line: {%4.3f, %4.3f, %4.3f} \n",i_layer,i,x,y,z);
                 i_point++;
             }
         }
@@ -1497,8 +1534,6 @@ void TBase_TRD_Calib::Draw_tracklets_line_2D(Int_t i_track)
     //tg_vdrift_vs_det   = (TGraph*)inputfile_QA->Get("tg_vdrift_vs_det");;
 }
 //----------------------------------------------------------------------------------------
-
-
 
 //----------------------------------------------------------------------------------------
 void TBase_TRD_Calib::Draw_tracklets_line(Int_t i_track)
@@ -2209,6 +2244,8 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
             {
                 digit_pos[i_xyz] = AS_Digit ->get_pos(i_time,i_xyz);
                 vec_digit_data[i_xyz] = digit_pos[i_xyz];
+
+                //if(detector == 0) printf("layer: %d, vec_digit_data[x]: %4.3f \n",layer,vec_digit_data[0]);
             }
             vec_digit_data[3] = ADC;
 
@@ -2289,7 +2326,14 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                     vec_digit_cluster_data[i_xyzADC] = pos_ADC_sum[i_xyzADC];
                 }
 
-                vec_all_TRD_digits_clusters[i_det][i_time].push_back(vec_digit_cluster_data);
+                vec_all_TRD_digits_clusters[i_det][i_time].push_back(vec_digit_cluster_data);   //is this already what i need //maybe better to use new func create trkl
+                //printf("test 1 i_digit_max: %d \n",i_digit_max);
+                //printf("vec_all_TRD_digits_clusters[%d][%d].size(): %d \n",i_det,i_time,vec_all_TRD_digits_clusters[i_det][i_time].size());
+
+                //if (i_det == 0 || i_det == 5) printf("vec_all_TRD_digits_clusters[%d][%d][%d][0]: %4.3f \n",i_det,i_time,vec_all_TRD_digits_clusters[i_det][i_time].size()-1,vec_all_TRD_digits_clusters[i_det][i_time][vec_all_TRD_digits_clusters[i_det][i_time].size()-1][0]);
+                //printf("vec_all_TRD_digits_clusters[%d][%d].size(): %d \n",i_det,i_time,vec_all_TRD_digits_clusters[i_det][i_time].size());
+                //printf("test 2 \n");
+
             }
 
         }
@@ -2352,7 +2396,7 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                     for(Int_t i_time_sub = i_time_start; i_time_sub < 24; i_time_sub++)
                     {
                         Double_t scale_fac = 1.0*scale_fac_add;
-                        printf("i_time_sub: %d, scale_fac: %4.3f \n",i_time_sub,scale_fac);
+                        //printf("i_time_sub: %d, scale_fac: %4.3f \n",i_time_sub,scale_fac);
                         if(i_time_sub == 0) scale_fac = factor_layer*scale_fac_add;
                         Int_t N_clusters_sub = (Int_t)vec_all_TRD_digits_clusters[i_det_sub][i_time_sub].size();
 
@@ -2446,7 +2490,7 @@ void TBase_TRD_Calib::Make_clusters_from_all_digits(Double_t Delta_x, Double_t D
                     vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetLineStyle(1);
                 }
 
-                printf("i_det: %d, i_cls: %d, n_clusters_attached: %d \n",i_det,i_cls,n_clusters_attached);
+                //printf("i_det: %d, i_cls: %d, n_clusters_attached: %d \n",i_det,i_cls,n_clusters_attached);
             } // end of main cluster loop
 
         }
@@ -2481,7 +2525,633 @@ void TBase_TRD_Calib::Draw_TRD_tracks(Double_t Delta_x, Double_t Delta_z, Double
 }
 //----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
+void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing)
+{
+    printf("TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit() \n");
 
+    //Reset();
+    //printf("test 1 \n");
+
+    vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits;
+
+    vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits_clusters;
+
+    //vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points;
+
+
+    vec_all_TRD_digits.resize(540);
+    vec_all_TRD_digits_clusters.resize(540);
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        vec_all_TRD_digits[i_det].resize(24); // time bins
+        vec_all_TRD_digits_clusters[i_det].resize(24); // time bins
+    }
+    vector<Double_t> vec_digit_data; // x,y,z,ADC
+    vector<Double_t> vec_digit_cluster_data; // x,y,z,ADC
+    vec_digit_data.resize(4);
+    vec_digit_cluster_data.resize(4);
+
+    // Fill all the information in the hierachy of detectors and time bins
+    Int_t    N_TRD_digits  = AS_Event ->getNumTRD_digits();
+    for(Int_t i_digit = 0; i_digit < N_TRD_digits; i_digit++)
+    {
+        AS_Digit              = AS_Event ->getTRD_digit(i_digit);
+        Int_t    layer        = AS_Digit ->get_layer();
+        Int_t    sector       = AS_Digit ->get_sector();
+        Int_t    column       = AS_Digit ->get_column();
+        Int_t    stack        = AS_Digit ->get_stack();
+        Int_t    row          = AS_Digit ->get_row();
+        Int_t    detector     = AS_Digit ->get_detector(layer,stack,sector);
+
+        for(Int_t i_time = 0; i_time < 24; i_time++)
+        {
+            Float_t ADC = (Float_t)AS_Digit ->getADC_time_value(i_time);
+            if(ADC < 0.0) continue;
+            for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+            {
+                digit_pos[i_xyz] = AS_Digit ->get_pos(i_time,i_xyz);
+                vec_digit_data[i_xyz] = digit_pos[i_xyz];
+            }
+            vec_digit_data[3] = ADC;
+
+            vec_all_TRD_digits[detector][i_time].push_back(vec_digit_data);
+        }
+    }
+
+    //printf("test 2 \n");
+
+    // Make clusters for each detector and time bin
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        //printf("i_det: %d \n",i_det);
+        for(Int_t i_time = 0; i_time < 24; i_time++)
+        {
+            //if(!(i_det == 0 && i_time == 0)) continue;
+            //for(Int_t i_digit = 0; i_digit < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit++)
+            //{
+            //    printf("i_digit: %d, pos: {%4.3f, %4.3f, %4.3f}, ADC: %4.3f \n",i_digit,vec_all_TRD_digits[i_det][i_time][i_digit][0],vec_all_TRD_digits[i_det][i_time][i_digit][1],vec_all_TRD_digits[i_det][i_time][i_digit][2],vec_all_TRD_digits[i_det][i_time][i_digit][3]);
+            //}
+
+            //cout << "Sorting vector" << endl;
+            // First order the vector from high to low ADC values
+            std::sort(vec_all_TRD_digits[i_det][i_time].begin(),vec_all_TRD_digits[i_det][i_time].end(),sortcol_first); // large values to small values, first column sorted via function sortcol
+
+            //for(Int_t i_digit = 0; i_digit < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit++)
+            //{
+            //    printf("i_digit: %d, pos: {%4.3f, %4.3f, %4.3f}, ADC: %4.3f \n",i_digit,vec_all_TRD_digits[i_det][i_time][i_digit][0],vec_all_TRD_digits[i_det][i_time][i_digit][1],vec_all_TRD_digits[i_det][i_time][i_digit][2],vec_all_TRD_digits[i_det][i_time][i_digit][3]);
+            //}
+
+
+            vector<Int_t> arr_used_digits;
+            arr_used_digits.clear();
+            arr_used_digits.resize((Int_t)vec_all_TRD_digits[i_det][i_time].size());
+            for(Int_t i_digit_max = 0; i_digit_max < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit_max++)
+            {
+                arr_used_digits[i_digit_max] = 0;
+            }
+
+            // Start from the maximum ADC value(s)
+            for(Int_t i_digit_max = 0; i_digit_max < ((Int_t)vec_all_TRD_digits[i_det][i_time].size() - 1); i_digit_max++)
+            {
+                if(arr_used_digits[i_digit_max]) continue;
+                arr_used_digits[i_digit_max] = 1;
+
+                Double_t pos_ADC_max[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_max][0],vec_all_TRD_digits[i_det][i_time][i_digit_max][1],vec_all_TRD_digits[i_det][i_time][i_digit_max][2],vec_all_TRD_digits[i_det][i_time][i_digit_max][3]};
+                Double_t N_digits_added = pos_ADC_max[3]; // ADC as weight
+                Double_t pos_ADC_sum[3] = {pos_ADC_max[0]*pos_ADC_max[3],pos_ADC_max[1]*pos_ADC_max[3],pos_ADC_max[2]*pos_ADC_max[3]};
+
+                // Get all other digits within a certain radius
+                for(Int_t i_digit_sub = (i_digit_max + 1); i_digit_sub < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit_sub++)
+                {
+                    if(arr_used_digits[i_digit_sub]) continue;
+
+                    Double_t pos_ADC_sub[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_sub][0],vec_all_TRD_digits[i_det][i_time][i_digit_sub][1],vec_all_TRD_digits[i_det][i_time][i_digit_sub][2],vec_all_TRD_digits[i_det][i_time][i_digit_sub][3]};
+                    Double_t dist_digits_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
+                    Double_t dist_digits_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
+                    if(dist_digits_XY > 5.0)  continue;
+                    if(dist_digits_Z  > 15.0) continue;
+
+                    for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+                    {
+                        pos_ADC_sum[i_xyz] += pos_ADC_sub[3]*pos_ADC_sub[i_xyz];
+                    }
+
+                    arr_used_digits[i_digit_sub] = 1;
+                    N_digits_added += pos_ADC_sub[3];
+                }
+
+                if(N_digits_added <= 0.0) continue;
+                // Calculate average position
+                for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+                {
+                    pos_ADC_sum[i_xyz] /= N_digits_added;
+                }
+
+                TEve_clusters ->SetNextPoint(pos_ADC_sum[0],pos_ADC_sum[1],pos_ADC_sum[2]);
+                for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+                {
+                    vec_digit_cluster_data[i_xyzADC] = pos_ADC_sum[i_xyzADC];
+                }
+
+                vec_all_TRD_digits_clusters[i_det][i_time].push_back(vec_digit_cluster_data);   //is this already what i need //maybe better to use new func create trkl
+            }                                                                                  
+        } //end of timebin loop
+    }
+
+    printf("arrangement of clusters done \n");
+
+
+    //printf("test 3 \n");
+
+    //create "tracklets"
+    //Int_t sector = (Int_t)(i_det/30);
+    //Int_t stack  = (Int_t)(i_det%30/6);
+    //Int_t layer  = i_det%6;
+    //Int_t i_det = layer + 6*stack + 30*sector;
+
+#if 0
+    for(Int_t i_det = 0; i_det < 540; i_layer++)
+    {
+        for(Int_t i_time = 0; i_time < 24; i_start_stop++)
+        {
+            for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+            {
+                vec_self_tracklet_points[i_det][i_start_stop][i_xyzADC] = -999.0;
+            }
+        }
+    }
+#endif
+
+    vec_self_tracklet_points.clear();
+    vec_self_tracklet_points.resize(540);
+
+    for (Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        Int_t i_time  = 0;
+        Int_t N_clusters = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time].size();
+
+        vec_self_tracklet_points[i_det].resize(N_clusters);
+
+        for(Int_t i_cls = 0; i_cls < N_clusters; i_cls++)
+        {
+            Int_t n_clusters_attached = 0;
+            Double_t pos_ADC_max[4] = {vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][3]};
+
+            vec_self_tracklet_points[i_det][i_cls].resize(24);
+
+            for (Int_t i_timebin = 0; i_timebin < 24; i_timebin++)
+            {
+                vec_self_tracklet_points[i_det][i_cls][i_timebin].resize(4);
+                for (Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+                {
+                    vec_self_tracklet_points[i_det][i_cls][i_timebin][i_xyzADC] = -999.0;
+                }
+            }
+
+            //vec_self_tracklet_points[i_det][i_cls][i].push_back(pos_ADC_max[i_xyz]);
+
+            for (Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+            {
+                vec_self_tracklet_points[i_det][i_cls][i_time][i_xyzADC] = pos_ADC_max[i_xyzADC];
+            }
+
+            Int_t i_time_start = 1;
+            Double_t scale_fac_add   = 1.0;
+            Int_t    missed_time_bin = 0;
+            for(Int_t i_time_sub = i_time_start; i_time_sub < 24; i_time_sub++)
+            {
+                Double_t scale_fac = 1.0*scale_fac_add;
+                //printf("i_time_sub: %d, scale_fac: %4.3f \n",i_time_sub,scale_fac);
+                //if(i_time_sub == 0) scale_fac = factor_layer*scale_fac_add;
+                Int_t N_clusters_sub = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time_sub].size();
+
+                Int_t best_sub_cluster = -1;
+                Double_t best_cluster_quality = 1000000.0;
+
+                for(Int_t i_cls_sub = 0; i_cls_sub < N_clusters_sub; i_cls_sub++)
+                {
+                    Double_t pos_ADC_sub[4] = {vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][0],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][1],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][2],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][3]};
+
+                    Double_t dist_clusters_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
+                    Double_t dist_clusters_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
+
+                    if(dist_clusters_XY > scale_fac*Delta_x)  continue;
+                    if(dist_clusters_Z  > Delta_z) continue;
+                    //if(dist_clusters_XY > scale_fac*3.0)  continue;
+                    //if(dist_clusters_Z  > 10.0) continue;
+
+                    // Matching quality - chi2 like
+                    //Double_t sub_cluster_quality = (0.7*dist_clusters_XY + 7.5*dist_clusters_Z)/(0.7 + 7.5);
+                    Double_t sub_cluster_quality = TMath::Power(dist_clusters_XY/0.7,2.0) + TMath::Power(dist_clusters_Z/7.5,2.0);
+
+
+                    if(sub_cluster_quality < best_cluster_quality)
+                            {
+                                best_cluster_quality = sub_cluster_quality;
+                                best_sub_cluster     = i_cls_sub;
+                            }
+                }
+
+
+                //cout << "best_sub_cluster: " << best_sub_cluster << ", i_time_sub: " << i_time_sub << ", i_layer_sub: " << i_layer_sub << endl;
+                if(best_sub_cluster < 0)
+                {
+                    scale_fac_add *= factor_missing; // one time bin was missing, increase matching window
+                    missed_time_bin++;
+                    continue;
+                }
+
+                if(missed_time_bin > 3) break;
+                scale_fac_add = 1.0; // reset additional matching window factor once a match was found
+
+                // Define new pos_ADC_max
+                for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+                {
+                    pos_ADC_max[i_xyzADC] = vec_all_TRD_digits_clusters[i_det][i_time_sub][best_sub_cluster][i_xyzADC];
+                    vec_self_tracklet_points[i_det][i_cls][i_time_sub][i_xyzADC] = pos_ADC_max[i_xyzADC];
+
+                }
+
+                //vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetNextPoint((Float_t)pos_ADC_max[0],(Float_t)pos_ADC_max[1],(Float_t)pos_ADC_max[2]);
+                //vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetNextPoint((Float_t)pos_ADC_max[0],(Float_t)pos_ADC_max[1]);
+
+                n_clusters_attached++;
+            }
+        }
+    }
+
+    printf("connection of clusters within detector done \n");
+    printf("tracklets fit starts now \n");
+
+    //printf("test 4 \n");
+
+    //ready to fit vec_self_tracklet_points[i_det][i_cls][i_time_sub][i_xyzADC]
+
+    // Is fitting the tracklets and doing the global fit through all first cluster points of all available layers
+    //printf("TBase_TRD_Calib::get_tracklets_fit((%d) \n",i_track);
+
+    //fit merged digits with a straight line
+
+    vec_self_tracklet_fit_points.resize(540);         //[i_det][i_trkl][i_start_stop][i_xyz]
+
+    for(Int_t i_detector = 0; i_detector < 540; i_detector++)
+    {
+        vec_self_tracklet_fit_points[i_detector].resize(vec_self_tracklet_points[i_detector].size());
+        for (Int_t i_trkl = 0; i_trkl < vec_self_tracklet_points[i_detector].size(); i_trkl++)
+        {
+            vec_self_tracklet_fit_points[i_detector][i_trkl].resize(2);
+            for(Int_t i_start_stop = 0; i_start_stop < 2; i_start_stop++)
+            {
+                vec_self_tracklet_fit_points[i_detector][i_trkl][i_start_stop].resize(3);
+                for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+                {
+                    vec_self_tracklet_fit_points[i_detector][i_trkl][i_start_stop][i_xyz] = -999.0;
+                }
+            }
+        }
+    }
+
+    //printf("test 5 \n");
+
+    Double_t p0[4] = {10,20,1,2};
+    //Int_t i_layer_notempty = 0;
+
+    //declare things that will be needed later
+    Double_t arglist[10];
+    Double_t a0[3] = {0,0,0};
+    Double_t a1[3] = {0,0,0};
+
+    TVector3 vec_a0;
+    TVector3 vec_a1;
+    TVector3 vec_u;
+    TVector3 vec_x0;
+    TVector3 vec_u_perp;
+    TVector3 vec_x1;
+
+    Double_t pStart[4]; //= {1,1,1,1};
+
+    int nvpar,nparx;
+    Double_t amin,edm, errdef;
+
+    Double_t parFit[4];
+
+    Int_t    n;
+    Double_t t0;
+    Double_t dt;
+    TVector3 TV3_line_point;
+    Double_t i_point;
+
+
+//    for(Int_t i_det = 0; i_det < 540; i_det++)
+//    {
+//        vec_layer_in_fit[i_layer] = 0;
+//    }
+
+    //loop over layers
+
+    Double_t layer_dist_min_max[6][2] =
+    {
+        {280.0,290.0},
+        {290.0,300.0},
+        {300.0,310.0},
+        {310.0,320.0},
+        {320.0,330.0},
+        {330.0,340.0},
+    };
+
+
+
+
+    //Double_t delta_layer = 12.5;
+
+
+    self_tracklets_min.resize(540);
+
+    //printf("test 5.1 \n");
+
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        //if(i_det == 0) printf("fitting detector %d  \n",i_det);
+        if(i_det % 40 == 0) printf("fitting detector %d  \n",i_det);
+
+        self_tracklets_min[i_det].resize(vec_self_tracklet_points[i_det].size());
+
+        for (Int_t i_trkl = 0; i_trkl < vec_self_tracklet_points[i_det].size(); i_trkl++)
+        {
+            //printf("test 5.2 \n");
+            self_tracklets_min[i_det][i_trkl] = -1.0;
+
+        //if(i_layer < 6)
+        //{
+        //    layer_dist_min_max[i_layer][0] = 295.0 + i_layer*delta_layer;
+        //    layer_dist_min_max[i_layer][1] = 307.0 + i_layer*delta_layer;
+        //}
+
+        //global_layer = i_layer;
+
+#if 0
+            for(Int_t i_time_merge = 0; i_time_merge < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time_merge++)
+            {
+                //printf("layer: %d, i_time_merge: %d, point: {%4.3f, %4.3f, %4.3f} \n",i_layer,i_time_merge,vec_Dt_digit_pos_cluster[i_layer][i_time_merge][0],vec_Dt_digit_pos_cluster[i_layer][i_time_merge][1],vec_Dt_digit_pos_cluster[i_layer][i_time_merge][2]);
+            }
+#endif
+
+            Int_t i_time_merge_AB[2] = {-1,-1};
+            for(Int_t i_time_merge = 0; i_time_merge < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time_merge++)
+            {
+                if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] == -999.0) continue;
+                else i_time_merge_AB[0] = i_time_merge;
+            }
+            if(i_time_merge_AB[0] == -1) continue; // all values are 0
+
+            for(Int_t i_time_merge = ((Int_t)vec_self_tracklet_points[i_det][i_trkl].size() - 1); i_time_merge >= 0; i_time_merge--)
+            {
+                if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] == -999.0) continue;
+                else i_time_merge_AB[1] = i_time_merge;
+            }
+
+            //printf("test 5.3 \n");
+
+            if(i_time_merge_AB[0] == i_time_merge_AB[1]) continue; // no fit possible with just one point
+
+            //printf("TBase_TRD_Calib::get_tracklets_fit(%d), i_layer: %d \n",i_track,i_layer);
+
+
+            TVirtualFitter *min = TVirtualFitter::Fitter(0,4);
+            //min->SetObjectFit(tracklets_gr);
+
+            arglist[0] = 3;
+            //min->ExecuteCommand("SET PRINT",arglist,1);
+            Double_t arglist_B[1] = {-1};
+            min->ExecuteCommand("SET PRIntout",arglist_B,1);
+            min->ExecuteCommand("SET NOWarnings",arglist_B,1);
+
+            //printf("test 5.4 \n");
+
+            for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+            {
+                a0[i_xyz] = vec_self_tracklet_points[i_det][i_trkl][i_time_merge_AB[0]][i_xyz];
+                a1[i_xyz] = vec_self_tracklet_points[i_det][i_trkl][i_time_merge_AB[1]][i_xyz];
+            }
+
+            //printf("test 5.5 \n");
+
+            Det = i_det;
+            Trkl = i_trkl;
+
+            //printf("point start: {%4.3f, %4.3f, %4.3f} \n",a0[0],a0[1],a0[2]);
+            //printf("point end: {%4.3f, %4.3f, %4.3f} \n",a1[0],a1[1],a1[2]);
+
+#if 0
+            TEveLine* digits_fit_line_init = new TEveLine();
+            digits_fit_line_init ->SetNextPoint(a0[0],a0[1],a0[2]);
+            digits_fit_line_init ->SetNextPoint(a1[0],a1[1],a1[2]);
+            digits_fit_line_init ->SetLineColor(kMagenta);
+            digits_fit_line_init ->SetLineWidth(3);
+            digits_fit_line_init ->DrawClone("ogl");
+#endif
+
+            Int_t flag_XZ = 1;
+            if(fabs(a0[0] - a1[0]) > fabs(a0[2] - a1[2]))
+            {
+                flag_XZ = 0; // x is used
+            }
+
+            vec_a0.SetXYZ(a0[0],a0[1],a0[2]);
+            vec_a1.SetXYZ(a1[0],a1[1],a1[2]);
+            vec_u = vec_a1 - vec_a0;
+            if(flag_XZ == 0)
+            {
+                min->SetFCN(SumDistance2_self_X_tr);
+                vec_x0 = vec_a0 - vec_u*(vec_a0.X()/vec_u.X());
+                vec_u_perp.SetXYZ(vec_u[0],vec_u[1],vec_u[2]);
+                vec_u_perp *= 1.0/vec_u[0];
+                //printf("X_tr \n");
+            }
+            else
+            {
+                min->SetFCN(SumDistance2_self_tr);
+                vec_x0 = vec_a0 - vec_u*(vec_a0.Z()/vec_u.Z());
+                vec_u_perp.SetXYZ(vec_u[0],vec_u[1],vec_u[2]);
+                vec_u_perp *= 1.0/vec_u[2];
+                //printf("tr \n");
+            }
+            vec_x1 = vec_x0 + vec_u_perp;
+
+            //printf("test 5.6 \n");
+
+            //TVector3 u = a1-a0;
+            //x0 = a0  (a0z/uz)*u;
+            //x1 = x0 + u / uz;
+
+            if(flag_XZ == 0)
+            {
+                pStart[0] = vec_x0.Z();
+                pStart[1] = vec_x1.Z() - pStart[0];
+                pStart[2] = vec_x0.Y();
+                pStart[3] = vec_x1.Y() - pStart[2];
+            }
+            else
+            {
+                pStart[0] = vec_x0.X();
+                pStart[1] = vec_x1.X() - pStart[0];
+                pStart[2] = vec_x0.Y();
+                pStart[3] = vec_x1.Y() - pStart[2];
+            }
+
+            //cout << "pStart[0]" << pStart[0] << endl;
+            //cout << "pStart[1]" << pStart[1] << endl;
+            //cout << "pStart[2]" << pStart[2] << endl;
+            //cout << "pStart[3]" << pStart[3] << endl;
+
+            min->SetParameter(0,"x0",pStart[0],0.01,0,0);
+            min->SetParameter(1,"Ax",pStart[1],0.01,0,0);
+            min->SetParameter(2,"y0",pStart[2],0.01,0,0);
+            min->SetParameter(3,"Ay",pStart[3],0.01,0,0);
+
+            //printf("test 5.7 \n");
+
+            arglist[0] = 1000; // number of function calls
+            arglist[1] = 0.001; // tolerance
+
+            //printf("test 5.71 \n");
+            //printf("     ------------------ MIGRAD ------------------ \n");
+            min->ExecuteCommand("MIGRAD",arglist,2);
+            //printf("     ------------------ END ------------------ \n");
+            //printf("test 5.72 \n");
+
+            //if (minos) min->ExecuteCommand("MINOS",arglist,0);
+
+            min->GetStats(amin,edm,errdef,nvpar,nparx);
+            //min->PrintResults(1,amin);
+
+            // get fit parameters
+            for(int i = 0; i < 4; ++i)
+            {
+                parFit[i] = min->GetParameter(i);
+                //parFit[i] = pStart[i];
+            }
+
+            //printf("i_layer: %d, amin: %4.3f, par: {%4.3f, %4.3f, %4.3f, %4.3f} \n",i_layer,amin,parFit[0],parFit[1],parFit[2],parFit[3]);
+            self_tracklets_min[i_det][i_trkl] = amin;
+
+            //printf("test 5.8 \n");
+
+            // draw the fitted line
+            n = 5000;   // 1000
+            t0 = -500.0; // -500
+            dt = 0.2;
+
+            Double_t x_A, y_A, z_A;
+            t0 = ((a0[1]-parFit[2])/parFit[3])-500;
+            if(flag_XZ == 0) line_X(t0,parFit,x_A,y_A,z_A);
+            else line(t0,parFit,x_A,y_A,z_A);
+            //printf("start point: {%4.3f, %4.3f, %4.3f} \n",x_A,y_A,z_A);
+
+            i_point = 0;
+            TVector3 vec_AB[2];
+            TVector3 vec_AB_2D[2];
+            vec_AB[0].SetXYZ(-999.0,-999.0,-999.0);
+            vec_AB[1].SetXYZ(-999.0,-999.0,-999.0);
+            vec_AB_2D[0].SetXYZ(-999.0,-999.0,-999.0);
+            vec_AB_2D[1].SetXYZ(-999.0,-999.0,-999.0);
+
+            //printf("test 5.9 \n");
+
+            //if (i_det==0 && i_trkl==0) printf("layer_dist_min_max[i_det%6][0]: %4.3f, layer_dist_min_max[i_det%6][1]: %4.3f \n",layer_dist_min_max[i_det%6][0],layer_dist_min_max[i_det%6][1]);
+
+            //if (i_det == 5)
+            //{
+            //    printf("\n");
+            //    printf("vec_a1.Perp(): %4.3f, vec_a0.Perp(): %4.3f \n",vec_a1.Perp(),vec_a0.Perp());
+            //}
+
+            for(int i = 0; i < n; ++i)
+            {
+                Double_t t = t0 + dt*i;
+                Double_t x,y,z;
+                if(flag_XZ == 0) line_X(t,parFit,x,y,z);
+                else line(t,parFit,x,y,z);
+                TV3_line_point.SetXYZ(x,y,z);
+                //if(i_layer == 5) printf("point: {%4.3f, %4.3f, %4.3f} \n",x,y,z);
+
+                Double_t distance = 1000.0;
+                for(Int_t i_time_bin = 0; i_time_bin < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time_bin++)
+                {
+                    TVector3 vec_TV3_digit_pos_cluster;
+                    vec_TV3_digit_pos_cluster.SetXYZ(vec_self_tracklet_points[i_det][i_trkl][i_time_bin][0],vec_self_tracklet_points[i_det][i_trkl][i_time_bin][1],vec_self_tracklet_points[i_det][i_trkl][i_time_bin][2]);
+                    TVector3 TV3_diff = vec_TV3_digit_pos_cluster - TV3_line_point;
+                    Double_t distance_layer = TV3_diff.Mag();
+                    if(distance_layer < distance) distance = distance_layer;
+                }
+                //if(i_layer == 5) printf("point: {%4.3f, %4.3f, %4.3f}, perp: %4.3f, layer min/max: {%4.3f, %4.3f}, distance: %4.3f \n",x,y,z,TV3_line_point.Perp(),layer_dist_min_max[i_layer][0],layer_dist_min_max[i_layer][1],distance);
+                //if(TV3_line_point.Perp() > 270.0 && TV3_line_point.Perp() < 380.0 && distance < 100.0)  // 100 just in case
+                //if(TV3_line_point.Perp() > vec_TV3_TRD_center_offset[i_det].Perp() - 1.5 && TV3_line_point.Perp() < vec_TV3_TRD_center_offset[i_det].Perp() + 1.5 && distance < 100.0)  // 100 just in case
+                if(TV3_line_point.Perp() < TMath::Max(vec_a1.Perp(),vec_a0.Perp())  && TV3_line_point.Perp() > TMath::Min(vec_a0.Perp(),vec_a1.Perp()) - 3.0 && distance < 5)
+                //if(TV3_line_point.X() < a1[0]  && TV3_line_point.X() > a0[0])
+                {
+                    //if(i_layer == 5) printf("Accepted \n");
+                    if(i_point == 0)
+                    {
+                        vec_AB[0].SetXYZ(x,y,z);
+                        vec_AB_2D[0].SetXYZ(x,y,0.0);
+                    }
+                    else
+                    {
+                        vec_AB[1].SetXYZ(x,y,z);
+                        vec_AB_2D[1].SetXYZ(x,y,0.0);
+                    }
+
+                    //if (i_det == 5){
+                    //    printf("i_layer: %d, i: %d, point line: {%4.3f, %4.3f, %4.3f}, TV3_line_point.Perp(): %4.3f \n",i_det%6,i,x,y,z,TV3_line_point.Perp());
+                    //}
+                    i_point++;
+                }
+            }
+
+            //printf("test 5.10 \n");
+
+            Int_t order_AB[2] = {0,1};
+            if(vec_AB_2D[0].Mag() > vec_AB_2D[1].Mag())
+            {
+                order_AB[0] = 1;
+                order_AB[1] = 0;
+            }
+
+            for(Int_t i_AB = 0; i_AB < 2; i_AB++)
+            {
+                for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+                {
+                    vec_self_tracklet_fit_points[i_det][i_trkl][i_AB][i_xyz] = vec_AB[order_AB[i_AB]][i_xyz];
+                }
+            }
+
+            //if (i_det == 5) {
+
+                //printf("Det: %d, Trkl: %d, n_timebins: %d \n",Det,Trkl,(Int_t)vec_self_tracklet_points[Det][Trkl].size());
+                //printf("X cl start: %4.3f, Y cl start: %4.3f, X cl stop: %4.3f, Y cl stop: %4.3f \n",vec_self_tracklet_points[Det][Trkl][0][0],vec_self_tracklet_points[Det][Trkl][0][1],vec_self_tracklet_points[Det][Trkl][(Int_t)vec_self_tracklet_points[Det][Trkl].size()-1][0],vec_self_tracklet_points[Det][Trkl][(Int_t)vec_self_tracklet_points[Det][Trkl].size()-1][1]);
+
+                //printf("X cl start: %4.3f, Y cl start: %4.3f, X cl stop: %4.3f, Y cl stop: %4.3f \n",vec_self_tracklet_points[Det][Trkl][0][0],vec_self_tracklet_points[Det][Trkl][0][1],vec_self_tracklet_points[Det][Trkl][(Int_t)vec_self_tracklet_points[Det][Trkl].size()-1][0],vec_self_tracklet_points[Det][Trkl][(Int_t)vec_self_tracklet_points[Det][Trkl].size()-1][1]);
+                //printf("a0.x: %4.3f, a0.Y: %4.3f, a1.x: %4.3f, a1.y: %4.3f \n",a0[0],a0[1],a1[0],a1[1]);
+                //printf("vec_self_tracklet_fit_points[%d][%d][start][X]: %4.3f, vec_self_tracklet_fit_points[%d][%d][stop][X]: %4.3f\n",Det,Trkl,vec_self_tracklet_fit_points[i_det][i_trkl][0][0],Det,Trkl,vec_self_tracklet_fit_points[i_det][i_trkl][1][0]);
+            //}
+
+            //printf("test 5.11 \n");
+
+            //vec_layer_in_fit[i_layer_notempty] = i_layer;
+            //i_layer_notempty++;
+
+            delete min;
+        }
+
+    }
+
+    //printf("test 6 \n");
+
+}
+
+//----------------------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------------------
 void TBase_TRD_Calib::Draw_digits()
@@ -3293,6 +3963,221 @@ void TBase_TRD_Calib::Draw_2D_TRD_track(Int_t Sector, Double_t Delta_x, Double_t
 }
 
 //----------------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------------
+void TBase_TRD_Calib::Draw_self_tracklets_line_2D(Int_t Sector,Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing)
+{
+    //get_tracklets_fit(i_track);
+    Make_clusters_and_get_tracklets_fit(Delta_x,Delta_z,factor_layer,factor_missing);
+
+    //Int_t sector = (Int_t)(i_det/30);
+    //Int_t stack  = (Int_t)(i_det%30/6);
+    //Int_t layer  = i_det%6;
+    //Int_t i_det = layer + 6*stack + 30*sector;
+
+    Int_t i_det = -1;
+    Int_t i_trkl_notempty = 0;
+    Int_t n_size;
+
+    vector< vector<Int_t> > vec_detectors_sector; //HERE CHOoSE TRACKS FROM [stack]
+    vec_detectors_sector.resize(5);
+
+    vector<TPolyMarker*> vec_TPM_self_cluster;
+    vec_TPM_self_cluster.resize(5);
+
+    vec_self_tracklet_line_2D.resize(5);
+
+    for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+    {
+        vec_TPM_self_cluster[i_stack] = new TPolyMarker();
+        vec_detectors_sector[i_stack].resize(6);
+        vec_self_tracklet_line_2D[i_stack].resize(6);
+
+        for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+        {
+            vec_detectors_sector[i_stack][i_layer] = i_layer + 6*i_stack + 6*5*Sector;
+            i_det = vec_detectors_sector[i_stack][i_layer];
+            i_trkl_notempty = 0;
+            n_size = 0;
+
+            for (Int_t i_trkl = 0; i_trkl < vec_self_tracklet_fit_points[i_det].size(); i_trkl++)
+            {
+                if(vec_self_tracklet_fit_points[i_det][i_trkl][0][0] > -999.0 && vec_self_tracklet_fit_points[i_det][i_trkl][1][0] > -999.0) n_size++;
+            }
+
+            vec_self_tracklet_line_2D[i_stack][i_layer].resize(n_size);
+
+            for (Int_t i_trkl = 0; i_trkl < vec_self_tracklet_fit_points[i_det].size(); i_trkl++)
+            {
+                if(vec_self_tracklet_fit_points[i_det][i_trkl][0][0] > -999.0 && vec_self_tracklet_fit_points[i_det][i_trkl][1][0] > -999.0)
+                {
+                    vec_self_tracklet_line_2D[i_stack][i_layer][i_trkl_notempty] = new TPolyLine();
+                    vec_self_tracklet_line_2D[i_stack][i_layer][i_trkl_notempty] ->SetNextPoint(vec_self_tracklet_fit_points[i_det][i_trkl][0][0],vec_self_tracklet_fit_points[i_det][i_trkl][0][1]);
+                    vec_self_tracklet_line_2D[i_stack][i_layer][i_trkl_notempty] ->SetNextPoint(vec_self_tracklet_fit_points[i_det][i_trkl][1][0],vec_self_tracklet_fit_points[i_det][i_trkl][1][1]);
+                    vec_self_tracklet_line_2D[i_stack][i_layer][i_trkl_notempty] ->SetLineStyle(1);
+                    vec_self_tracklet_line_2D[i_stack][i_layer][i_trkl_notempty] ->SetLineColor(color_layer[i_layer]);
+                    vec_self_tracklet_line_2D[i_stack][i_layer][i_trkl_notempty] ->SetLineWidth(line_width_layer[i_layer]);
+                    //vec_self_tracklet_line_2D[i_det][i_trkl] ->DrawClone("l");
+
+                    //if (i_layer == 5)
+                    //{
+                    //    printf("vec_self_tracklet_line_2D[%d][%d][%d].GetX(): %4.3f \n",i_stack,i_layer,i_trkl_notempty,vec_self_tracklet_fit_points[i_det][i_trkl][0][0]);
+                    //    printf("vec_self_tracklet_line_2D[%d][%d][%d].GetXend(): %4.3f \n",i_stack,i_layer,i_trkl_notempty,vec_self_tracklet_fit_points[i_det][i_trkl][1][0]);
+                    //}
+                    i_trkl_notempty++;
+
+                    for(Int_t i_time_merge = 0; i_time_merge < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time_merge++)
+                    {
+                            vec_TPM_self_cluster[i_stack] ->SetNextPoint(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0],vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1]);
+                            //if(i_stack == 0 && i_layer == 0) printf("i_stack: %d, i_layer: %d, i_trkl_notempty: %d, vec_TPM_self_cluster[i_stack]: %4.3f \n",i_stack,i_layer,i_trkl_notempty,vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0]);
+
+                    }
+
+                }
+                else
+                {
+                    printf("TBase_TRD_Calib::Draw_self_tracklets_line_2D, i_det: %d, i trkl: %d has no entry \n",i_det,i_trkl);
+                }
+            }
+        }
+    }
+
+#if 0
+
+    HistName = "Ev. ";
+    HistName += Event_active;
+    HistName += ", tr. ";
+    HistName += i_track;
+    HistName += Form(", min: (%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, gl. %4.3f)",tracklets_min[0],tracklets_min[1],tracklets_min[2],tracklets_min[3],tracklets_min[4],tracklets_min[5],tracklets_min[6]);
+    //sprintf(NoP,"%4.0f",(Double_t)i_detector);
+    //HistName += NoP;
+    plotTopLegend((char*)HistName.Data(),0.1,0.96,0.03,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+    HistName = Form("det: (%d, %d, %d, %d, %d, %d)",arr_layer_detector[0],arr_layer_detector[1],arr_layer_detector[2],arr_layer_detector[3],arr_layer_detector[4],arr_layer_detector[5]);
+    plotTopLegend((char*)HistName.Data(),0.24,0.92,0.03,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+    Double_t arr_HV_anode[6] = {-1.0};
+    Double_t arr_HV_drift[6] = {-1.0};
+    for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+    {
+        Double_t det;
+        tg_HV_anode_vs_det ->GetPoint(arr_layer_detector[i_layer],det,arr_HV_anode[i_layer]);
+        tg_HV_drift_vs_det ->GetPoint(arr_layer_detector[i_layer],det,arr_HV_drift[i_layer]);
+    }
+    HistName = Form("HVA: (%4.0f, %4.0f, %4.0f, %4.0f, %4.0f, %4.0f)",arr_HV_anode[0],arr_HV_anode[1],arr_HV_anode[2],arr_HV_anode[3],arr_HV_anode[4],arr_HV_anode[5]);
+    plotTopLegend((char*)HistName.Data(),0.24,0.89,0.03,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+    HistName = Form("HVD: (%4.0f, %4.0f, %4.0f, %4.0f, %4.0f, %4.0f)",arr_HV_drift[0],arr_HV_drift[1],arr_HV_drift[2],arr_HV_drift[3],arr_HV_drift[4],arr_HV_drift[5]);
+    plotTopLegend((char*)HistName.Data(),0.24,0.86,0.03,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+#endif
+
+    //------canvas-------
+
+    Double_t x_start = 0.0;
+    Double_t y_start = 0.0;
+    Double_t x_stop  = 0.0;
+    Double_t y_stop  = 0.0;
+
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() < 0 && vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() != 0.0)
+    {
+        x_stop = -1*(abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X()) - 60.0);
+        x_start  = -1*(abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].X()) + 60.0);
+    }
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() > 0 && vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() != 0.0)
+    {
+        x_start = (abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X()) - 60.0);
+        x_stop  = (abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].X()) + 60.0);
+    }
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X() == 0)
+    {
+        x_start = -60.0;
+        x_stop  = 60.0;
+    }
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y() < 0)
+    {
+        y_stop = -1*(abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y()) - 60.0);
+        y_start  = -1*(abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].Y()) + 60.0);
+
+    }
+    if (vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y() > 0)
+    {
+        y_start = (abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y()) - 60.0);
+        y_stop  = (abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].Y()) + 60.0);
+    }
+
+    //printf("x_start: %4.3f, x_stop: %4.3f, y_start: %4.3f, y_stop: %4.3f \n",x_start,x_stop,y_start,y_stop);
+    //printf("vec_detectors_sector[i_stack][0]: %d, vec_detectors_sector[i_stack][5]: %d, \n",vec_detectors_sector[0][0],vec_detectors_sector[0][5]);
+    //printf("abs(vec_TV3_TRD_center_offset[vec_detectors_sector[i_stack][0]].X()): %4.3f, abs(vec_TV3_TRD_center_offset[vec_detectors_sector[i_stack][5]].X()): %4.3f \n",abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].X()),abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].X()));
+    //printf("abs(vec_TV3_TRD_center_offset[vec_detectors_sector[i_stack][0]].Y()): %4.3f, abs(vec_TV3_TRD_center_offset[vec_detectors_sector[i_stack][5]].Y()): %4.3f \n",abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][0]].Y()),abs(vec_TV3_TRD_center_offset[vec_detectors_sector[0][5]].Y()));
+    //printf("\n");
+
+
+    vector<TH1F*> vec_h_frame;
+    vec_h_frame.resize(5);
+
+    for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+    {
+        vec_h_frame[i_stack] = new TH1F();
+    }
+
+    TCanvas* can_2D_TRD_track = new TCanvas("can_2D_TRD_track","can_2D_TRD_track",10,10,1500,300);
+
+    can_2D_TRD_track ->Divide(5,1); // x = stack, y = sector
+
+    for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+    {
+        Int_t iPad = i_stack+1;
+        can_2D_TRD_track ->cd(iPad)->SetTicks(1,1);
+        can_2D_TRD_track ->cd(iPad)->SetGrid(0,0);
+        can_2D_TRD_track ->cd(iPad)->SetFillColor(10);
+        can_2D_TRD_track ->cd(iPad)->SetRightMargin(0.01);
+        can_2D_TRD_track ->cd(iPad)->SetTopMargin(0.01);
+        can_2D_TRD_track ->cd(iPad)->SetBottomMargin(0.2);
+        can_2D_TRD_track ->cd(iPad)->SetLeftMargin(0.2);
+        can_2D_TRD_track ->cd(iPad);
+        //                h_dummy_Delta_vs_impact->Draw("h");
+
+        vec_h_frame[i_stack] = can_2D_TRD_track ->cd(iPad)->DrawFrame(x_start,y_start,x_stop,y_stop,Form("vec_h_frame_%d",iPad));
+
+        vec_h_frame[i_stack]->SetStats(0);
+        vec_h_frame[i_stack]->SetTitle("");
+        vec_h_frame[i_stack]->GetXaxis()->SetTitleOffset(1.1);
+        vec_h_frame[i_stack]->GetYaxis()->SetTitleOffset(1.8);
+        vec_h_frame[i_stack]->GetXaxis()->SetLabelOffset(0.0);
+        vec_h_frame[i_stack]->GetYaxis()->SetLabelOffset(0.01);
+        vec_h_frame[i_stack]->GetXaxis()->SetLabelSize(0.05);
+        vec_h_frame[i_stack]->GetYaxis()->SetLabelSize(0.05);
+        vec_h_frame[i_stack]->GetXaxis()->SetTitleSize(0.05);
+        vec_h_frame[i_stack]->GetYaxis()->SetTitleSize(0.05);
+        vec_h_frame[i_stack]->GetXaxis()->SetNdivisions(505,'N');
+        vec_h_frame[i_stack]->GetYaxis()->SetNdivisions(505,'N');
+        vec_h_frame[i_stack]->GetXaxis()->CenterTitle();
+        vec_h_frame[i_stack]->GetYaxis()->CenterTitle();
+        vec_h_frame[i_stack]->GetXaxis()->SetTitle("x (cm)");
+        vec_h_frame[i_stack]->GetYaxis()->SetTitle("y (cm)");
+
+        can_2D_TRD_track ->cd(iPad);
+
+        vec_TPM_self_cluster[i_stack] ->SetMarkerColor(kRed);
+        vec_TPM_self_cluster[i_stack] ->SetMarkerSize(0.4);
+        vec_TPM_self_cluster[i_stack] ->SetMarkerStyle(20);
+        vec_TPM_self_cluster[i_stack] ->Draw("");
+
+        for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+        {
+            for (Int_t i_trkl = 0; i_trkl < vec_self_tracklet_line_2D[i_stack][i_layer].size(); i_trkl++)
+            {
+                vec_self_tracklet_line_2D[i_stack][i_layer][i_trkl] ->DrawClone("l");
+            }
+
+        }
+
+    }
+    vec_TPM_self_cluster.clear();
+    vec_self_tracklet_line_2D.clear();
+}
+//----------------------------------------------------------------------------------------
+
 
 
 #endif // __TBASE_TRD_CALIB_H__
