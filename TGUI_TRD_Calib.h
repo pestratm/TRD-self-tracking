@@ -51,6 +51,7 @@ private:
     TGTextButton *Button_draw3D_offline_tracklets;
     TGTextButton *Button_Calibrate;
     TGTextButton *Button_Track_Tracklets;
+    TGTextButton *Button_Find_Tracklets;
     TGTextButton *Button_draw2D_track;
     TGTextButton *Button_draw2D_TRD_track;
     TGTextButton *Button_draw2D_TRD_tracklets;
@@ -99,6 +100,7 @@ public:
     Int_t Draw_all_tracks();
     Int_t Calibrate();
     Int_t Track_Tracklets();
+    Int_t Find_TRD_tracklets();
     ClassDef(TGUI_TRD_Calib, 0)
 };
 //---------------------------------------------------------------------------------
@@ -285,13 +287,20 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
     Button_Calibrate->Connect("Clicked()", "TGUI_TRD_Calib", this, "Calibrate()");
     hframe_Main[3]->AddFrame(Button_Calibrate, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
 
+#if 0
     // draw button
     Button_Track_Tracklets = new TGTextButton(hframe_Main[3], "&TrackTracklets ",10);
     Button_Track_Tracklets->Connect("Clicked()", "TGUI_TRD_Calib", this, "Track_Tracklets()");
     hframe_Main[3]->AddFrame(Button_Track_Tracklets, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
+#endif
 
     // draw button
-    Button_draw2D_track = new TGTextButton(hframe_Main[3], "&Draw 2D ",10);
+    Button_Find_Tracklets = new TGTextButton(hframe_Main[3], "&Find TRD Tracklets ",10);
+    Button_Find_Tracklets->Connect("Clicked()", "TGUI_TRD_Calib", this, "Find_TRD_tracklets()");
+    hframe_Main[3]->AddFrame(Button_Find_Tracklets, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
+
+    // draw button
+    Button_draw2D_track = new TGTextButton(hframe_Main[3], "&Draw 2D TPC-TRD match ",10);
     Button_draw2D_track->Connect("Clicked()", "TGUI_TRD_Calib", this, "Draw_2D_track()");
     hframe_Main[3]->AddFrame(Button_draw2D_track, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
 
@@ -555,8 +564,14 @@ Int_t TGUI_TRD_Calib::Draw_2D_track()
     gClient->GetColorByName("green", green);
     Button_draw2D_track->ChangeBackground(green);
 
+    Double_t Delta_x        = arr_NEntry_matching_params[0]->GetNumberEntry()->GetNumber();
+    Double_t Delta_z        = arr_NEntry_matching_params[1]->GetNumberEntry()->GetNumber();
+    Double_t factor_layer   = arr_NEntry_matching_params[2]->GetNumberEntry()->GetNumber();
+    Double_t factor_missing = arr_NEntry_matching_params[3]->GetNumberEntry()->GetNumber();
+
     Int_t i_track = arr_NEntry_ana_params[1]->GetNumberEntry()->GetNumber();
 
+#if 0
     vector<TVector2> vec_TV2_clusters;
     vec_TV2_clusters.resize(6);
     Int_t N_clusters_circle_fit = 0;
@@ -578,9 +593,11 @@ Int_t TGUI_TRD_Calib::Draw_2D_track()
             }
         }
     }
+#endif
 
     Base_TRD_Calib ->Draw_2D_track(i_track);
     //printf("N_clusters_circle_fit: %d \n",N_clusters_circle_fit);
+#if 0
     if(N_clusters_circle_fit == 3) Base_TRD_Calib ->Draw_2D_circle_3points(vec_TV2_clusters);
 
 
@@ -642,8 +659,10 @@ Int_t TGUI_TRD_Calib::Draw_2D_track()
     TPM_cluster ->SetMarkerSize(0.9);
     TPM_cluster ->SetMarkerStyle(20);
     TPM_cluster ->Draw("");
+#endif
 
-    Base_TRD_Calib ->Draw_tracklets_line_2D(i_track);
+    //Base_TRD_Calib ->Draw_tracklets_line_2D(i_track);
+    Base_TRD_Calib ->Draw_matched_tracklets_line_2D(i_track);
 
     return 1;
 }
@@ -681,12 +700,32 @@ Int_t TGUI_TRD_Calib::Draw_2D_self_tracklets()
     Button_draw2D_TRD_tracklets->ChangeBackground(green);
 
     Int_t Sector = NEntry_sector->GetNumberEntry()->GetNumber();
+    //Double_t Delta_x        = arr_NEntry_matching_params[0]->GetNumberEntry()->GetNumber();
+    //Double_t Delta_z        = arr_NEntry_matching_params[1]->GetNumberEntry()->GetNumber();
+    //Double_t factor_layer   = arr_NEntry_matching_params[2]->GetNumberEntry()->GetNumber();
+    //Double_t factor_missing = arr_NEntry_matching_params[3]->GetNumberEntry()->GetNumber();
+
+    Base_TRD_Calib ->Draw_self_tracklets_line_2D(Sector);
+
+    return 1;
+}
+
+//---------------------------------------------------------------------------------
+
+Int_t TGUI_TRD_Calib::Find_TRD_tracklets()
+{
+    printf("TGUI_TRD_Calib::Find_TRD_tracklets() \n");
+    Pixel_t green;
+    gClient->GetColorByName("green", green);
+    Button_Find_Tracklets->ChangeBackground(green);
+
+    //Int_t Sector = NEntry_sector->GetNumberEntry()->GetNumber();
     Double_t Delta_x        = arr_NEntry_matching_params[0]->GetNumberEntry()->GetNumber();
     Double_t Delta_z        = arr_NEntry_matching_params[1]->GetNumberEntry()->GetNumber();
     Double_t factor_layer   = arr_NEntry_matching_params[2]->GetNumberEntry()->GetNumber();
     Double_t factor_missing = arr_NEntry_matching_params[3]->GetNumberEntry()->GetNumber();
 
-    Base_TRD_Calib ->Draw_self_tracklets_line_2D(Sector,Delta_x,Delta_z,factor_layer,factor_missing);
+    Base_TRD_Calib ->Make_clusters_and_get_tracklets_fit(Delta_x,Delta_z,factor_layer,factor_missing);
 
     return 1;
 }

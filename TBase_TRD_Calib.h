@@ -77,6 +77,7 @@ private:
     Long64_t Event_active = 0;
     Double_t tracklets_min[7] = {-1.0};
     vector< vector<Double_t> > self_tracklets_min;
+    vector< vector<Double_t> > trkl_min; //for matched self tracklets
 
     TChain* input_SE;
     TString JPsi_TREE   = "Tree_AS_Event";
@@ -110,7 +111,7 @@ private:
     TEveLine* vec_tracklets_line = NULL;
     vector<TPolyLine*> vec_tracklets_line_2D;
     vector< vector< vector <TPolyLine*> > > vec_self_tracklet_line_2D;
-
+    vector< vector<TPolyLine*> > vec_self_tracklet_line_2D_matched;
 
     TPolyLine* TPL_helix;
 
@@ -192,11 +193,11 @@ private:
     vector<Int_t> vec_layer_in_fit;
     vector< vector< vector<Double_t> > > vec_tracklet_fit_points;
     vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_fit_points;
+    vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points_matched;
+    vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_fit_points_matched;
 
     vector<TProfile*> vec_tp_Delta_vs_impact;
     vector<TH2D*> vec_TH2D_Delta_vs_impact;
-
-
 
 public:
     TBase_TRD_Calib();
@@ -243,7 +244,9 @@ public:
     void Reset();
     void Draw_2D_TRD_track(Int_t Sector, Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing, Int_t flag_draw_clusters);
     void Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
-    void Draw_self_tracklets_line_2D(Int_t Sector,Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
+    void Draw_self_tracklets_line_2D(Int_t Sector);
+    void match_TRD_tracklets_to_TPC_track(Int_t i_track);
+    Int_t Draw_matched_tracklets_line_2D(Int_t i_track);
 
 
     ClassDef(TBase_TRD_Calib, 1)
@@ -510,6 +513,9 @@ TBase_TRD_Calib::TBase_TRD_Calib()
 
 
     vec_tracklets_line_2D.resize(7);
+    vec_self_tracklet_points_matched.resize(540);
+    vec_self_tracklet_fit_points_matched.resize(540);
+    trkl_min.resize(540);
 }
 //----------------------------------------------------------------------------------------
 
@@ -1768,8 +1774,6 @@ void TBase_TRD_Calib::Draw_2D_track(Int_t i_track){
 }
 //----------------------------------------------------------------------------------------
 
-
-
 //----------------------------------------------------------------------------------------
 void TBase_TRD_Calib::Draw_neighbor_tracks(Int_t i_track_sel)
 {
@@ -2648,7 +2652,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                     pos_ADC_sum[i_xyz] /= N_digits_added;
                 }
 
-                TEve_clusters ->SetNextPoint(pos_ADC_sum[0],pos_ADC_sum[1],pos_ADC_sum[2]);
+                //TEve_clusters ->SetNextPoint(pos_ADC_sum[0],pos_ADC_sum[1],pos_ADC_sum[2]);
                 for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
                 {
                     vec_digit_cluster_data[i_xyzADC] = pos_ADC_sum[i_xyzADC];
@@ -3149,6 +3153,117 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
     //printf("test 6 \n");
 
+}
+
+//----------------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------------
+void TBase_TRD_Calib::match_TRD_tracklets_to_TPC_track(Int_t i_track)
+{
+    printf("TBase_TRD_Calib::match_TRD_tracklets_to_TPC_track(%d) \n",i_track);
+
+    //-----------------------
+    //event loop
+
+    //Make_clusters_and_get_tracklets_fit(Delta_x,Delta_z,factor_layer,factor_missing);
+
+    vector<Int_t> vec_detectors_hit;
+
+    AS_Track               = AS_Event ->getTrack( i_track ); // take the track
+    UShort_t fNumTRDdigits = AS_Track ->getNumTRD_digits();
+
+    //TLorentzVector TLV_part = AS_Track ->get_TLV_part();
+    //Float_t momentum        = TLV_part.P();
+    //Float_t eta_track       = TLV_part.Eta();
+    //Float_t pT_track        = TLV_part.Pt();
+    //Float_t theta_track     = TLV_part.Theta();
+    //Float_t phi_track       = TLV_part.Phi();
+
+    //pT = pT_track;
+
+    // Get the detectors which were hit from the track of interest
+    for(UShort_t i_digits = 0; i_digits < fNumTRDdigits; i_digits++)
+    {
+        //cout << "i_digits: " << i_digits << ", of " << fNumTRDdigits << endl;
+        AS_Digit              = AS_Track ->getTRD_digit(i_digits);
+        Int_t    layer        = AS_Digit ->get_layer();
+        Int_t    sector       = AS_Digit ->get_sector();
+        Int_t    stack        = AS_Digit ->get_stack();
+        Int_t    detector     = AS_Digit ->get_detector(layer,stack,sector);
+
+        Int_t flag_exist = 0;
+        for(Int_t i_ele = 0; i_ele < (Int_t)vec_detectors_hit.size(); i_ele++)
+        {
+            if(vec_detectors_hit[i_ele] == detector)
+            {
+                flag_exist = 1;
+                break;
+            }
+        }
+        if(!flag_exist) vec_detectors_hit.push_back(detector);
+    }
+
+    for(Int_t i_param = 0; i_param < 9; i_param++)
+    {
+        aliHelix.fHelix[i_param] = AS_Track ->getHelix_param(i_param);
+    }
+
+    //printf("test 1 \n");
+
+    Double_t helix_point[3];
+    Double_t pathA = 0.0;
+    Double_t radius = 0.0;
+    Int_t i_det;
+    Int_t n_matches;
+
+    for(Int_t i_step = 0; i_step < 400; i_step++)
+    {
+        pathA = i_step*3.0;
+        aliHelix.Evaluate(pathA,helix_point);
+
+        //printf("test 1.1 \n");
+
+        radius = TMath::Sqrt(TMath::Power(helix_point[0],2.0) + TMath::Power(helix_point[1],2.0));
+        //TPL3D_helix_track ->SetNextPoint(helix_point[0],helix_point[1],helix_point[2]);
+        //printf("i_step: %d, pos: {%4.3f, %4.3f, %4.3f}, radius: %4.3f \n",i_step,helix_point[0],helix_point[1],helix_point[2],radius);
+
+        for (Int_t i_ele = 0; i_ele < (Int_t)vec_detectors_hit.size(); i_ele++)
+        {
+            //printf("test 1.2; vec_detectors_hit[%d]: %d \n",i_ele,vec_detectors_hit[i_ele]);
+            i_det = vec_detectors_hit[i_ele];
+            n_matches = 0;
+
+            //printf("vec_self_tracklet_points[i_det].size(): %d \n",vec_self_tracklet_points[i_det].size());
+
+            for (Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_points[i_det].size(); i_trkl++)
+            {
+                //printf("test 1.3 \n");
+                if(fabs(helix_point[0] - vec_self_tracklet_fit_points[i_det][i_trkl][0][0]) < 3 && fabs(helix_point[1] - vec_self_tracklet_fit_points[i_det][i_trkl][0][1]) < 3 && fabs(helix_point[2] - vec_self_tracklet_fit_points[i_det][i_trkl][0][2]) < 3 && vec_self_tracklet_fit_points[i_det][i_trkl][0][0] != -999.0 && vec_self_tracklet_fit_points[i_det][i_trkl][1][0] != -999.0)
+                {
+                    //printf("test 2 \n");
+                    vec_self_tracklet_points_matched[i_det].push_back(vec_self_tracklet_points[i_det][i_trkl]);
+                    vec_self_tracklet_fit_points_matched[i_det].push_back(vec_self_tracklet_fit_points[i_det][i_trkl]);
+                    trkl_min[i_det].push_back(self_tracklets_min[i_det][i_trkl]);
+                    //printf("test 3 \n");
+                    n_matches++;
+                    continue;
+                    //for (i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+                    //{
+                    //    vec_self_tracklet_points_matched[i_det][i_cls][i_time_sub][i_xyzADC] = vec_self_tracklet_points[i_det][i_cls][i_time_sub][i_xyzADC];
+                    //    //or push_back
+                    //}
+                }
+
+                //if(n_matches == 0)
+                //{
+                //    printf("trkl matching: no matches in layer %d \n",i_det%6);
+                //}
+            }
+        }
+        if(radius > 368.0) break;
+    }
+
+    vec_detectors_hit.clear();
 }
 
 //----------------------------------------------------------------------------------------
@@ -3965,10 +4080,10 @@ void TBase_TRD_Calib::Draw_2D_TRD_track(Int_t Sector, Double_t Delta_x, Double_t
 //----------------------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------------------
-void TBase_TRD_Calib::Draw_self_tracklets_line_2D(Int_t Sector,Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing)
+void TBase_TRD_Calib::Draw_self_tracklets_line_2D(Int_t Sector)
 {
     //get_tracklets_fit(i_track);
-    Make_clusters_and_get_tracklets_fit(Delta_x,Delta_z,factor_layer,factor_missing);
+    //Make_clusters_and_get_tracklets_fit(Delta_x,Delta_z,factor_layer,factor_missing);
 
     //Int_t sector = (Int_t)(i_det/30);
     //Int_t stack  = (Int_t)(i_det%30/6);
@@ -4178,6 +4293,152 @@ void TBase_TRD_Calib::Draw_self_tracklets_line_2D(Int_t Sector,Double_t Delta_x,
 }
 //----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
+Int_t TBase_TRD_Calib::Draw_matched_tracklets_line_2D(Int_t i_track)
+{
+    printf("TBase_TRD_Calib::Draw_matched_tracklets_line_2D(%d) \n",i_track);
+    match_TRD_tracklets_to_TPC_track(i_track);
 
+    vector<Int_t> vec_detectors_hit;
+    Int_t n_det_hit = 0;
+
+    AS_Track               = AS_Event ->getTrack( i_track ); // take the track
+    UShort_t fNumTRDdigits = AS_Track ->getNumTRD_digits();
+
+    //TLorentzVector TLV_part = AS_Track ->get_TLV_part();
+    //Float_t momentum        = TLV_part.P();
+    //Float_t eta_track       = TLV_part.Eta();
+    //Float_t pT_track        = TLV_part.Pt();
+    //Float_t theta_track     = TLV_part.Theta();
+    //Float_t phi_track       = TLV_part.Phi();
+
+    //pT = pT_track;
+
+    // Get the detectors which were hit from the track of interest
+    for(UShort_t i_digits = 0; i_digits < fNumTRDdigits; i_digits++)
+    {
+        //cout << "i_digits: " << i_digits << ", of " << fNumTRDdigits << endl;
+        AS_Digit              = AS_Track ->getTRD_digit(i_digits);
+        Int_t    layer        = AS_Digit ->get_layer();
+        Int_t    sector       = AS_Digit ->get_sector();
+        Int_t    stack        = AS_Digit ->get_stack();
+        Int_t    detector     = AS_Digit ->get_detector(layer,stack,sector);
+
+        Int_t flag_exist = 0;
+        for(Int_t i_ele = 0; i_ele < (Int_t)vec_detectors_hit.size(); i_ele++)
+        {
+            if(vec_detectors_hit[i_ele] == detector)
+            {
+                flag_exist = 1;
+                break;
+            }
+        }
+        if(!flag_exist) vec_detectors_hit.push_back(detector);
+        n_det_hit++;
+    }
+
+    if (n_det_hit == 0)
+    {
+        HistName = Form("track %d doesn't hit any TRD chamber",i_track);
+        plotTopLegend((char*)HistName.Data(),0.24,0.89,0.03,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+        return 0;
+    }
+    Int_t i_det;
+    vec_self_tracklet_line_2D_matched.resize(vec_detectors_hit.size());
+
+    vector<Double_t> self_trkl_min;
+    self_trkl_min.resize(6);
+    for (Int_t i_layer = 0; i_layer < 6; i_layer++)
+    {
+        self_trkl_min[i_layer] = -1.0;
+    }
+
+    for(Int_t i_ele = 0; i_ele < vec_detectors_hit.size(); i_ele++) // 6 layers
+    {
+        i_det = vec_detectors_hit[i_ele];
+        //printf("i_det[%d]: %d \n",i_ele,vec_detectors_hit[i_ele]);
+        vec_self_tracklet_line_2D_matched[i_ele].resize(vec_self_tracklet_fit_points_matched[i_det].size());
+
+        for (Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_fit_points_matched[i_det].size(); i_trkl++)
+        {
+
+            //if(vec_self_tracklet_fit_points_matched[i_det][i_trkl][0][0] > -999.0 && vec_selftracklet_fit_points_matched[i_det][i_trkl][0][1] > -999.0)
+            //{
+             vec_self_tracklet_line_2D_matched[i_ele][i_trkl] = new TPolyLine();
+             vec_self_tracklet_line_2D_matched[i_ele][i_trkl] ->SetNextPoint(vec_self_tracklet_fit_points_matched[i_det][i_trkl][0][0],vec_self_tracklet_fit_points_matched[i_det][i_trkl][0][1]);
+             vec_self_tracklet_line_2D_matched[i_ele][i_trkl] ->SetNextPoint(vec_self_tracklet_fit_points_matched[i_det][i_trkl][1][0],vec_self_tracklet_fit_points_matched[i_det][i_trkl][1][1]);
+             vec_self_tracklet_line_2D_matched[i_ele][i_trkl] ->SetLineStyle(1);
+             vec_self_tracklet_line_2D_matched[i_ele][i_trkl] ->SetLineColor(color_layer[i_det%6]);
+             vec_self_tracklet_line_2D_matched[i_ele][i_trkl] ->SetLineWidth(line_width_layer[i_det%6]);
+             vec_self_tracklet_line_2D_matched[i_ele][i_trkl] ->DrawClone("l");
+             self_trkl_min[vec_detectors_hit[i_ele]%6] = trkl_min[i_det][i_trkl];
+
+             //printf("i_layer tracklets line: %d \n", i_det%6);
+             //printf("x_start: %4.3f, \n", vec_self_tracklet_fit_points_matched[i_det][i_trkl][0][0]);
+             //printf("x_stop: %4.3f, \n", vec_self_tracklet_fit_points_matched[i_det][i_trkl][1][0]);
+
+            //}
+            //else
+            //{
+            //    printf("TBase_TRD_Calib::Draw_tracklets_line(%d), i_layer: %d has no entry \n",i_track,i_det%6);
+            //}
+        }
+    }
+
+#if 0
+    for(Int_t i_onl_trkl = 0; i_onl_trkl < (Int_t)vec_TPL_on_trkl.size(); i_onl_trkl++)
+    {
+        vec_TPL_on_trkl[i_onl_trkl] ->SetLineStyle(9);
+        vec_TPL_on_trkl[i_onl_trkl] ->SetLineWidth(3);
+        vec_TPL_on_trkl[i_onl_trkl] ->SetLineColor(kBlack);
+        vec_TPL_on_trkl[i_onl_trkl] ->DrawClone("l");
+    }
+
+    for(Int_t i_offl_trkl = 0; i_offl_trkl < (Int_t)vec_TPL_off_trkl.size(); i_offl_trkl++)
+    {
+        //printf(" drawing i_offl_trkl: %d \n",i_offl_trkl);
+        vec_TPL_off_trkl[i_offl_trkl] ->SetLineStyle(9);
+        vec_TPL_off_trkl[i_offl_trkl] ->SetLineWidth(3);
+        vec_TPL_off_trkl[i_offl_trkl] ->SetLineColor(kCyan+1);
+        vec_TPL_off_trkl[i_offl_trkl] ->DrawClone("l");
+    }
+
+#endif
+    HistName = "Ev. ";
+    HistName += Event_active;
+    HistName += ", tr. ";
+    HistName += i_track;
+    HistName += Form(", min: (%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f)",self_trkl_min[0],self_trkl_min[1],self_trkl_min[2],self_trkl_min[3],self_trkl_min[4],self_trkl_min[5]);
+
+    plotTopLegend((char*)HistName.Data(),0.1,0.96,0.03,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+    HistName = Form("det: (%d, %d, %d, %d, %d, %d)",vec_detectors_hit[0],vec_detectors_hit[1],vec_detectors_hit[2],vec_detectors_hit[3],vec_detectors_hit[4],vec_detectors_hit[5]);
+    plotTopLegend((char*)HistName.Data(),0.24,0.92,0.03,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+#if 0
+    Double_t arr_HV_anode[6] = {-1.0};
+    Double_t arr_HV_drift[6] = {-1.0};
+    for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+    {
+        Double_t det;
+        tg_HV_anode_vs_det ->GetPoint(arr_layer_detector[i_layer],det,arr_HV_anode[i_layer]);
+        tg_HV_drift_vs_det ->GetPoint(arr_layer_detector[i_layer],det,arr_HV_drift[i_layer]);
+    }
+    HistName = Form("HVA: (%4.0f, %4.0f, %4.0f, %4.0f, %4.0f, %4.0f)",arr_HV_anode[0],arr_HV_anode[1],arr_HV_anode[2],arr_HV_anode[3],arr_HV_anode[4],arr_HV_anode[5]);
+    plotTopLegend((char*)HistName.Data(),0.24,0.89,0.03,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+    HistName = Form("HVD: (%4.0f, %4.0f, %4.0f, %4.0f, %4.0f, %4.0f)",arr_HV_drift[0],arr_HV_drift[1],arr_HV_drift[2],arr_HV_drift[3],arr_HV_drift[4],arr_HV_drift[5]);
+    plotTopLegend((char*)HistName.Data(),0.24,0.86,0.03,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+#endif
+
+    //tg_HV_drift_vs_det = (TGraph*)inputfile_QA->Get("tg_HV_drift_vs_det");
+    //tg_HV_anode_vs_det = (TGraph*)inputfile_QA->Get("tg_HV_anode_vs_det");;
+    //tg_vdrift_vs_det   = (TGraph*)inputfile_QA->Get("tg_vdrift_vs_det");;
+    vec_detectors_hit.clear();
+    return 1;
+
+}
+//----------------------------------------------------------------------------------------
 
 #endif // __TBASE_TRD_CALIB_H__
