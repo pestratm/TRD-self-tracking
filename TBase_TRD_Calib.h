@@ -3216,29 +3216,33 @@ void TBase_TRD_Calib::match_TRD_tracklets_to_TPC_track(Int_t i_track)
     Int_t i_det;
     Int_t n_matches;
 
-    for(Int_t i_step = 0; i_step < 400; i_step++)
+    for (Int_t i_ele = 0; i_ele < (Int_t)vec_detectors_hit.size(); i_ele++)
     {
-        pathA = i_step*3.0;
-        aliHelix.Evaluate(pathA,helix_point);
+        i_det = vec_detectors_hit[i_ele];
+        n_matches = 0;
 
-        //printf("test 1.1 \n");
+        //printf("vec_TV3_TRD_center_offset[i_det]: %4.3f \n",vec_TV3_TRD_center_offset[i_det].Perp());
 
-        radius = TMath::Sqrt(TMath::Power(helix_point[0],2.0) + TMath::Power(helix_point[1],2.0));
-        //TPL3D_helix_track ->SetNextPoint(helix_point[0],helix_point[1],helix_point[2]);
-        //printf("i_step: %d, pos: {%4.3f, %4.3f, %4.3f}, radius: %4.3f \n",i_step,helix_point[0],helix_point[1],helix_point[2],radius);
-
-        for (Int_t i_ele = 0; i_ele < (Int_t)vec_detectors_hit.size(); i_ele++)
+        for (Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_points[i_det].size(); i_trkl++)
         {
-            //printf("test 1.2; vec_detectors_hit[%d]: %d \n",i_ele,vec_detectors_hit[i_ele]);
-            i_det = vec_detectors_hit[i_ele];
-            n_matches = 0;
-
-            //printf("vec_self_tracklet_points[i_det].size(): %d \n",vec_self_tracklet_points[i_det].size());
-
-            for (Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_points[i_det].size(); i_trkl++)
+            for(Int_t i_step = 0; i_step < 400; i_step++)
             {
+                pathA = i_step*3.0;
+                aliHelix.Evaluate(pathA,helix_point);
+
+                radius = TMath::Sqrt(TMath::Power(helix_point[0],2.0) + TMath::Power(helix_point[1],2.0));
+                //TPL3D_helix_track ->SetNextPoint(helix_point[0],helix_point[1],helix_point[2]);
+                //printf("i_step: %d, pos: {%4.3f, %4.3f, %4.3f}, radius: %4.3f \n",i_step,helix_point[0],helix_point[1],helix_point[2],radius);
+                if(radius < vec_TV3_TRD_center_offset[i_det].Perp() - 10.0) continue;
+
+                //printf("test 1.2; vec_detectors_hit[%d]: %d \n",i_ele,vec_detectors_hit[i_ele]);
+
+                //printf("helix_point[0]: %4.3f, helix_point[1]: %4.3f \n",helix_point[0],helix_point[1]);
+
+                //printf("vec_self_tracklet_points[i_det].size(): %d \n",vec_self_tracklet_points[i_det].size());
+
                 //printf("test 1.3 \n");
-                if(fabs(helix_point[0] - vec_self_tracklet_fit_points[i_det][i_trkl][0][0]) < 3 && fabs(helix_point[1] - vec_self_tracklet_fit_points[i_det][i_trkl][0][1]) < 3 && fabs(helix_point[2] - vec_self_tracklet_fit_points[i_det][i_trkl][0][2]) < 3 && vec_self_tracklet_fit_points[i_det][i_trkl][0][0] != -999.0 && vec_self_tracklet_fit_points[i_det][i_trkl][1][0] != -999.0)
+                if(fabs(helix_point[0] - vec_self_tracklet_fit_points[i_det][i_trkl][0][0]) < 3.0 && fabs(helix_point[1] - vec_self_tracklet_fit_points[i_det][i_trkl][0][1]) < 3.0 && fabs(helix_point[2] - vec_self_tracklet_fit_points[i_det][i_trkl][0][2]) < 10.0 && vec_self_tracklet_fit_points[i_det][i_trkl][0][0] != -999.0 && vec_self_tracklet_fit_points[i_det][i_trkl][1][0] != -999.0)
                 {
                     //printf("test 2 \n");
                     vec_self_tracklet_points_matched[i_det].push_back(vec_self_tracklet_points[i_det][i_trkl]);
@@ -3246,7 +3250,8 @@ void TBase_TRD_Calib::match_TRD_tracklets_to_TPC_track(Int_t i_track)
                     trkl_min[i_det].push_back(self_tracklets_min[i_det][i_trkl]);
                     //printf("test 3 \n");
                     n_matches++;
-                    continue;
+                    //printf("i_det: %d, i_trkl: %d, n_matches: %d \n",i_det,i_trkl,n_matches);
+                    //continue;
                     //for (i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
                     //{
                     //    vec_self_tracklet_points_matched[i_det][i_cls][i_time_sub][i_xyzADC] = vec_self_tracklet_points[i_det][i_cls][i_time_sub][i_xyzADC];
@@ -3254,15 +3259,14 @@ void TBase_TRD_Calib::match_TRD_tracklets_to_TPC_track(Int_t i_track)
                     //}
                 }
 
-                //if(n_matches == 0)
+                if(n_matches > 0) break;
                 //{
                 //    printf("trkl matching: no matches in layer %d \n",i_det%6);
                 //}
+                if(radius > vec_TV3_TRD_center_offset[i_det].Perp() + 10.0) break;
             }
         }
-        if(radius > 368.0) break;
     }
-
     vec_detectors_hit.clear();
 }
 
