@@ -78,6 +78,9 @@ private:
     Double_t tracklets_min[7] = {-1.0};
     vector< vector<Double_t> > self_tracklets_min;
     vector< vector<Double_t> > trkl_min; //for matched self tracklets
+    vector< vector<Double_t> > trkl_min_background; //for background self tracklets
+    vector< vector<Double_t> > trkl_min_bckg; //for background self tracklets
+
 
     TChain* input_SE;
     TString JPsi_TREE   = "Tree_AS_Event";
@@ -195,6 +198,10 @@ private:
     vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_fit_points;
     vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points_matched;
     vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_fit_points_matched;
+    vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points_background;
+    vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_fit_points_background;
+    vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points_bckg;
+    vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_fit_points_bckg;
 
     vector<TProfile*> vec_tp_Delta_vs_impact;
     vector<TH2D*> vec_TH2D_Delta_vs_impact;
@@ -247,6 +254,7 @@ public:
     void Draw_self_tracklets_line_2D(Int_t Sector);
     void match_TRD_tracklets_to_TPC_track(Int_t i_track);
     Int_t Draw_matched_tracklets_line_2D(Int_t i_track);
+    void find_backgound_tracklets();
 
 
     ClassDef(TBase_TRD_Calib, 1)
@@ -515,7 +523,13 @@ TBase_TRD_Calib::TBase_TRD_Calib()
     vec_tracklets_line_2D.resize(7);
     vec_self_tracklet_points_matched.resize(540);
     vec_self_tracklet_fit_points_matched.resize(540);
+    vec_self_tracklet_points_background.resize(540);
+    vec_self_tracklet_fit_points_background.resize(540);
     trkl_min.resize(540);
+    trkl_min_background.resize(540);
+    vec_self_tracklet_points_bckg.resize(540);
+    vec_self_tracklet_fit_points_bckg.resize(540);
+    trkl_min_bckg.resize(540);
 }
 //----------------------------------------------------------------------------------------
 
@@ -1480,7 +1494,8 @@ void TBase_TRD_Calib::Draw_tracklets_line_2D(Int_t i_track)
             vec_tracklets_line_2D[i_layer] ->SetNextPoint(vec_tracklet_fit_points[i_layer][0][0],vec_tracklet_fit_points[i_layer][0][1]);
             vec_tracklets_line_2D[i_layer] ->SetNextPoint(vec_tracklet_fit_points[i_layer][1][0],vec_tracklet_fit_points[i_layer][1][1]);
             vec_tracklets_line_2D[i_layer] ->SetLineStyle(1);
-            vec_tracklets_line_2D[i_layer] ->SetLineColor(color_layer[i_layer]);
+            //vec_tracklets_line_2D[i_layer] ->SetLineColor(color_layer[i_layer]);
+            vec_tracklets_line_2D[i_layer] ->SetLineColor(kGray);
             vec_tracklets_line_2D[i_layer] ->SetLineWidth(line_width_layer[i_layer]);
             vec_tracklets_line_2D[i_layer] ->DrawClone("l");
             printf("i_layer tracklets line: %d \n", i_layer);
@@ -3271,6 +3286,150 @@ void TBase_TRD_Calib::match_TRD_tracklets_to_TPC_track(Int_t i_track)
 }
 
 //----------------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------------
+
+void TBase_TRD_Calib::find_backgound_tracklets()
+{
+    Int_t n_trkl = 0;
+
+    //loop over det
+    //vec_self_tracklet_fit_points[i_det][i_trkl][i_AB][i_xyz]
+
+    //loop and store only tracklets that are NOT close to the TPC track
+    for (Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        n_trkl = vec_self_tracklet_fit_points[i_det].size();
+
+        for (Int_t i_trkl = 0; i_trkl < n_trkl; i_trkl++)
+        {
+            Int_t n_matches = 0;
+
+            for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
+            {
+                //if(i_event % 100 == 0) printf("i_event: %lld out of %lld \n",i_event,file_entries_total);
+                if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
+
+                UShort_t NumTracks = AS_Event ->getNumTracks(); // number of tracks in this event
+
+                // Loop over all tracks and find those with hits in vec_detectors_sector
+                for(UShort_t i_track = 0; i_track < NumTracks; ++i_track) // loop over all tracks of the actual event
+                {
+                    //if(i_track == i_track_sel) continue; // Don't use the selected track twice
+                    AS_Track      = AS_Event ->getTrack( i_track ); // take the track
+                    UShort_t fNumTRDdigits = AS_Track ->getNumTRD_digits();
+
+                    for(UShort_t i_digits = 0; i_digits < fNumTRDdigits; i_digits++)
+                    {
+                        //cout << "i_digits: " << i_digits << ", of " << fNumTRDdigits << endl;
+                        AS_Digit              = AS_Track ->getTRD_digit(i_digits);
+                        Int_t    layer        = AS_Digit ->get_layer();
+                        Int_t    sector       = AS_Digit ->get_sector();
+                        Int_t    stack        = AS_Digit ->get_stack();
+                        Int_t    detector     = AS_Digit ->get_detector(layer,stack,sector);
+
+                        //Int_t flag_exist = 0;
+                        //Int_t stack = 0;
+
+                        if(i_det == detector)
+                        {
+                            for(Int_t i_param = 0; i_param < 9; i_param++)
+                            {
+                                aliHelix.fHelix[i_param] = AS_Track ->getHelix_param(i_param);
+                            }
+
+                            Double_t helix_point[3];
+                            Double_t pathA = 0.0;
+                            Double_t radius = 0.0;
+
+                            for(Int_t i_step = 0; i_step < 400; i_step++)
+                            {
+                                pathA = i_step*3.0;
+                                aliHelix.Evaluate(pathA,helix_point);
+
+                                radius = TMath::Sqrt(TMath::Power(helix_point[0],2.0) + TMath::Power(helix_point[1],2.0));
+
+                                if(radius < vec_TV3_TRD_center_offset[i_det].Perp() - 10.0) continue;
+
+                                if(fabs(helix_point[0] - vec_self_tracklet_fit_points[i_det][i_trkl][0][0]) < 5.0 && fabs(helix_point[1] - vec_self_tracklet_fit_points[i_det][i_trkl][0][1]) < 5.0 && fabs(helix_point[2] - vec_self_tracklet_fit_points[i_det][i_trkl][0][2]) < 15.0 )//&& vec_self_tracklet_fit_points[i_det][i_trkl][0][0] != -999.0 && vec_self_tracklet_fit_points[i_det][i_trkl][1][0] != -999.0)
+                                {
+                                    n_matches++;
+                                }
+                                if(radius > vec_TV3_TRD_center_offset[i_det].Perp() + 10.0) break;
+                            }
+                            //flag_exist = 1;
+
+                            //break;
+
+                        }
+                    }
+                }
+            }
+
+            if (n_matches == 0)
+            {
+                vec_self_tracklet_points_background[i_det].push_back(vec_self_tracklet_points[i_det][i_trkl]);
+                vec_self_tracklet_fit_points_background[i_det].push_back(vec_self_tracklet_fit_points[i_det][i_trkl]);
+                trkl_min_background[i_det].push_back(self_tracklets_min[i_det][i_trkl]);
+            }
+
+        }
+
+    }
+
+    Int_t i_det = 0;
+    Int_t n_matches = 0;
+    Double_t radius1 = 0.0;
+    Double_t radius_sub1 = 0.0;
+    Double_t radius2 = 0.0;
+    Double_t radius_sub2 = 0.0;
+
+    for (Int_t i_sector = 0; i_sector < 18; i_sector++)
+    {
+        for (Int_t i_stack = 0; i_stack < 5; i_stack++)
+        {
+            for (Int_t i_layer = 0; i_layer < 5; i_layer++) //from layer 0 to layer 5
+            {
+                i_det = i_sector + 5*i_stack + 6*i_layer;
+
+                if (vec_self_tracklet_points_background[i_det].size() > 0)
+                {
+                    for (Int_t i_trkl = 0; i_trkl < vec_self_tracklet_points_background[i_det].size(); i_trkl++)
+                    {
+                        n_matches = 0;
+                        radius1 = TMath::Sqrt(TMath::Power(vec_self_tracklet_points_background[i_det][i_trkl][0][0],2) + TMath::Power(vec_self_tracklet_points_background[i_det][i_trkl][0][1],2));
+                        radius2 = TMath::Sqrt(TMath::Power(vec_self_tracklet_points_background[i_det][i_trkl][1][0],2) + TMath::Power(vec_self_tracklet_points_background[i_det][i_trkl][1][1],2));
+
+                        if (vec_self_tracklet_points_background[i_det+1].size() > 0) //tracklets from next layer
+                        {
+                            for (Int_t i_trkl_sub = 0; i_trkl_sub < vec_self_tracklet_points_background[i_det+1].size(); i_trkl_sub++)
+                            {
+                                radius_sub1 = TMath::Sqrt(TMath::Power(vec_self_tracklet_points_background[i_det][i_trkl_sub][0][0],2) + TMath::Power(vec_self_tracklet_points_background[i_det][i_trkl_sub][0][1],2));
+                                radius_sub2 = TMath::Sqrt(TMath::Power(vec_self_tracklet_points_background[i_det][i_trkl_sub][1][0],2) + TMath::Power(vec_self_tracklet_points_background[i_det][i_trkl_sub][1][1],2));
+
+                                if(((fabs(radius2 - radius_sub1) < 5.0 || fabs(radius1 - radius_sub2) < 5.0)) && fabs(vec_self_tracklet_points_background[i_det][i_trkl][0][2] - vec_self_tracklet_points_background[i_det][i_trkl_sub][0][2] < 10.0))
+                                {
+                                    n_matches++;
+                                }
+                            }
+                        }
+
+                        if(n_matches == 0)
+                        {
+                            vec_self_tracklet_points_bckg[i_det].push_back(vec_self_tracklet_points_background[i_det][i_trkl]);
+                            vec_self_tracklet_fit_points_bckg[i_det].push_back(vec_self_tracklet_fit_points_background[i_det][i_trkl]);
+                            trkl_min_bckg[i_det].push_back(trkl_min_background[i_det][i_trkl]);
+                        }
+                    }
+
+                    //write here
+                }
+            }
+        }
+    }
+}
+
+    //----------------------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------------------
 void TBase_TRD_Calib::Draw_digits()
