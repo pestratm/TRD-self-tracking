@@ -54,6 +54,46 @@ Double_t calculateMinimumDistanceStraightToPoint(TVector3 &base, TVector3 &dir,
 
 
 //----------------------------------------------------------------------------------------
+TVector3 calculateDCA_vec_StraightToPoint(TVector3 &base, TVector3 &dir, TVector3 &point)
+{
+  // calculates the minimum distance vector of a point to a straight given as parametric straight x = base + n * dir
+
+    TVector3 diff = base-point;
+    TVector3 dir_norm = dir;
+    dir_norm *= (1.0/dir.Mag());
+    Double_t proj_val = diff.Dot(dir_norm);
+    TVector3 proj_dir = dir_norm;
+    proj_dir *= proj_val;
+
+    TVector3 dist_vec = proj_dir - diff;
+
+    return dist_vec;
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+TVector3 calculate_point_on_Straight_dca_to_Point(TVector3 &base, TVector3 &dir, TVector3 &point)
+{
+  // calculates the TVector3 on the straight line which is closest to point
+
+    TVector3 diff = base-point;
+    TVector3 dir_norm = dir;
+    dir_norm *= (1.0/dir.Mag());
+    Double_t proj_val = diff.Dot(dir_norm);
+    TVector3 proj_dir = dir_norm;
+    proj_dir *= proj_val;
+
+    TVector3 dist_vec = proj_dir + base;
+
+    return dist_vec;
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
 class TBase_TRD_Calib
 {
 private:
@@ -2600,6 +2640,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
     //printf("test 2 \n");
 
+    //-------------------------------------------------------
     // Make clusters for each detector and time bin
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
@@ -2673,12 +2714,12 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                     vec_digit_cluster_data[i_xyzADC] = pos_ADC_sum[i_xyzADC];
                 }
 
-                vec_all_TRD_digits_clusters[i_det][i_time].push_back(vec_digit_cluster_data);   //is this already what i need //maybe better to use new func create trkl
-            }                                                                                  
-        } //end of timebin loop
+                vec_all_TRD_digits_clusters[i_det][i_time].push_back(vec_digit_cluster_data);
+            }
+        } // end of timebin loop
     }
-
     printf("arrangement of clusters done \n");
+    //-------------------------------------------------------
 
 
     //printf("test 3 \n");
@@ -2702,10 +2743,13 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
     }
 #endif
 
+
+    //-------------------------------------------------------
+    // Connect clusters within each chamber
     vec_self_tracklet_points.clear();
     vec_self_tracklet_points.resize(540);
 
-    for (Int_t i_det = 0; i_det < 540; i_det++)
+    for(Int_t i_det = 0; i_det < 540; i_det++) // is done chamber wise
     {
         Int_t i_time  = 0;
         Int_t N_clusters = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time].size();
@@ -2719,7 +2763,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
             vec_self_tracklet_points[i_det][i_cls].resize(24);
 
-            for (Int_t i_timebin = 0; i_timebin < 24; i_timebin++)
+            for(Int_t i_timebin = 0; i_timebin < 24; i_timebin++)
             {
                 vec_self_tracklet_points[i_det][i_cls][i_timebin].resize(4);
                 for (Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
@@ -2728,9 +2772,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                 }
             }
 
-            //vec_self_tracklet_points[i_det][i_cls][i].push_back(pos_ADC_max[i_xyz]);
-
-            for (Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+            for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
             {
                 vec_self_tracklet_points[i_det][i_cls][i_time][i_xyzADC] = pos_ADC_max[i_xyzADC];
             }
@@ -2766,10 +2808,10 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
 
                     if(sub_cluster_quality < best_cluster_quality)
-                            {
-                                best_cluster_quality = sub_cluster_quality;
-                                best_sub_cluster     = i_cls_sub;
-                            }
+                    {
+                        best_cluster_quality = sub_cluster_quality;
+                        best_sub_cluster     = i_cls_sub;
+                    }
                 }
 
 
@@ -2802,8 +2844,12 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
     printf("connection of clusters within detector done \n");
     printf("tracklets fit starts now \n");
+    //-------------------------------------------------------
 
-    //printf("test 4 \n");
+
+
+    //-------------------------------------------------------
+    // Fit the connected clusters
 
     //ready to fit vec_self_tracklet_points[i_det][i_cls][i_time_sub][i_xyzADC]
 
@@ -2816,7 +2862,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
     for(Int_t i_detector = 0; i_detector < 540; i_detector++)
     {
-        vec_self_tracklet_fit_points[i_detector].resize(vec_self_tracklet_points[i_detector].size());
+        vec_self_tracklet_fit_points[i_detector].resize((Int_t)vec_self_tracklet_points[i_detector].size());
         for (Int_t i_trkl = 0; i_trkl < vec_self_tracklet_points[i_detector].size(); i_trkl++)
         {
             vec_self_tracklet_fit_points[i_detector][i_trkl].resize(2);
@@ -2831,7 +2877,6 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
         }
     }
 
-    //printf("test 5 \n");
 
     Double_t p0[4] = {10,20,1,2};
     //Int_t i_layer_notempty = 0;
@@ -2862,13 +2907,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
     Double_t i_point;
 
 
-//    for(Int_t i_det = 0; i_det < 540; i_det++)
-//    {
-//        vec_layer_in_fit[i_layer] = 0;
-//    }
-
     //loop over layers
-
     Double_t layer_dist_min_max[6][2] =
     {
         {280.0,290.0},
@@ -2879,11 +2918,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
         {330.0,340.0},
     };
 
-
-
-
     //Double_t delta_layer = 12.5;
-
 
     self_tracklets_min.resize(540);
 
@@ -2896,7 +2931,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
         self_tracklets_min[i_det].resize(vec_self_tracklet_points[i_det].size());
 
-        for (Int_t i_trkl = 0; i_trkl < vec_self_tracklet_points[i_det].size(); i_trkl++)
+        for(Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_points[i_det].size(); i_trkl++)
         {
             //printf("test 5.2 \n");
             self_tracklets_min[i_det][i_trkl] = -1.0;
@@ -3055,14 +3090,38 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
             //printf("i_layer: %d, amin: %4.3f, par: {%4.3f, %4.3f, %4.3f, %4.3f} \n",i_layer,amin,parFit[0],parFit[1],parFit[2],parFit[3]);
             self_tracklets_min[i_det][i_trkl] = amin;
 
-            //printf("test 5.8 \n");
 
-            // draw the fitted line
+            //-------------------------------------------------------
+            // Calculate tracklet base and direction vectors
+
+            // Arbitrary space point on fitted line
+            Double_t x_A, y_A, z_A;
+            if(flag_XZ == 0) line_X(0.0,parFit,x_A,y_A,z_A);
+            else line(0.0,parFit,x_A,y_A,z_A);
+            TVector3 TV3_base_fit(x_A,y_A,z_A);
+
+            // normalized direction vector of fitted line
+            if(flag_XZ == 0) line_X(1.0,parFit,x_A,y_A,z_A);
+            else line(1.0,parFit,x_A,y_A,z_A);
+            TVector3 TV3_dir_fit(x_A,y_A,z_A);
+
+            TV3_dir_fit -= TV3_base_fit;
+            Double_t dir_length = TV3_dir_fit.Mag();
+            if(dir_length > 0.0) TV3_dir_fit *= 1.0/dir_length;
+
+            // First space point of fitted clusters
+            TVector3 TV3_t0_point(vec_self_tracklet_points[i_det][i_trkl][0][0],vec_self_tracklet_points[i_det][i_trkl][0][1],vec_self_tracklet_points[i_det][i_trkl][0][2]);
+
+            // Space point on straight line which is closes to first space point of fitted clusters
+            TVector3 TV3_base_fit_t0 = calculate_point_on_Straight_dca_to_Point(TV3_base_fit,TV3_dir_fit,TV3_t0_point);
+            //-------------------------------------------------------
+
+
+                // draw the fitted line
             n = 5000;   // 1000
             t0 = -500.0; // -500
             dt = 0.2;
 
-            Double_t x_A, y_A, z_A;
             t0 = ((a0[1]-parFit[2])/parFit[3])-500;
             if(flag_XZ == 0) line_X(t0,parFit,x_A,y_A,z_A);
             else line(t0,parFit,x_A,y_A,z_A);
@@ -3075,8 +3134,6 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
             vec_AB[1].SetXYZ(-999.0,-999.0,-999.0);
             vec_AB_2D[0].SetXYZ(-999.0,-999.0,-999.0);
             vec_AB_2D[1].SetXYZ(-999.0,-999.0,-999.0);
-
-            //printf("test 5.9 \n");
 
             //if (i_det==0 && i_trkl==0) printf("layer_dist_min_max[i_det%6][0]: %4.3f, layer_dist_min_max[i_det%6][1]: %4.3f \n",layer_dist_min_max[i_det%6][0],layer_dist_min_max[i_det%6][1]);
 
@@ -3167,6 +3224,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
     }
 
     //printf("test 6 \n");
+    //-------------------------------------------------------
 
 }
 
