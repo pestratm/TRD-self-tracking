@@ -283,7 +283,7 @@ TGUI_TRD_Calib::TGUI_TRD_Calib() : TGMainFrame(gClient->GetRoot(), 100, 100)
     hframe_Main[3]  = new TGHorizontalFrame(Frame_Main,200,100);
 
     // draw button
-    Button_Calibrate = new TGTextButton(hframe_Main[3], "&Calibrate ",10);
+    Button_Calibrate = new TGTextButton(hframe_Main[3], "&Full ST ",10);
     Button_Calibrate->Connect("Clicked()", "TGUI_TRD_Calib", this, "Calibrate()");
     hframe_Main[3]->AddFrame(Button_Calibrate, new TGLayoutHints(kLHintsCenterX,5,5,3,4));
 
@@ -495,7 +495,12 @@ Int_t TGUI_TRD_Calib::Calibrate()
     gClient->GetColorByName("green", green);
     Button_Calibrate->ChangeBackground(green);
 
-    Base_TRD_Calib ->Calibrate();
+    Double_t Delta_x        = arr_NEntry_matching_params[0]->GetNumberEntry()->GetNumber();
+    Double_t Delta_z        = arr_NEntry_matching_params[1]->GetNumberEntry()->GetNumber();
+    Double_t factor_layer   = arr_NEntry_matching_params[2]->GetNumberEntry()->GetNumber();
+    Double_t factor_missing = arr_NEntry_matching_params[3]->GetNumberEntry()->GetNumber();
+
+    Base_TRD_Calib ->Calibrate(Delta_x,Delta_z,factor_layer,factor_missing);
 
     return 1;
 }
