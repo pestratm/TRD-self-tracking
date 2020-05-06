@@ -11,6 +11,8 @@ using namespace std;
 
 #include "Ali_AS_Event.h"
 #include "Ali_AS_EventLinkDef.h"
+#include "Ali_TRD_ST.h"
+#include "Ali_TRD_ST_LinkDef.h"
 #include "Ana_Digits_functions.h"
 
 ClassImp(Ali_AS_TRD_digit)
@@ -18,6 +20,9 @@ ClassImp(Ali_AS_Track)
 ClassImp(Ali_AS_Tracklet)
 ClassImp(Ali_AS_offline_Tracklet)
 ClassImp(Ali_AS_Event)
+ClassImp(Ali_TRD_ST_Tracklets)
+ClassImp(Ali_TRD_ST_TPC_Track)
+ClassImp(Ali_TRD_ST_Event)
 
 
 //----------------------------------------------------------------------------------------
@@ -103,6 +108,11 @@ private:
     Ali_AS_offline_Tracklet*  AS_offline_Tracklet;
     Ali_AS_TRD_digit* AS_Digit;
 
+
+    Ali_TRD_ST_Tracklets* TRD_ST_Tracklet;
+    Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track;
+    Ali_TRD_ST_Event*     TRD_ST_Event;
+    TTree* Tree_TRD_ST_Event;
 
     TFile* outputfile;
 
@@ -285,7 +295,7 @@ public:
     vector< vector<TVector3> >  make_clusters(Int_t i_track);
     vector< vector< vector<Double_t> > > get_tracklet_fit_points() {return vec_tracklet_fit_points;}
     void make_plots_ADC(Int_t i_track);
-    void Calibrate();
+    void Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
     void Track_Tracklets(); // for online tracklets
     void Draw_2D_circle_3points(vector<TVector2>);
     void Reset();
@@ -309,6 +319,21 @@ TBase_TRD_Calib::TBase_TRD_Calib()
     outputfile = new TFile("./TRD_Calib.root","RECREATE");
 
     Init_QA();
+
+
+    //------------------------------------------------
+    outputfile ->cd();
+    // TRD self tracking output data containers
+    TRD_ST_Tracklet   = new Ali_TRD_ST_Tracklets();
+    TRD_ST_TPC_Track  = new Ali_TRD_ST_TPC_Track();
+    TRD_ST_Event      = new Ali_TRD_ST_Event();
+
+    Tree_TRD_ST_Event  = NULL;
+    Tree_TRD_ST_Event  = new TTree("Tree_TRD_ST_Event" , "TRD_ST_Events" );
+    Tree_TRD_ST_Event  ->Branch("Tree_TRD_ST_Event_branch"  , "TRD_ST_Event", TRD_ST_Event );
+    Tree_TRD_ST_Event  ->SetAutoSave( 5000000 );
+    //------------------------------------------------
+
 
     vec_TV3_Tracklet_pos.resize(540);
     vec_TV3_Tracklet_dir.resize(540);
@@ -2638,7 +2663,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
         }
     }
 
-    //printf("test 2 \n");
+
 
     //-------------------------------------------------------
     // Make clusters for each detector and time bin
@@ -2722,26 +2747,11 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
     //-------------------------------------------------------
 
 
-    //printf("test 3 \n");
-
     //create "tracklets"
     //Int_t sector = (Int_t)(i_det/30);
     //Int_t stack  = (Int_t)(i_det%30/6);
     //Int_t layer  = i_det%6;
     //Int_t i_det = layer + 6*stack + 30*sector;
-
-#if 0
-    for(Int_t i_det = 0; i_det < 540; i_layer++)
-    {
-        for(Int_t i_time = 0; i_time < 24; i_start_stop++)
-        {
-            for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
-            {
-                vec_self_tracklet_points[i_det][i_start_stop][i_xyzADC] = -999.0;
-            }
-        }
-    }
-#endif
 
 
     //-------------------------------------------------------
@@ -2803,7 +2813,6 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                     //if(dist_clusters_Z  > 10.0) continue;
 
                     // Matching quality - chi2 like
-                    //Double_t sub_cluster_quality = (0.7*dist_clusters_XY + 7.5*dist_clusters_Z)/(0.7 + 7.5);
                     Double_t sub_cluster_quality = TMath::Power(dist_clusters_XY/0.7,2.0) + TMath::Power(dist_clusters_Z/7.5,2.0);
 
 
@@ -2858,6 +2867,7 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
     //fit merged digits with a straight line
 
+    vec_self_tracklet_fit_points.clear();
     vec_self_tracklet_fit_points.resize(540);         //[i_det][i_trkl][i_start_stop][i_xyz]
 
     for(Int_t i_detector = 0; i_detector < 540; i_detector++)
@@ -2922,7 +2932,6 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
     self_tracklets_min.resize(540);
 
-    //printf("test 5.1 \n");
 
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
@@ -2933,7 +2942,6 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
         for(Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_points[i_det].size(); i_trkl++)
         {
-            //printf("test 5.2 \n");
             self_tracklets_min[i_det][i_trkl] = -1.0;
 
         //if(i_layer < 6)
@@ -3114,10 +3122,28 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
 
             // Space point on straight line which is closes to first space point of fitted clusters
             TVector3 TV3_base_fit_t0 = calculate_point_on_Straight_dca_to_Point(TV3_base_fit,TV3_dir_fit,TV3_t0_point);
+
+            TVector3 vec_AB[2];
+            vec_AB[0] = TV3_base_fit_t0;
+            vec_AB[1] = TV3_base_fit_t0 + TV3_dir_fit;
+            if(vec_AB[1].Mag() < vec_AB[0].Mag())
+            {
+                TV3_dir_fit *= -1.0;
+                vec_AB[1] = TV3_base_fit_t0 + TV3_dir_fit;
+            }
+
+            for(Int_t i_AB = 0; i_AB < 2; i_AB++)
+            {
+                for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+                {
+                    vec_self_tracklet_fit_points[i_det][i_trkl][i_AB][i_xyz] = vec_AB[i_AB][i_xyz];
+                }
+            }
             //-------------------------------------------------------
 
 
-                // draw the fitted line
+            /*
+            // draw the fitted line
             n = 5000;   // 1000
             t0 = -500.0; // -500
             dt = 0.2;
@@ -3179,14 +3205,10 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                         vec_AB_2D[1].SetXYZ(x,y,0.0);
                     }
 
-                    //if (i_det == 5){
-                    //    printf("i_layer: %d, i: %d, point line: {%4.3f, %4.3f, %4.3f}, TV3_line_point.Perp(): %4.3f \n",i_det%6,i,x,y,z,TV3_line_point.Perp());
-                    //}
                     i_point++;
                 }
             }
 
-            //printf("test 5.10 \n");
 
             Int_t order_AB[2] = {0,1};
             if(vec_AB_2D[0].Mag() > vec_AB_2D[1].Mag())
@@ -3202,28 +3224,10 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                     vec_self_tracklet_fit_points[i_det][i_trkl][i_AB][i_xyz] = vec_AB[order_AB[i_AB]][i_xyz];
                 }
             }
-
-            //if (i_det == 5) {
-
-                //printf("Det: %d, Trkl: %d, n_timebins: %d \n",Det,Trkl,(Int_t)vec_self_tracklet_points[Det][Trkl].size());
-                //printf("X cl start: %4.3f, Y cl start: %4.3f, X cl stop: %4.3f, Y cl stop: %4.3f \n",vec_self_tracklet_points[Det][Trkl][0][0],vec_self_tracklet_points[Det][Trkl][0][1],vec_self_tracklet_points[Det][Trkl][(Int_t)vec_self_tracklet_points[Det][Trkl].size()-1][0],vec_self_tracklet_points[Det][Trkl][(Int_t)vec_self_tracklet_points[Det][Trkl].size()-1][1]);
-
-                //printf("X cl start: %4.3f, Y cl start: %4.3f, X cl stop: %4.3f, Y cl stop: %4.3f \n",vec_self_tracklet_points[Det][Trkl][0][0],vec_self_tracklet_points[Det][Trkl][0][1],vec_self_tracklet_points[Det][Trkl][(Int_t)vec_self_tracklet_points[Det][Trkl].size()-1][0],vec_self_tracklet_points[Det][Trkl][(Int_t)vec_self_tracklet_points[Det][Trkl].size()-1][1]);
-                //printf("a0.x: %4.3f, a0.Y: %4.3f, a1.x: %4.3f, a1.y: %4.3f \n",a0[0],a0[1],a1[0],a1[1]);
-                //printf("vec_self_tracklet_fit_points[%d][%d][start][X]: %4.3f, vec_self_tracklet_fit_points[%d][%d][stop][X]: %4.3f\n",Det,Trkl,vec_self_tracklet_fit_points[i_det][i_trkl][0][0],Det,Trkl,vec_self_tracklet_fit_points[i_det][i_trkl][1][0]);
-            //}
-
-            //printf("test 5.11 \n");
-
-            //vec_layer_in_fit[i_layer_notempty] = i_layer;
-            //i_layer_notempty++;
-
+            */
             delete min;
         }
-
     }
-
-    //printf("test 6 \n");
     //-------------------------------------------------------
 
 }
@@ -3603,352 +3607,132 @@ void TBase_TRD_Calib::Track_Tracklets()
 
 
 //----------------------------------------------------------------------------------------
-void TBase_TRD_Calib::Calibrate()
+void TBase_TRD_Calib::Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing)
 {
-    printf("TBase_TRD_Calib::Calibrate() \n");
+    printf("TBase_TRD_Calib::Loop_full_self_tracking() \n");
 
-    vec_tp_Delta_vs_impact.resize(540);
-    vec_TH2D_Delta_vs_impact.resize(540);
+    TVector3 TV3_trkl_offset;
+    TVector3 TV3_trkl_dir;
+    Float_t  helix_par[9];
 
-    for (Int_t i_det = 0; i_det < 540; i_det++)
-    {
-        vec_tp_Delta_vs_impact[i_det] = new TProfile(Form("vec_th1d_Delta_vs_impact_%d",i_det),Form("vec_th1d_Delta_vs_impact_%d",i_det),360,-360,360);
-        vec_TH2D_Delta_vs_impact[i_det] = new TH2D(Form("vec_th2d_Delta_vs_impact_%d",i_det),Form("vec_th2d_Delta_vs_impact_%d",i_det),10,70,110,50,-25,25);
-    }
-
-    //for(Long64_t i_event = 0; i_event < 72000; i_event++)
     for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
     {
         if(i_event % 100 == 0) printf("i_event: %lld out of %lld \n",i_event,file_entries_total);
         if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
-        UShort_t NumTracks = AS_Event ->getNumTracks(); // number of tracks in this event
 
-        for(Int_t i_track = 0; i_track < NumTracks; i_track++)
+        //------------------------------------------
+        // Fill event information
+        TRD_ST_Event ->clearTrackList();
+        TRD_ST_Event ->clearTrackletList();
+
+        TRD_ST_Event ->setTriggerWord( AS_Event->getTriggerWord() );
+        TRD_ST_Event ->setx( AS_Event->getx() );
+        TRD_ST_Event ->sety( AS_Event->gety() );
+        TRD_ST_Event ->setz( AS_Event->getz() );
+        TRD_ST_Event ->setid( AS_Event->getid() );
+        TRD_ST_Event ->setN_tracks( AS_Event->getN_tracks() );
+        TRD_ST_Event ->setN_TRD_tracklets( AS_Event->getN_TRD_tracklets() );
+        TRD_ST_Event ->setBeamIntAA( AS_Event->getBeamIntAA() );
+        TRD_ST_Event ->setT0zVertex( AS_Event->getT0zVertex() );
+        TRD_ST_Event ->setcent_class_ZNA( AS_Event->getcent_class_ZNA() );
+        TRD_ST_Event ->setcent_class_ZNC( AS_Event->getcent_class_ZNC() );
+        TRD_ST_Event ->setcent_class_V0A( AS_Event->getcent_class_V0A() );
+        TRD_ST_Event ->setcent_class_V0C( AS_Event->getcent_class_V0C() );
+        TRD_ST_Event ->setcent_class_V0M( AS_Event->getcent_class_V0M() );
+        TRD_ST_Event ->setcent_class_CL0( AS_Event->getcent_class_CL0() );
+        TRD_ST_Event ->setcent_class_CL1( AS_Event->getcent_class_CL1() );
+        TRD_ST_Event ->setcent_class_SPD( AS_Event->getcent_class_SPD() );
+        TRD_ST_Event ->setcent_class_V0MEq( AS_Event->getcent_class_V0MEq() );
+        TRD_ST_Event ->setcent_class_V0AEq( AS_Event->getcent_class_V0AEq() );
+        TRD_ST_Event ->setcent_class_V0CEq( AS_Event->getcent_class_V0CEq() );
+
+        printf("Event information filled \n");
+        //------------------------------------------
+
+
+
+        //------------------------------------------
+        // Loop over all tracks
+        UShort_t NumTracks = AS_Event ->getNumTracks(); // number of tracks in this event
+        for(UShort_t i_track = 0; i_track < NumTracks; ++i_track) // loop over all tracks of the actual event
         {
+            TRD_ST_TPC_Track = TRD_ST_Event ->createTrack(); // TPC track
             //cout << "i_track: " << i_track << ", of " << NumTracks << endl;
             AS_Track      = AS_Event ->getTrack( i_track ); // take the track
-            TLorentzVector TLV_part = AS_Track ->get_TLV_part();
-            Float_t pT_track        = TLV_part.Pt();
-            if(pT_track < 3.5) continue; // 3.5
+            TRD_ST_TPC_Track ->setnsigma_e_TPC( AS_Track ->getnsigma_e_TPC() );
+            TRD_ST_TPC_Track ->setnsigma_pi_TPC( AS_Track ->getnsigma_pi_TPC() );
+            TRD_ST_TPC_Track ->setnsigma_p_TPC( AS_Track ->getnsigma_p_TPC() );
+            TRD_ST_TPC_Track ->setnsigma_e_TOF( AS_Track ->getnsigma_e_TOF() );
+            TRD_ST_TPC_Track ->setnsigma_pi_TOF( AS_Track ->getnsigma_pi_TOF() );
+            TRD_ST_TPC_Track ->setTRDSignal( AS_Track ->getTRDSignal() );
+            TRD_ST_TPC_Track ->setTRDsumADC( AS_Track ->getTRDsumADC() );
+            TRD_ST_TPC_Track ->setdca( AS_Track ->getdca() );  // charge * distance of closest approach to the primary vertex
+            TRD_ST_TPC_Track ->set_TLV_part( AS_Track ->get_TLV_part() );
+            TRD_ST_TPC_Track ->setNTPCcls( AS_Track ->getNTPCcls() );
+            TRD_ST_TPC_Track ->setNTRDcls( AS_Track ->getNTRDcls() );
+            TRD_ST_TPC_Track ->setNITScls( AS_Track ->getNITScls() );
+            TRD_ST_TPC_Track ->setTPCchi2( AS_Track ->getTPCchi2() );
+            TRD_ST_TPC_Track ->setTPCdEdx( AS_Track ->getTPCdEdx() );
+            TRD_ST_TPC_Track ->setTOFsignal( AS_Track ->getTOFsignal() ); // in ps (1E-12 s)
+            TRD_ST_TPC_Track ->setTrack_length( AS_Track ->getTrack_length() );
 
-            Double_t nsigma_TPC_e   = AS_Track ->getnsigma_e_TPC();
-            Double_t nsigma_TPC_pi  = AS_Track ->getnsigma_pi_TPC();
-            Double_t nsigma_TPC_p   = AS_Track ->getnsigma_p_TPC();
-            Double_t nsigma_TOF_e   = AS_Track ->getnsigma_e_TOF();
-            Double_t nsigma_TOF_pi  = AS_Track ->getnsigma_pi_TOF();
-            Double_t TRD_signal     = AS_Track ->getTRDSignal();
-            Double_t TRDsumADC      = AS_Track ->getTRDsumADC();
-            Double_t dca            = AS_Track ->getdca();  // charge * distance of closest approach to the primary vertex
-            UShort_t NTPCcls        = AS_Track ->getNTPCcls();
-            UShort_t NTRDcls        = AS_Track ->getNTRDcls();
-            UShort_t NITScls        = AS_Track ->getNITScls();
-            Float_t  TPCchi2        = AS_Track ->getTPCchi2();
-            Float_t  TPCdEdx        = AS_Track ->getTPCdEdx();
-            Float_t  TOFsignal      = AS_Track ->getTOFsignal(); // in ps (1E-12 s)
-            Float_t  Track_length   = AS_Track ->getTrack_length();
-            Float_t  Angle_on_TRD   = AS_Track ->getimpact_angle_on_TRD();
-
-            Float_t  momentum       = TLV_part.P();
-            Float_t  eta_track      = TLV_part.Eta();
-            Float_t  theta_track    = TLV_part.Theta();
-
-
-            //--------------------------
-            // Offline tracklet loop
-            UShort_t  fNumOfflineTracklets = AS_Track ->getNumOfflineTracklets();
-            if(fNumOfflineTracklets > 3)
+            for(Int_t i_helix_par = 0; i_helix_par < 9; i_helix_par++)
             {
-                for(Int_t i_tracklet = 0; i_tracklet < fNumOfflineTracklets; i_tracklet++) // layers
-                {
-                    AS_offline_Tracklet     = AS_Track            ->getOfflineTracklet( i_tracklet ); // take the track
-                    TVector3 TV3_offset     = AS_offline_Tracklet ->get_TV3_offset(); // offline tracklets
-                    TVector3 TV3_dir        = AS_offline_Tracklet ->get_TV3_dir();    // offline tracklets
-                    Short_t  i_det_tracklet = AS_offline_Tracklet ->get_detector();
-                    Float_t  chi2           = AS_offline_Tracklet ->get_chi2();
-                    Float_t  refZ           = AS_offline_Tracklet ->get_refZ();
-                    Float_t  refY           = AS_offline_Tracklet ->get_refY();
-                    Float_t  refdZdx        = AS_offline_Tracklet ->get_refdZdx();
-                    Float_t  refdYdx        = AS_offline_Tracklet ->get_refdYdx();
-                    Float_t  locZ           = AS_offline_Tracklet ->get_locZ();
-                    Float_t  locY           = AS_offline_Tracklet ->get_locY();
-                    Float_t  locdZdx        = AS_offline_Tracklet ->get_locdZdx();
-                    Float_t  locdYdx        = AS_offline_Tracklet ->get_locdYdx();
-
-                    Int_t i_det_layer = i_det_tracklet%6;
-
-                    if(i_det_tracklet < 0 || i_det_tracklet >= 540) continue;
-                    Float_t diff_dYdx = locdYdx - refdYdx;
-
-                    vec_h_diff_ref_loc_off_trkl[0][i_det_tracklet] ->Fill(diff_dYdx);
-                    vec_h_diff_ref_loc_off_trkl[0][540] ->Fill(diff_dYdx);
-                    vec_h_diff_ref_loc_off_trkl[0][541+i_det_layer] ->Fill(diff_dYdx);
-                    if(dca < 0.0)
-                    {
-                        vec_h_diff_ref_loc_off_trkl[1][i_det_tracklet] ->Fill(diff_dYdx);
-                        vec_h_diff_ref_loc_off_trkl[1][540] ->Fill(diff_dYdx);
-                        vec_h_diff_ref_loc_off_trkl[1][541+i_det_layer] ->Fill(diff_dYdx);
-                    }
-                    if(dca > 0.0)
-                    {
-                        vec_h_diff_ref_loc_off_trkl[2][i_det_tracklet] ->Fill(diff_dYdx);
-                        vec_h_diff_ref_loc_off_trkl[2][540] ->Fill(diff_dYdx);
-                        vec_h_diff_ref_loc_off_trkl[2][541+i_det_layer] ->Fill(diff_dYdx);
-                    }
-                }
+                helix_par[i_helix_par] =  AS_Track ->getHelix_param(i_helix_par);
             }
-            //--------------------------
 
-            //if(dca > 0.0) continue;
-
-
-            for(Int_t i_param = 0; i_param < 9; i_param++)
-            {
-                aliHelix.fHelix[i_param] = AS_Track ->getHelix_param(i_param);
-            }
-            Double_t pathA = 0.0;
-            Double_t helix_point[3];
-            Double_t helix_pointB[3];
-
-            make_clusters(i_track);
-            //get_straight_line_fit(i_track);
-            get_tracklets_fit(i_track);
-
-            vector<TVector3> vec_TV3_tracklet_vectors;
-            vec_TV3_tracklet_vectors.resize(7);
-
-
-            if(vec_tracklet_fit_points[6][0][0] == -999.0  && vec_tracklet_fit_points[6][1][0] == -999.0) continue; // no global fit available
-            if(tracklets_min[6] > 7.5) continue;
-
-            //printf("Track with pT: %4.3f used for calibration \n",pT_track);
-
-            Int_t N_good_layers = 0;
-            for(Int_t i_layer = 5; i_layer >= 0; i_layer--)
-            {
-                if(vec_tracklet_fit_points[i_layer][0][0] > -999.0 && vec_tracklet_fit_points[i_layer][1][0] > -999.0) N_good_layers++;
-            }
-            if(N_good_layers < 3) continue;
-
-            Double_t impact_angle[6] = {0.0};
-            Double_t delta_x_local_global[6] = {0.0}; // local chamber coordinate system, global fit
-            for(Int_t i_layer = 6; i_layer >= 0; i_layer--)
-            {
-                if(vec_tracklet_fit_points[i_layer][0][0] > -999.0 && vec_tracklet_fit_points[i_layer][1][0] > -999.0)
-                {
-                    Double_t delta_x = vec_tracklet_fit_points[i_layer][1][0] - vec_tracklet_fit_points[i_layer][0][0];
-                    Double_t delta_y = vec_tracklet_fit_points[i_layer][1][1] - vec_tracklet_fit_points[i_layer][0][1];
-                    Double_t delta_z = vec_tracklet_fit_points[i_layer][1][2] - vec_tracklet_fit_points[i_layer][0][2];
-
-                    //printf("i_layer: %d, delta_z: %4.3f \n",i_layer,delta_z);
-                    TVector3 TV3_delta(delta_x,delta_y,delta_z);
-
-
-                    vec_TV3_tracklet_vectors[i_layer].SetXYZ(delta_x,delta_y,0.0);
-                    //printf("i_layer: %d, delta_x: %4.3f, delta_y: %4.3f \n",i_layer,delta_x,delta_y);
-                    if(vec_TV3_tracklet_vectors[i_layer].Mag() <= 0.0)
-                    {
-                        //printf("A: {%4.3f, %4.3f}, B: {%4.3f, %4.3f} \n",vec_tracklet_fit_points[i_layer][1][0],vec_tracklet_fit_points[i_layer][1][1],vec_tracklet_fit_points[i_layer][0][0],vec_tracklet_fit_points[i_layer][0][1]);
-                        continue;
-                    }
-                    vec_TV3_tracklet_vectors[i_layer] *= 1.0/vec_TV3_tracklet_vectors[i_layer].Mag(); // Normalize
-
-
-                    // Calculate impact angles of global track to every single layer
-                    if(i_layer == 6) // Global track
-                    {
-                        Double_t path_offset = 0.0;
-                        for(Int_t i_layerB = 0; i_layerB < 6; i_layerB++)
-                        {
-                            if(arr_layer_detector[i_layerB] < 0) continue;
-                            delta_x_local_global[i_layerB] = vec_TV3_tracklet_vectors[i_layer].Dot(vec_TV3_TRD_center[arr_layer_detector[i_layerB]][0]);
-                            Double_t proj_radial = TV3_delta.Dot(vec_TV3_TRD_center[arr_layer_detector[i_layerB]][2]);
-                            //if(arr_layer_detector[i_layerB] == 0)
-                            //{
-                            //    printf("detector: %d, proj_radial: %4.3f \n",arr_layer_detector[i_layerB],proj_radial);
-                                //vec_TV3_TRD_center[arr_layer_detector[i_layerB]][2].Print();
-                                //TV3_delta.Print();
-                            //}
-                            Double_t sign_direction_impactB = TMath::Sign(1.0,delta_x_local_global[i_layerB]);
-                            impact_angle[i_layerB] = vec_TV3_tracklet_vectors[i_layer].Angle(vec_TV3_TRD_center[arr_layer_detector[i_layerB]][2]);
-                            if(impact_angle[i_layerB] > TMath::Pi()*0.5) impact_angle[i_layerB] -= TMath::Pi();
-                            //printf("i_layerB: %d, 3D_Angle_on_TRD(TPC track): %4.3f, 2D_impact_angle: %4.3f \n",i_layerB,Angle_on_TRD*TMath::RadToDeg(),impact_angle[i_layerB]*TMath::RadToDeg());
-                            impact_angle[i_layerB] = 0.5*TMath::Pi() - sign_direction_impactB*impact_angle[i_layerB];
-
-
-                            //---------------------------
-                            // Calculate impact angle based on track helix
-                            Double_t radius_layer = vec_TV3_TRD_center_offset[i_layerB].Perp();
-                            Double_t impact_angle_helix = -999.0;
-                            for(Int_t i_step = 0; i_step < 400; i_step++)
-                            {
-                                pathA = i_step*3.0 + path_offset;
-                                aliHelix.Evaluate(pathA,helix_point);
-                                Double_t radius_helix_point = TMath::Sqrt(TMath::Power(helix_point[0],2) + TMath::Power(helix_point[1],2));
-
-                                if(radius_helix_point > radius_layer)
-                                {
-                                    aliHelix.Evaluate(pathA+0.5,helix_pointB);
-                                    TVector3 dir_helix_impact_on_layer(helix_pointB[0] - helix_point[0],helix_pointB[1] - helix_point[1],0.0);
-                                    Double_t delta_x_local_global_helix = dir_helix_impact_on_layer.Dot(vec_TV3_TRD_center[arr_layer_detector[i_layerB]][0]);
-                                    Double_t sign_direction_impact_helix = TMath::Sign(1.0,delta_x_local_global_helix);
-                                    impact_angle_helix = dir_helix_impact_on_layer.Angle(vec_TV3_TRD_center[arr_layer_detector[i_layerB]][2]);
-                                    if(impact_angle_helix > TMath::Pi()*0.5) impact_angle_helix -= TMath::Pi();
-                                    impact_angle_helix = 0.5*TMath::Pi() - sign_direction_impact_helix*impact_angle_helix;
-                                    //impact_angle[i_layerB] = impact_angle_helix; // test to use TPC impact angle instead of TRD one
-
-                                    path_offset = pathA; // start from previous layer radius
-                                    break;
-                                }
-                            }
-                            vec_h_diff_helix_line_impact_angle[0][arr_layer_detector[i_layerB]] ->Fill(impact_angle[i_layerB]*TMath::RadToDeg() - impact_angle_helix*TMath::RadToDeg());
-                            if(dca < 0.0) vec_h_diff_helix_line_impact_angle[1][arr_layer_detector[i_layerB]] ->Fill(impact_angle[i_layerB]*TMath::RadToDeg() - impact_angle_helix*TMath::RadToDeg());
-                            if(dca > 0.0) vec_h_diff_helix_line_impact_angle[2][arr_layer_detector[i_layerB]] ->Fill(impact_angle[i_layerB]*TMath::RadToDeg() - impact_angle_helix*TMath::RadToDeg());
-                            //printf("impact_angle: %4.3f, impact_angle_helix: %4.3f \n",impact_angle[i_layerB]*TMath::RadToDeg(),impact_angle_helix*TMath::RadToDeg());
-                            //---------------------------
-
-
-                            //if(impact_angle[i_layerB]*TMath::RadToDeg() > 89.0 && impact_angle[i_layerB]*TMath::RadToDeg() < 91.0)
-                            //{
-                            //    printf("  --> i_layerB: %d, impact_angle: %4.3f, vec: {%4.3f, %4.3f} \n",i_layerB,impact_angle[i_layerB]*TMath::RadToDeg(),vec_tracklet_fit_points[i_layerB][0][0],vec_tracklet_fit_points[i_layerB][1][0]);
-                            //}
-                        }
-                    }
-
-
-                    if(i_layer < 6) // tracklets
-                    {
-                        if(tracklets_min[i_layer] > 0.2) continue;
-                        if(arr_layer_detector[i_layer] < 0) continue;
-                        Int_t detector = arr_layer_detector[i_layer];
-                        Double_t delta_x_local_tracklet = vec_TV3_tracklet_vectors[i_layer].Dot(vec_TV3_TRD_center[arr_layer_detector[i_layer]][0]);
-                        Double_t sign_angle = 1.0;
-                        if(delta_x_local_tracklet < delta_x_local_global[i_layer]) sign_angle = -1.0;
-                        Double_t Delta_angle  = sign_angle*vec_TV3_tracklet_vectors[6].Angle(vec_TV3_tracklet_vectors[i_layer]);
-                        if(Delta_angle > TMath::Pi()*0.5)  Delta_angle -= TMath::Pi();
-                        if(Delta_angle < -TMath::Pi()*0.5) Delta_angle += TMath::Pi();
-
-                        h_detector_hit ->Fill(detector);
-                        //if(detector == 69) printf("impact_angle: %4.3f, Delta_angle: %4.3f \n",impact_angle[i_layer]*TMath::RadToDeg(),Delta_angle*TMath::RadToDeg());
-
-                        //vec_tp_Delta_vs_impact[arr_layer_detector[i_layer]] ->Fill(impact_angle[i_layer]*TMath::RadToDeg(),Delta_angle*TMath::RadToDeg());
-                        //vec_tp_Delta_vs_impact[detector] ->Fill(impact_angle[i_layer]*TMath::RadToDeg(),fabs(Delta_angle*TMath::RadToDeg()));
-                        vec_tp_Delta_vs_impact[detector]   ->Fill(impact_angle[i_layer]*TMath::RadToDeg(),Delta_angle*TMath::RadToDeg());
-                        vec_TH2D_Delta_vs_impact[detector] ->Fill(impact_angle[i_layer]*TMath::RadToDeg(),Delta_angle*TMath::RadToDeg());
-                        if(impact_angle[i_layer]*TMath::RadToDeg() > 89.0 && impact_angle[i_layer]*TMath::RadToDeg() < 91.0)
-                        //if(impact_angle[i_layer]*TMath::RadToDeg() > 80 && impact_angle[i_layer]*TMath::RadToDeg() < 83)
-                        {
-                        //    printf("detector: %d, track: %d, impact angle: %4.3f, Delta angle: %4.3f, delta_x_local_tracklet: %4.3f \n",detector,i_track,impact_angle[i_layer]*TMath::RadToDeg(),Delta_angle*TMath::RadToDeg(),delta_x_local_tracklet);
-                            h_delta_angle_perp_impact ->Fill(Delta_angle*TMath::RadToDeg());
-                        }
-                        //if(impact_angle[i_layer]*TMath::RadToDeg() > 73.0 && impact_angle[i_layer]*TMath::RadToDeg() < 78.0 && pT_track > 3.5)
-                        if(impact_angle[i_layer]*TMath::RadToDeg() > 87.5 && impact_angle[i_layer]*TMath::RadToDeg() < 92.5 && pT_track > 3.5)
-                        {
-                            //printf("       ======================> i_event: %lld, i_track: %d \n",i_event,i_track);
-                        }
-                        //printf("detector: %d, track: %d, impact angle: %4.3f, Delta angle: %4.3f \n",detector,i_track,impact_angle[i_layer]*TMath::RadToDeg(),Delta_angle*TMath::RadToDeg());
-                    }
-
-                }
-            }
+            TRD_ST_TPC_Track ->setHelix(helix_par[0],helix_par[1],helix_par[2],helix_par[3],helix_par[4],helix_par[5],helix_par[6],helix_par[7],helix_par[8]);
         }
-    }
+
+        printf("Track information filled \n");
+        //------------------------------------------
 
 
-    vector<TCanvas*> vec_can_Delta_vs_impact;
-    vec_can_Delta_vs_impact.resize(6); // 6 sector blocks with 3 sectors each (18)
 
-    TH1D* h_dummy_Delta_vs_impact = new TH1D("h_dummy_Delta_vs_impact","h_dummy_Delta_vs_impact",90,50,140);
-    h_dummy_Delta_vs_impact->SetStats(0);
-    h_dummy_Delta_vs_impact->SetTitle("");
-    h_dummy_Delta_vs_impact->GetXaxis()->SetTitleOffset(0.85);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetTitleOffset(0.78);
-    h_dummy_Delta_vs_impact->GetXaxis()->SetLabelOffset(0.0);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetLabelOffset(0.01);
-    h_dummy_Delta_vs_impact->GetXaxis()->SetLabelSize(0.08);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetLabelSize(0.08);
-    h_dummy_Delta_vs_impact->GetXaxis()->SetTitleSize(0.08);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetTitleSize(0.08);
-    h_dummy_Delta_vs_impact->GetXaxis()->SetNdivisions(505,'N');
-    h_dummy_Delta_vs_impact->GetYaxis()->SetNdivisions(505,'N');
-    h_dummy_Delta_vs_impact->GetXaxis()->CenterTitle();
-    h_dummy_Delta_vs_impact->GetYaxis()->CenterTitle();
-    h_dummy_Delta_vs_impact->GetXaxis()->SetTitle("impact angle");
-    h_dummy_Delta_vs_impact->GetYaxis()->SetTitle("#Delta #alpha");
-    h_dummy_Delta_vs_impact->GetXaxis()->SetRangeUser(70,110);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetRangeUser(0,24);
 
-    Int_t arr_color_layer[6] = {kBlack,kRed,kBlue,kGreen,kMagenta,kCyan};
-
-    for(Int_t i_sec_block = 0; i_sec_block < 6; i_sec_block++)
-    {
-        HistName = "vec_can_Delta_vs_impact_";
-        HistName += i_sec_block;
-        vec_can_Delta_vs_impact[i_sec_block] = new TCanvas(HistName.Data(),HistName.Data(),10,10,1600,1000);
-
-        vec_can_Delta_vs_impact[i_sec_block] ->Divide(5,3); // x = stack, y = sector
-
-        for(Int_t i_sec_sub = 0; i_sec_sub < 3; i_sec_sub++)
+        //------------------------------------------
+        // Loop over all TRD tracklets
+        Make_clusters_and_get_tracklets_fit(Delta_x,Delta_z,factor_layer,factor_missing);
+        for(Int_t i_det = 0; i_det < 540; i_det++)
         {
-            Int_t i_sector = i_sec_block + 6*i_sec_sub;
-            for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+            //printf("i_det: %d \n",i_det);
+            for(Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_fit_points[i_det].size(); i_trkl++)
             {
-                Int_t iPad = i_sec_sub*5 + i_stack + 1;
-                vec_can_Delta_vs_impact[i_sec_block] ->cd(iPad)->SetTicks(1,1);
-                vec_can_Delta_vs_impact[i_sec_block] ->cd(iPad)->SetGrid(0,0);
-                vec_can_Delta_vs_impact[i_sec_block] ->cd(iPad)->SetFillColor(10);
-                vec_can_Delta_vs_impact[i_sec_block] ->cd(iPad)->SetRightMargin(0.01);
-                vec_can_Delta_vs_impact[i_sec_block] ->cd(iPad)->SetTopMargin(0.01);
-                vec_can_Delta_vs_impact[i_sec_block] ->cd(iPad)->SetBottomMargin(0.2);
-                vec_can_Delta_vs_impact[i_sec_block] ->cd(iPad)->SetLeftMargin(0.2);
-                vec_can_Delta_vs_impact[i_sec_block] ->cd(iPad);
-                h_dummy_Delta_vs_impact->Draw("h");
-
-                for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+                //printf("i_trkl: %d \n",i_trkl);
+                for(Int_t i_AB = 0; i_AB < 2; i_AB++)
                 {
-                    Int_t i_detector = i_layer + 6*i_stack + 30*i_sector;
-                    printf("detector: %d \n",i_detector);
-                    vec_tp_Delta_vs_impact[i_detector] ->SetLineColor(arr_color_layer[i_layer]);
-                    vec_tp_Delta_vs_impact[i_detector] ->SetLineWidth(2);
-                    vec_tp_Delta_vs_impact[i_detector] ->SetLineStyle(1);
-                    vec_tp_Delta_vs_impact[i_detector] ->Draw("same hl");
-
-                    HistName = "";
-                    sprintf(NoP,"%4.0f",(Double_t)i_detector);
-                    HistName += NoP;
-                    plotTopLegend((char*)HistName.Data(),0.24,0.89-i_layer*0.07,0.045,arr_color_layer[i_layer],0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+                    for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+                    {
+                        //printf("i_AB: %d, i_xyz: %d \n",i_AB,i_xyz);
+                        if(i_AB == 0) TV3_trkl_offset[i_xyz] = vec_self_tracklet_fit_points[i_det][i_trkl][i_AB][i_xyz];
+                        if(i_AB == 1) TV3_trkl_dir[i_xyz]    = vec_self_tracklet_fit_points[i_det][i_trkl][i_AB][i_xyz];
+                    }
                 }
-            }
-        }
+
+                TV3_trkl_dir -= TV3_trkl_offset;
+
+                TRD_ST_Tracklet = TRD_ST_Event ->createTracklet(); // online tracklet
+                TRD_ST_Tracklet  ->set_TRD_det(i_det);
+                TRD_ST_Tracklet  ->set_TV3_offset(TV3_trkl_offset);
+                TRD_ST_Tracklet  ->set_TV3_dir(TV3_trkl_dir);
+            } // end tracklet loop
+        } // end detector loop
+
+        printf("Tracklet information filled \n");
+        //------------------------------------------
+
+
+        printf("Fill tree \n");
+        Tree_TRD_ST_Event ->Fill();
+        printf("Tree filled \n");
     }
 
-
-    TCanvas* can_delta_angle_perp_impact = new TCanvas("can_delta_angle_perp_impact","can_delta_angle_perp_impact",500,10,500,500);
-    can_delta_angle_perp_impact ->cd();
-    h_delta_angle_perp_impact  ->Draw();
-
-    TCanvas* can_detector_hit = new TCanvas("can_detector_hit","can_detector_hit",500,500,500,500);
-    can_detector_hit ->cd();
-    h_detector_hit  ->Draw();
-
-    printf("Write data to output file \n");
+    printf("Write data to file \n");
     outputfile ->cd();
-    for(Int_t i_det = 0; i_det < 540; i_det++)
-    {
-        vec_tp_Delta_vs_impact[i_det]   ->Write();
-        vec_TH2D_Delta_vs_impact[i_det] ->Write();
-    }
+    Tree_TRD_ST_Event ->Write();
 
-    outputfile ->mkdir("Delta_impact");
-    outputfile ->cd("Delta_impact");
-    for(Int_t i_charge = 0; i_charge < 3; i_charge++)
-    {
-        for(Int_t i_det = 0; i_det < 547; i_det++)
-        {
-            vec_h_diff_helix_line_impact_angle[i_charge][i_det] ->Write();
-            vec_h_diff_ref_loc_off_trkl[i_charge][i_det]        ->Write();
-        }
-    }
+
     printf("All data written \n");
 
 }
