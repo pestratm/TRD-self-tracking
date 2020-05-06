@@ -83,7 +83,7 @@ TVector3 calculate_point_on_Straight_dca_to_Point(TVector3 &base, TVector3 &dir,
 {
   // calculates the TVector3 on the straight line which is closest to point
 
-    TVector3 diff = base-point;
+    TVector3 diff = point - base;
     TVector3 dir_norm = dir;
     dir_norm *= (1.0/dir.Mag());
     Double_t proj_val = diff.Dot(dir_norm);
@@ -3095,7 +3095,6 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                 //parFit[i] = pStart[i];
             }
 
-            //printf("i_layer: %d, amin: %4.3f, par: {%4.3f, %4.3f, %4.3f, %4.3f} \n",i_layer,amin,parFit[0],parFit[1],parFit[2],parFit[3]);
             self_tracklets_min[i_det][i_trkl] = amin;
 
 
@@ -3140,6 +3139,10 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                 }
             }
             //-------------------------------------------------------
+
+            Double_t radius = TMath::Sqrt( TMath::Power(TV3_base_fit_t0[0],2) + TMath::Power(TV3_base_fit_t0[1],2) );
+            printf("amin: %4.3f, par: {%4.3f, %4.3f, %4.3f, %4.3f} \n",amin,parFit[0],parFit[1],parFit[2],parFit[3]);
+            printf("   --> radius: %4.3f, point first cluster: {%4.3f, %4.3f, %4.3f}, point line: {%4.3f, %4.3f, %4.3f} \n",radius,TV3_t0_point[0],TV3_t0_point[1],TV3_t0_point[2],TV3_base_fit_t0[0],TV3_base_fit_t0[1],TV3_base_fit_t0[2]);
 
 
             /*
