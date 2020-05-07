@@ -9,5 +9,6 @@ void TRD_ST_Analyze_tracklets()
     TRD_ST_Analyze ->Init_tree("List_data.txt");
     TRD_ST_Analyze ->Loop_event(0);
     TRD_ST_Analyze ->Draw_event(0);
+    TRD_ST_Analyze ->Do_TPC_TRD_matching(0,3.0,10.0);
 
 }
