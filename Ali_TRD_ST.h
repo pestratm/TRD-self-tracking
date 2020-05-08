@@ -13,20 +13,24 @@ private:
     TVector3 TV3_offset;
     TVector3 TV3_dir;
     Int_t    TRD_det;
+    Double_t ADC_val[];
 public:
     Ali_TRD_ST_Tracklets() :
-        TV3_offset(),TV3_dir(),TRD_det(-1)
+        TV3_offset(),TV3_dir(),TRD_det(-1),ADC_val()
     {}
         ~Ali_TRD_ST_Tracklets(){}
 
-        void       set_TV3_offset(TVector3 TV3_offset_in)        { TV3_offset = TV3_offset_in; }
-        TVector3   get_TV3_offset() const                        { return TV3_offset;          }
+        void       set_TV3_offset(TVector3 TV3_offset_in)           { TV3_offset = TV3_offset_in;    }
+        TVector3   get_TV3_offset() const                           { return TV3_offset;             }
 
-        void       set_TV3_dir(TVector3 TV3_dir_in)              { TV3_dir = TV3_dir_in;       }
-        TVector3   get_TV3_dir() const                           { return TV3_dir;             }
+        void       set_TV3_dir(TVector3 TV3_dir_in)                 { TV3_dir = TV3_dir_in;          }
+        TVector3   get_TV3_dir() const                              { return TV3_dir;                }
 
-        void       set_TRD_det(Int_t TRD_det_in)                 { TRD_det = TRD_det_in;       }
-        Int_t      get_TRD_det() const                           { return TRD_det;             }
+        void       set_TRD_det(Int_t TRD_det_in)                    { TRD_det = TRD_det_in;          }
+        Int_t      get_TRD_det() const                              { return TRD_det;                }
+
+        void       set_ADC_val(Int_t time_bin, Double_t ADC_value)  { ADC_val[time_bin] = ADC_value; }
+        Double_t   get_ADC_val(Int_t time_bin) const                { return ADC_val[time_bin];      }
 
         ClassDef(Ali_TRD_ST_Tracklets,1);
 };

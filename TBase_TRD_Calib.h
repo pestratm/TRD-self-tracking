@@ -253,6 +253,8 @@ private:
     vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points_bckg;
     vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_fit_points_bckg;
 
+    vector< vector< vector<Double_t> > > vec_ADC_val; //[i_det][i_trkl][i_timebin]
+
     vector<TProfile*> vec_tp_Delta_vs_impact;
     vector<TH2D*> vec_TH2D_Delta_vs_impact;
 
@@ -316,7 +318,7 @@ public:
 //----------------------------------------------------------------------------------------
 TBase_TRD_Calib::TBase_TRD_Calib()
 {
-    outputfile = new TFile("./TRD_Calib.root","RECREATE");
+    outputfile = new TFile("./TRD_Calib_test.root","RECREATE");
 
     Init_QA();
 
@@ -595,6 +597,7 @@ TBase_TRD_Calib::TBase_TRD_Calib()
     vec_self_tracklet_points_bckg.resize(540);
     vec_self_tracklet_fit_points_bckg.resize(540);
     trkl_min_bckg.resize(540);
+    //vec_ADC_val.resize(540);
 }
 //----------------------------------------------------------------------------------------
 
@@ -2870,12 +2873,18 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
     vec_self_tracklet_fit_points.clear();
     vec_self_tracklet_fit_points.resize(540);         //[i_det][i_trkl][i_start_stop][i_xyz]
 
+    vec_ADC_val.clear();
+    vec_ADC_val.resize(540);
+
     for(Int_t i_detector = 0; i_detector < 540; i_detector++)
     {
         vec_self_tracklet_fit_points[i_detector].resize((Int_t)vec_self_tracklet_points[i_detector].size());
+        vec_ADC_val[i_detector].resize((Int_t)vec_self_tracklet_points[i_detector].size());
+
         for (Int_t i_trkl = 0; i_trkl < vec_self_tracklet_points[i_detector].size(); i_trkl++)
         {
             vec_self_tracklet_fit_points[i_detector][i_trkl].resize(2);
+
             for(Int_t i_start_stop = 0; i_start_stop < 2; i_start_stop++)
             {
                 vec_self_tracklet_fit_points[i_detector][i_trkl][i_start_stop].resize(3);
@@ -2943,6 +2952,8 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
         for(Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_points[i_det].size(); i_trkl++)
         {
             self_tracklets_min[i_det][i_trkl] = -1.0;
+
+            vec_ADC_val[i_det][i_trkl].resize((Int_t)vec_self_tracklet_points[i_det][i_trkl].size());
 
         //if(i_layer < 6)
         //{
@@ -3136,6 +3147,13 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                 for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
                 {
                     vec_self_tracklet_fit_points[i_det][i_trkl][i_AB][i_xyz] = vec_AB[i_AB][i_xyz];
+
+                    //if () some condition to check if clusters are organized in correct order
+
+                    for (Int_t i_timebin = 0; i_timebin < vec_self_tracklet_points[i_det][i_trkl].size(); i_timebin++)
+                    {
+                        vec_ADC_val[i_det][i_trkl][i_timebin] = vec_self_tracklet_points[i_det][i_trkl][i_timebin][4];
+                    }
                 }
             }
             //-------------------------------------------------------
@@ -3617,6 +3635,7 @@ void TBase_TRD_Calib::Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t fac
     TVector3 TV3_trkl_offset;
     TVector3 TV3_trkl_dir;
     Float_t  helix_par[9];
+    Double_t ADC_val[24] = {-1.0};
 
     for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
     {
@@ -3702,6 +3721,11 @@ void TBase_TRD_Calib::Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t fac
             //printf("i_det: %d \n",i_det);
             for(Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_fit_points[i_det].size(); i_trkl++)
             {
+                for (Int_t i_timebin = 0; i_timebin < (Int_t)vec_ADC_val[i_det][i_trkl].size(); i_timebin++)
+                {
+                    ADC_val[i_timebin] = vec_ADC_val[i_det][i_trkl][i_timebin];
+                }
+
                 //printf("i_trkl: %d \n",i_trkl);
                 for(Int_t i_AB = 0; i_AB < 2; i_AB++)
                 {
@@ -3719,6 +3743,10 @@ void TBase_TRD_Calib::Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t fac
                 TRD_ST_Tracklet  ->set_TRD_det(i_det);
                 TRD_ST_Tracklet  ->set_TV3_offset(TV3_trkl_offset);
                 TRD_ST_Tracklet  ->set_TV3_dir(TV3_trkl_dir);
+                for (i_timebin = 0; i_timebin < vec_ADC_val[i_det][i_trkl].size(); i_timebin++)
+                {
+                    TRD_ST_Tracklet  ->set_ADC_val(i_timebin,ADC_val[i_timebin]);
+                }
             } // end tracklet loop
         } // end detector loop
 
