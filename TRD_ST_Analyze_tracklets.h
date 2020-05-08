@@ -30,7 +30,8 @@ private:
     Int_t N_tracklets_layers[6] = {0};
     Double_t scale_length = 10.0;
     Int_t track_color    = kAzure-2;
-    Int_t color_layer[6] = {kRed,kGreen,kCyan,kYellow,kPink-3,kOrange+8};
+    Int_t color_layer_match[6] = {kRed,kGreen,kCyan,kYellow,kPink-3,kOrange+8};
+    Int_t color_layer[6] = {kGray,kGray,kGray,kGray,kGray,kGray};
     Double_t TRD_layer_radii[6][2] =
     {
         {297.5,306.5},
@@ -40,6 +41,13 @@ private:
         {348.0,357.0},
         {361.0,371.0}
     };
+
+    Int_t Not_installed_TRD_detectors[19] = {402,403,404,405,406,407,432,433,434,435,436,437,462,463,464,465,466,467,538};
+    TH1D* h_good_bad_TRD_chambers;
+
+    // TRD 3D graphics
+    vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
+    vector<TEveBox*> vec_eve_TRD_detector_box;
 
 public:
     Ali_TRD_ST_Analyze();
@@ -75,6 +83,64 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
     vec_TEveLine_tracklets_match.resize(6); // layers
 
     th1d_TRD_layer_radii = new TH1D("th1d_TRD_layer_radii","th1d_TRD_layer_radii",900,250,400.0);
+
+
+
+    //--------------------------
+    // Open histogram which defines good and bad chambers
+    TFile* file_TRD_QA = TFile::Open("./Data/chamber_QC.root");
+    h_good_bad_TRD_chambers = (TH1D*)file_TRD_QA ->Get("all_defects_hist");
+    //--------------------------
+
+
+
+    //--------------------------
+    // Load TRD geometry
+    TFile* file_TRD_geom = TFile::Open("./Data/TRD_Geom.root");
+    vec_TH1D_TRD_geometry.resize(3); // x,y,z
+    for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+    {
+        vec_TH1D_TRD_geometry[i_xyz].resize(8); // 8 vertices
+        for(Int_t i_vertex = 0; i_vertex < 8; i_vertex++)
+        {
+            HistName = "vec_TH1D_TRD_geometry_xyz_";
+            HistName += i_xyz;
+            HistName += "_V";
+            HistName += i_vertex;
+            vec_TH1D_TRD_geometry[i_xyz][i_vertex] = (TH1D*)file_TRD_geom->Get(HistName.Data());
+        }
+
+    }
+    vec_eve_TRD_detector_box.resize(540);
+    for(Int_t TRD_detector = 0; TRD_detector < 540; TRD_detector++)
+    {
+        vec_eve_TRD_detector_box[TRD_detector] = new TEveBox;
+
+        HistName = "TRD_box_";
+        HistName += TRD_detector;
+        vec_eve_TRD_detector_box[TRD_detector] ->SetName(HistName.Data());
+        if(h_good_bad_TRD_chambers ->GetBinContent(TRD_detector)) // chamber is OK flagged by QA
+        {
+            vec_eve_TRD_detector_box[TRD_detector]->SetMainColor(kCyan);
+            vec_eve_TRD_detector_box[TRD_detector]->SetMainTransparency(95); // the higher the value the more transparent
+        }
+        else // bad chamber
+        {
+            vec_eve_TRD_detector_box[TRD_detector]->SetMainColor(kRed);
+            vec_eve_TRD_detector_box[TRD_detector]->SetMainTransparency(85); // the higher the value the more transparent
+        }
+        for(Int_t i_vertex = 0; i_vertex < 8; i_vertex++)
+        {
+            Double_t arr_pos_glb[3] = {vec_TH1D_TRD_geometry[0][i_vertex]->GetBinContent(TRD_detector),vec_TH1D_TRD_geometry[1][i_vertex]->GetBinContent(TRD_detector),vec_TH1D_TRD_geometry[2][i_vertex]->GetBinContent(TRD_detector)};
+            vec_eve_TRD_detector_box[TRD_detector]->SetVertex(i_vertex,arr_pos_glb[0],arr_pos_glb[1],arr_pos_glb[2]);
+        }
+
+        gEve->AddElement(vec_eve_TRD_detector_box[TRD_detector]);
+    }
+    //--------------------------
+
+
+
 }
 //----------------------------------------------------------------------------------------
 
@@ -366,11 +432,11 @@ void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
         HistName += i_tracklet;
         vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetName(HistName.Data());
         vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetLineStyle(1);
-        vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetLineWidth(4);
+        vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetLineWidth(3);
         vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetMainColor(color_layer[i_layer]);
         //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
         {
-            //gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
+            gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
         }
 
         N_tracklets_layers[i_layer]++;
@@ -543,8 +609,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
             HistName += size_tracklet;
             vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetName(HistName.Data());
             vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetLineStyle(1);
-            vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetLineWidth(4);
-            vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetMainColor(color_layer[i_layer]);
+            vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetLineWidth(6);
+            vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetMainColor(color_layer_match[i_layer]);
             //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
             {
                 gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
