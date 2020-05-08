@@ -476,6 +476,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
     vector< vector<TVector3> > vec_TV3_offset_tracklets;
     vec_TV3_dir_tracklets.resize(540);
     vec_TV3_offset_tracklets.resize(540);
+    Double_t ADC_val[24];
+
 
     TVector3 TV3_offset;
     TVector3 TV3_dir;
@@ -496,6 +498,16 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
         vec_TV3_dir_tracklets[i_det].push_back(TV3_dir);
         vec_TV3_offset_tracklets[i_det].push_back(TV3_offset);
+
+        if (i_tracklet%50 == 0) 
+        {
+            printf("i_trkl: %d, ADC_val: \n",i_tracklet);
+            for (Int_t i_tbn = 0; i_tbn < 24; i_tbn++)
+            {
+                ADC_val[i_tbn]         = TRD_ST_Tracklet ->get_ADC_val(i_tbn);
+                printf("i_timebin: %d; ADC_val: %4.3f \n \n",i_tbn,ADC_val[i_tbn]);
+            }
+        }
 
     }
     //--------------------------------------------------
