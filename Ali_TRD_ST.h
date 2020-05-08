@@ -13,7 +13,7 @@ private:
     TVector3 TV3_offset;
     TVector3 TV3_dir;
     Int_t    TRD_det;
-    Double_t ADC_val[];
+    Double_t ADC_val[24];
 public:
     Ali_TRD_ST_Tracklets() :
         TV3_offset(),TV3_dir(),TRD_det(-1),ADC_val()
