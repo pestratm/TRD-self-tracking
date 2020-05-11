@@ -318,7 +318,7 @@ public:
 //----------------------------------------------------------------------------------------
 TBase_TRD_Calib::TBase_TRD_Calib()
 {
-    outputfile = new TFile("./TRD_Calib_ADC.root","RECREATE");
+    outputfile = new TFile("./Data/TRD_Calib_ADC_check.root","RECREATE");
 
     Init_QA();
 
@@ -3149,11 +3149,31 @@ void TBase_TRD_Calib::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Doub
                 }
             }
 
-            for (Int_t i_timebin = 0; i_timebin < vec_self_tracklet_points[i_det][i_trkl].size(); i_timebin++)
+            // fill ADC val vector
+
+            Int_t tbn_max = (Int_t)vec_self_tracklet_points[i_det][i_trkl].size()-1;
+            Double_t radius_in  = TMath::Sqrt( TMath::Power(vec_self_tracklet_points[i_det][i_trkl][tbn_max][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_trkl][tbn_max][1],2) );
+            Double_t radius_out = TMath::Sqrt( TMath::Power(vec_self_tracklet_points[i_det][i_trkl][0][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_trkl][0][1],2) );
+
+            if (radius_in >= radius_out)
             {
-                vec_ADC_val[i_det][i_trkl][i_timebin] = vec_self_tracklet_points[i_det][i_trkl][i_timebin][3];
-                //printf("");
+                for (Int_t i_timebin = 0; i_timebin < tbn_max; i_timebin++)
+                {
+                    vec_ADC_val[i_det][i_trkl][i_timebin] = vec_self_tracklet_points[i_det][i_trkl][i_timebin][3];
+                    printf("right order \n");
+                    if (radius_in == radius_out) printf("SAME radius \n");
+                }
             }
+
+            if (radius_in < radius_out)
+            {
+                for (Int_t i_timebin = 0; i_timebin < tbn_max; i_timebin++)
+                {
+                    vec_ADC_val[i_det][i_trkl][tbn_max - i_timebin] = vec_self_tracklet_points[i_det][i_trkl][i_timebin][3];
+                    printf("wrong order \n");
+                }
+            }
+
             //-------------------------------------------------------
 
             Double_t radius = TMath::Sqrt( TMath::Power(TV3_base_fit_t0[0],2) + TMath::Power(TV3_base_fit_t0[1],2) );
@@ -3735,11 +3755,6 @@ void TBase_TRD_Calib::Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t fac
                     }
                 }
 
-                for (Int_t i_timebin = 0; i_timebin < (Int_t)vec_ADC_val[i_det][i_trkl].size(); i_timebin++)
-                {
-                    ADC_val[i_timebin] = vec_ADC_val[i_det][i_trkl][i_timebin];
-                }
-
                 TV3_trkl_dir -= TV3_trkl_offset;
 
                 TRD_ST_Tracklet = TRD_ST_Event ->createTracklet(); // online tracklet
@@ -3748,6 +3763,7 @@ void TBase_TRD_Calib::Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t fac
                 TRD_ST_Tracklet  ->set_TV3_dir(TV3_trkl_dir);
                 for (Int_t i_timebin = 0; i_timebin < vec_ADC_val[i_det][i_trkl].size(); i_timebin++)
                 {
+                    ADC_val[i_timebin] = vec_ADC_val[i_det][i_trkl][i_timebin];
                     TRD_ST_Tracklet  ->set_ADC_val(i_timebin,ADC_val[i_timebin]);
                 }
 
