@@ -11,5 +11,5 @@ void TRD_ST_Analyze_tracklets()
     TRD_ST_Analyze ->Loop_event(event);
     TRD_ST_Analyze ->Draw_event(event);
     TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0);
-
+    TRD_ST_Analyze ->Do_TPC_TRD_matching_allEvents(3.0,10.0);
 }

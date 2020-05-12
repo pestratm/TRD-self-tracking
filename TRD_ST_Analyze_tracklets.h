@@ -17,6 +17,13 @@ private:
     Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track;
     Ali_TRD_ST_Event*     TRD_ST_Event;
 
+    Ali_TRD_ST_Tracklets* TRD_ST_Tracklet_out;
+    Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track_out;
+    Ali_TRD_ST_Event*     TRD_ST_Event_out;
+    TTree* Tree_TRD_ST_Event_out;
+
+    TFile* outputfile;
+
     TString HistName;
     TH1D* th1d_TRD_layer_radii;
 
@@ -56,6 +63,7 @@ public:
     void Loop_event(Long64_t i_event);
     void Draw_event(Long64_t i_event);
     void Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window);
+    void Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window);
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
@@ -66,6 +74,19 @@ public:
 //----------------------------------------------------------------------------------------
 Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 {
+    outputfile = new TFile("./TRD_Calib_matched.root","RECREATE");
+    //------------------------------------------------
+    outputfile ->cd();
+    // TRD self tracking output data containers
+    TRD_ST_Tracklet_out   = new Ali_TRD_ST_Tracklets();
+    TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
+    TRD_ST_Event_out      = new Ali_TRD_ST_Event();
+
+    Tree_TRD_ST_Event_out  = NULL;
+    Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
+    Tree_TRD_ST_Event_out  ->Branch("Tree_TRD_ST_Event_branch_out"  , "TRD_ST_Event_out", TRD_ST_Event_out );
+    Tree_TRD_ST_Event_out  ->SetAutoSave( 5000000 );
+    //------------------------------------------------
     // constructor
     TEveManager::Create();
 
@@ -91,8 +112,6 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
     TFile* file_TRD_QA = TFile::Open("./Data/chamber_QC.root");
     h_good_bad_TRD_chambers = (TH1D*)file_TRD_QA ->Get("all_defects_hist");
     //--------------------------
-
-
 
     //--------------------------
     // Load TRD geometry
@@ -476,8 +495,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
     vector< vector<TVector3> > vec_TV3_offset_tracklets;
     vec_TV3_dir_tracklets.resize(540);
     vec_TV3_offset_tracklets.resize(540);
-    Double_t ADC_val[24];
 
+    Double_t ADC_val[24];
 
     TVector3 TV3_offset;
     TVector3 TV3_dir;
@@ -498,21 +517,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
         vec_TV3_dir_tracklets[i_det].push_back(TV3_dir);
         vec_TV3_offset_tracklets[i_det].push_back(TV3_offset);
-
-        if (i_tracklet%50 == 0) 
-        {
-            printf("i_trkl: %d, ADC_val: \n",i_tracklet);
-            for (Int_t i_tbn = 0; i_tbn < 24; i_tbn++)
-            {
-                ADC_val[i_tbn]         = TRD_ST_Tracklet ->get_ADC_val(i_tbn);
-                printf("i_timebin: %d; ADC_val: %4.3f \n \n",i_tbn,ADC_val[i_tbn]);
-            }
-        }
-
     }
     //--------------------------------------------------
-
-
 
     //--------------------------------------------------
     // TPC track loop
@@ -623,12 +629,12 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
             vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetLineStyle(1);
             vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetLineWidth(6);
             vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetMainColor(color_layer_match[i_layer]);
+
             //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
             {
                 gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
             }
         }
-
     }
     //--------------------------------------------------
 
@@ -636,7 +642,326 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 }
 //----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window)
+{
 
+
+    for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
+    {
+        printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching_allEvents: Event %lld \n",i_event);
+
+        if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
+
+
+        //--------------------------------------------------
+        // Event information (more data members available, see Ali_TRD_ST_Event class definition)
+        UShort_t NumTracks            = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
+        Int_t    NumTracklets         = TRD_ST_Event ->getNumTracklets();
+        Double_t EventVertexX         = TRD_ST_Event ->getx();
+        Double_t EventVertexY         = TRD_ST_Event ->gety();
+        Double_t EventVertexZ         = TRD_ST_Event ->getz();
+        Float_t  V0MEq                = TRD_ST_Event ->getcent_class_V0MEq();
+        //--------------------------------------------------
+
+
+
+        //--------------------------------------------------
+        // Store all TRD tracklet in an array to keep it in memory
+        // TRD tracklet loop
+        vector< vector<TVector3> > vec_TV3_dir_tracklets;
+        vector< vector<TVector3> > vec_TV3_offset_tracklets;
+        vec_TV3_dir_tracklets.resize(540);
+        vec_TV3_offset_tracklets.resize(540);
+        
+        vector< vector<Int_t> > vec_trkl_ID; //[det][i_trkl(det)] = i_trkl_global
+        vec_trkl_ID.resize(540);
+
+        Double_t ADC_val[24];
+
+        TVector3 TV3_offset;
+        TVector3 TV3_dir;
+        Int_t    i_det;
+
+        for(Int_t i_tracklet = 0; i_tracklet < NumTracklets; i_tracklet++)
+        {
+            TRD_ST_Tracklet = TRD_ST_Event    ->getTracklet(i_tracklet);
+            TV3_offset      = TRD_ST_Tracklet ->get_TV3_offset();
+            TV3_dir         = TRD_ST_Tracklet ->get_TV3_dir();
+            i_det           = TRD_ST_Tracklet ->get_TRD_det();
+
+            //create "tracklets"
+            Int_t i_sector = (Int_t)(i_det/30);
+            Int_t i_stack  = (Int_t)(i_det%30/6);
+            Int_t i_layer  = i_det%6;
+            //Int_t i_det = layer + 6*stack + 30*sector;
+
+            vec_TV3_dir_tracklets[i_det].push_back(TV3_dir);
+            vec_TV3_offset_tracklets[i_det].push_back(TV3_offset);
+
+            vec_trkl_ID[i_det].resize(vec_TV3_dir_tracklets[i_det].size());
+            vec_trkl_ID[i_det][vec_TV3_dir_tracklets[i_det].size()-1] = i_tracklet;
+
+            for (Int_t i_tbn = 0; i_tbn < 24; i_tbn++)
+            {
+                ADC_val[i_tbn] = TRD_ST_Tracklet ->get_ADC_val(i_tbn);
+                //printf("i_timebin: %d; ADC_val: %4.3f \n \n",i_tbn,ADC_val[i_tbn]);
+            }
+
+            TRD_ST_Tracklet_out = TRD_ST_Event_out ->createTracklet(); // rewrite same trkl info in a new Tree 
+
+            TRD_ST_Tracklet_out     ->set_TRD_det(i_det);
+            TRD_ST_Tracklet_out     ->set_TV3_offset(TV3_offset);
+            TRD_ST_Tracklet_out     ->set_TV3_dir(TV3_dir);
+            for (Int_t i_timebin = 0; i_timebin < 24; i_timebin++)
+            {
+                TRD_ST_Tracklet_out ->set_ADC_val(i_timebin,ADC_val[i_timebin]);
+            }
+        }
+        //--------------------------------------------------
+
+
+
+        //--------------------------------------------------
+        // TPC track loop
+        Double_t track_pos[3];
+        Double_t radius_helix;
+        for(Int_t i_track = 0; i_track < NumTracks; i_track++)
+        //for(Int_t i_track = 3; i_track < 4; i_track++)
+        {
+            TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
+
+            Double_t nsigma_TPC_e   = TRD_ST_TPC_Track ->getnsigma_e_TPC();
+            Double_t nsigma_TPC_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TPC();
+            Double_t nsigma_TPC_p   = TRD_ST_TPC_Track ->getnsigma_p_TPC();
+            Double_t nsigma_TOF_e   = TRD_ST_TPC_Track ->getnsigma_e_TOF();
+            Double_t nsigma_TOF_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TOF();
+            Double_t TRD_signal     = TRD_ST_TPC_Track ->getTRDSignal();
+            Double_t TRDsumADC      = TRD_ST_TPC_Track ->getTRDsumADC();
+            Double_t dca            = TRD_ST_TPC_Track ->getdca();  // charge * distance of closest approach to the primary vertex
+            TLorentzVector TLV_part = TRD_ST_TPC_Track ->get_TLV_part();
+            UShort_t NTPCcls        = TRD_ST_TPC_Track ->getNTPCcls();
+            UShort_t NTRDcls        = TRD_ST_TPC_Track ->getNTRDcls();
+            UShort_t NITScls        = TRD_ST_TPC_Track ->getNITScls();
+            Float_t TPCchi2         = TRD_ST_TPC_Track ->getTPCchi2();
+            Float_t TPCdEdx         = TRD_ST_TPC_Track ->getTPCdEdx();
+            Float_t TOFsignal       = TRD_ST_TPC_Track ->getTOFsignal(); // in ps (1E-12 s)
+            Float_t Track_length    = TRD_ST_TPC_Track ->getTrack_length();
+
+            Float_t momentum        = TLV_part.P();
+            Float_t eta_track       = TLV_part.Eta();
+            Float_t pT_track        = TLV_part.Pt();
+            Float_t theta_track     = TLV_part.Theta();
+            Float_t phi_track       = TLV_part.Phi();
+
+            if(momentum < 0.3) continue;
+
+            vector<TVector3> vec_TV3_helix_points_at_TRD_layers;
+            vec_TV3_helix_points_at_TRD_layers.resize(6);
+
+            for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+            {
+                Double_t radius_layer_center = 0.5*(TRD_layer_radii[i_layer][0] + TRD_layer_radii[i_layer][1]);
+
+                // Find the helix path which touches the first TRD layer
+                Double_t track_path_add      = 10.0;
+                Double_t track_path_layer0   = 0.0;
+                Double_t radius_helix_layer0 = 0.0;
+                for(Double_t track_path = TRD_layer_radii[i_layer][0]; track_path < 1000; track_path += track_path_add)
+                {
+                    TRD_ST_TPC_Track ->Evaluate(track_path,track_pos);
+                    radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
+                    if(radius_helix < radius_layer_center)
+                    {
+                        track_path_layer0   = track_path;
+                        radius_helix_layer0 = radius_helix;
+                        //printf("radius_helix_layer0: %4.3f, track_path_add: %4.3f \n",radius_helix_layer0,track_path_add);
+                    }
+                    else
+                    {
+                        track_path -= track_path_add;
+                        track_path_add *= 0.5;
+                    }
+                    if(track_path_add < 1.0)
+                    {
+                        vec_TV3_helix_points_at_TRD_layers[i_layer].SetXYZ(track_pos[0],track_pos[1],track_pos[2]);
+                        break;
+                    }
+                }
+                //printf("   --> i_layer: %d, track_path_layer0: %4.3f, radius_helix_layer0: %4.3f \n",i_layer,track_path_layer0,radius_helix_layer0);
+
+
+                TVector3 TV3_diff_vec;
+                Double_t dist_min      = 10.0;
+                Double_t dist          = 0.0;
+                Int_t    det_best      = -1;
+                Int_t    tracklet_best = -1;
+                for(Int_t i_det = 0; i_det < 540; i_det++)
+                {
+                    Int_t i_layer_from_det  = i_det%6;
+                    if(i_layer_from_det != i_layer) continue;
+
+                    for(Int_t i_tracklet = 0; i_tracklet < (Int_t)vec_TV3_offset_tracklets[i_det].size(); i_tracklet++)
+                    {
+                        TV3_diff_vec = vec_TV3_offset_tracklets[i_det][i_tracklet] - vec_TV3_helix_points_at_TRD_layers[i_layer];
+                        dist = TV3_diff_vec.Mag();
+                        if(dist < dist_min)
+                        {
+                            dist_min      = dist;
+                            det_best      = i_det;
+                            tracklet_best = i_tracklet;
+                        }
+                    }
+                }
+
+                if(det_best < 0 || tracklet_best < 0) continue;
+
+                Int_t size_tracklet = (Int_t)vec_TEveLine_tracklets_match[i_layer].size();
+
+                //printf("i_layer: %d, size_tracklet: %d \n",i_layer,size_tracklet);
+
+                TRD_ST_Tracklet_out = TRD_ST_Event_out ->getTracklet(vec_trkl_ID[det_best][tracklet_best]); //set match flag 
+                TRD_ST_Tracklet_out                    ->set_TPC_match(1);
+            }
+
+        }
+        //--------------------------------------------------
+
+        //loop again over trkls with TPC match flag == 0; 
+        //check where is the nearest trkl
+        //check how many trkl within 20 cm distance
+
+        TVector3 TV3_offset_sub;
+        TVector3 TV3_dir_sub;
+        Int_t    i_det_sub;
+
+        TVector3 TV3_diff_prim_sub;
+        Int_t    n_tracklets_around;
+        Double_t dist_to_next_trkl;
+        Double_t min_dist_to_next_trkl;
+
+        for(Int_t i_tracklet = 0; i_tracklet < NumTracklets; i_tracklet++)
+        {
+            
+            n_tracklets_around    = 0;
+            dist_to_next_trkl     = -1.0;
+            min_dist_to_next_trkl = 20.0;
+
+            TRD_ST_Tracklet_out = TRD_ST_Event_out   ->getTracklet(i_tracklet);
+            UShort_t TPC_match = TRD_ST_Tracklet_out ->get_TPC_match();
+
+            //printf("i_tracklet: %d, TPC_match: %d \n",i_tracklet,TPC_match);
+
+            if (TPC_match == 0) continue; //ignore matched trkls
+
+            TV3_offset      = TRD_ST_Tracklet_out ->get_TV3_offset();
+            TV3_dir         = TRD_ST_Tracklet_out ->get_TV3_dir();
+            i_det           = TRD_ST_Tracklet_out ->get_TRD_det();
+
+            //create "tracklets"
+            Int_t i_sector = (Int_t)(i_det/30);
+            Int_t i_stack  = (Int_t)(i_det%30/6);
+            Int_t i_layer  = i_det%6;
+            //Int_t i_det = layer + 6*stack + 30*sector;
+
+            Int_t i_det_sub_min = i_det-1;
+            Int_t i_det_sub_max = i_det+1;
+
+            if (i_det == 0)   i_det_sub_min = 0;
+            if (i_det == 540) i_det_sub_min = 540;
+
+            ////////
+            for (Int_t i_det_sub = i_det_sub_min; i_det_sub < i_det_sub_max; i_det_sub++)
+            {
+
+                for(Int_t i_tracklet_sub = 0; i_tracklet_sub < (Int_t)vec_TV3_offset_tracklets[i_det_sub].size(); i_tracklet_sub++)
+                {
+                    if (vec_trkl_ID[i_det_sub][i_tracklet_sub] == i_tracklet) continue;
+                    
+                    TV3_diff_prim_sub = TV3_offset - vec_TV3_offset_tracklets[i_det_sub][i_tracklet_sub];
+                    
+                    if (TV3_diff_prim_sub.Mag() < 20.0) 
+                    {
+                        n_tracklets_around++;
+                        dist_to_next_trkl = TV3_diff_prim_sub.Mag();
+
+                         //printf("i_tracklet: %d, n_tracklets_around: %d, dist_to_next_trkl: %4.3f \n",i_tracklet,n_tracklets_around,dist_to_next_trkl);
+
+                        if (dist_to_next_trkl < min_dist_to_next_trkl) min_dist_to_next_trkl = dist_to_next_trkl; // save min distance to next tracklet
+                    }
+
+                }
+            //}
+            ////////
+
+            #if 0
+
+            Int_t i_trkl_sub_min = 0;
+            Int_t i_trkl_sub_max = NumTracklets;//i_tracklet + 300;
+
+            //if (i_tracklet >= 300) i_trkl_sub_min = i_tracklet - 300;
+
+            //if (i_tracklet < NumTracklets-301) i_trkl_sub_max = NumTracklets;;
+
+            for (Int_t i_tracklet_sub = i_trkl_sub_min; i_tracklet_sub <  i_trkl_sub_max; i_tracklet_sub++)
+            {
+                if (i_tracklet_sub == i_tracklet) continue;
+
+                TRD_ST_Tracklet_out = TRD_ST_Event_out    ->getTracklet(i_tracklet_sub);
+
+                //UShort_t TPC_match = TRD_ST_Tracklet ->get_TPC_match();
+
+                //if (TPC_match == 0) continue; //ignore matched trkls
+
+                TV3_offset_sub      = TRD_ST_Tracklet_out ->get_TV3_offset();
+                TV3_dir_sub         = TRD_ST_Tracklet_out ->get_TV3_dir();
+                i_det_sub           = TRD_ST_Tracklet_out ->get_TRD_det();
+
+                Int_t i_sector_sub = (Int_t)(i_det_sub/30);
+                Int_t i_stack_sub  = (Int_t)(i_det_sub%30/6);
+                Int_t i_layer_sub  = i_det_sub%6;
+
+
+                if (i_sector != i_sector_sub && i_stack_sub != i_stack && fabs(i_layer - i_layer_sub) > 1) continue;
+
+                TV3_diff_prim_sub = TV3_offset - TV3_offset_sub;
+
+                //printf("TV3_diff_prim_sub.Mag(): %4.3f, \n",TV3_diff_prim_sub.Mag());
+
+                if (TV3_diff_prim_sub.Mag() < 20.0) 
+                {
+                    n_tracklets_around++;
+                    dist_to_next_trkl = TV3_diff_prim_sub.Mag();
+
+                    //printf("i_tracklet: %d, n_tracklets_around: %d, dist_to_next_trkl: %4.3f \n",i_tracklet,n_tracklets_around,dist_to_next_trkl);
+
+                    if (dist_to_next_trkl < min_dist_to_next_trkl) min_dist_to_next_trkl = dist_to_next_trkl; // save min distance to next tracklet
+                }
+
+            #endif 
+
+
+            TRD_ST_Tracklet_out ->set_n_tracklets_around(n_tracklets_around);
+            TRD_ST_Tracklet_out ->set_min_dist_to_next_trkl(min_dist_to_next_trkl);
+            }
+        }
+        //--------------------------------------------------
+
+        //gEve->Redraw3D(kTRUE);
+        printf("Fill tree \n");
+        Tree_TRD_ST_Event_out ->Fill();
+        printf("Tree filled for event %lld \n",i_event);
+
+    }
+
+    printf("Write data to file \n");
+    outputfile ->cd();
+    Tree_TRD_ST_Event_out ->Write();
+
+    printf("All data written \n");
+
+}
+//----------------------------------------------------------------------------------------
 
 
 
