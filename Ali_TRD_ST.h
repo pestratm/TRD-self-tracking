@@ -14,9 +14,13 @@ private:
     TVector3 TV3_dir;
     Int_t    TRD_det;
     Double_t ADC_val[24];
+    UShort_t TPC_match;
+    Int_t    n_tracklets_around;
+    Double_t min_dist_to_next_trkl;
+
 public:
     Ali_TRD_ST_Tracklets() :
-        TV3_offset(),TV3_dir(),TRD_det(-1),ADC_val()
+        TV3_offset(),TV3_dir(),TRD_det(-1),ADC_val(),TPC_match(0),n_tracklets_around(0),min_dist_to_next_trkl(-1.0)
     {}
         ~Ali_TRD_ST_Tracklets(){}
 
@@ -31,6 +35,15 @@ public:
 
         void       set_ADC_val(Int_t time_bin, Double_t ADC_value)  { ADC_val[time_bin] = ADC_value; }
         Double_t   get_ADC_val(Int_t time_bin) const                { return ADC_val[time_bin];      }
+
+        void       set_TPC_match(UShort_t TPC_match_in)             { TPC_match = TPC_match_in;      }
+        UShort_t   get_TPC_match() const      						{ return TPC_match;              }
+                
+        void       set_n_tracklets_around(Int_t n_tracklets_around_in)          { n_tracklets_around = n_tracklets_around_in;       }
+        Int_t      get_n_tracklets_around() const                               { return n_tracklets_around;                        }
+                
+        void       set_min_dist_to_next_trkl(Double_t min_dist_to_next_trkl_in) { min_dist_to_next_trkl = min_dist_to_next_trkl_in; }
+        Double_t   get_min_dist_to_next_trkl() const                            { return min_dist_to_next_trkl;                     }
 
         ClassDef(Ali_TRD_ST_Tracklets,1);
 };
