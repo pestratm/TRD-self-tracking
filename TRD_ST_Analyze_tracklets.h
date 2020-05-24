@@ -64,6 +64,8 @@ public:
     void Draw_event(Long64_t i_event);
     void Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window);
     void Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window);
+    void Do_TRD_self_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window);
+    void Draw_hist_TPC_tracklet_diffs();
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
@@ -965,3 +967,195 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching_allEvents(Double_t xy_matching_wind
 
 
 
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_window, double angle_window)
+{
+    printf("Ali_TRD_ST_Analyze::Do_TRD_self_matching \n");
+
+    if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
+
+
+    UShort_t NumTracks            = TRD_ST_Event ->getNumTracks(); 
+    Int_t    NumTracklets         = TRD_ST_Event ->getNumTracklets();
+
+
+    vector< vector<TVector3> > vec_TV3_dir_tracklets;
+    vector< vector<TVector3> > vec_TV3_offset_tracklets;
+    vector< vector<int> > tracklet_numbers;
+
+    vec_TV3_dir_tracklets.resize(540);
+    vec_TV3_offset_tracklets.resize(540);
+    tracklet_numbers.resize(540);
+
+
+    TVector3 TV3_offset;
+    TVector3 TV3_dir;
+    Int_t    i_det;
+
+    for(Int_t i_tracklet = 0; i_tracklet < NumTracklets; i_tracklet++)
+    {
+        TRD_ST_Tracklet = TRD_ST_Event    ->getTracklet(i_tracklet);
+        TV3_offset      = TRD_ST_Tracklet ->get_TV3_offset();
+        TV3_dir         = TRD_ST_Tracklet ->get_TV3_dir();
+        i_det           = TRD_ST_Tracklet ->get_TRD_det();
+
+        vec_TV3_dir_tracklets[i_det].push_back(TV3_dir);
+        vec_TV3_offset_tracklets[i_det].push_back(TV3_offset);
+
+        // build vector of tracklet numbers so we can erase from other vectors safely
+        int trkl_num = vec_TV3_offset_tracklets[i_det].size()-1;
+        for (int m=0; m<i_det; m++)
+        {
+            trkl_num += vec_TV3_offset_tracklets[m].size();
+        }
+
+        tracklet_numbers[i_det].push_back(trkl_num);
+    }
+
+
+    vector< vector<TVector3> > tracklet_dir = vec_TV3_dir_tracklets;
+    vector< vector<TVector3> > tracklet_offset = vec_TV3_offset_tracklets;
+    vector< vector< vector<int> > > tracks;
+    vector< vector<int> > tracklet_chain;
+    vector<double> angle_diffs;
+    vector<double> offset_diffs;
+
+    TVector3 a_offset;
+    TVector3 a_dir;
+    TVector3 b_offset;
+    TVector3 b_dir;
+
+    // looking for start of a track. Move in an inward "spiral" visiting only first two layers
+    for (int i_layer=5; i_layer>3; i_layer--)
+    {
+        // loop over detectors in correct layer
+        for (int a_det=(539-(5-i_layer)); a_det>=0; a_det-=6)
+        {
+            // if (!h_good_bad_TRD_chambers->GetBinContent(a_det)) {continue;}
+
+            for (int a_trkl=0; a_trkl<tracklet_dir[a_det].size(); a_trkl++)
+            {
+                a_offset = tracklet_offset[a_det][a_trkl];
+                a_dir = tracklet_dir[a_det][a_trkl];
+
+                tracklet_chain.clear();
+
+                bool first = 1;
+ 
+                // look for candidate matching tracklets in successive layers
+                for (int b_layer=i_layer-1; b_layer>=0; b_layer--)
+                {
+                    int b_det = a_det - (i_layer - b_layer);
+
+                    offset_diffs.clear();
+                    angle_diffs.clear();
+
+                    for (int b_trkl=0; b_trkl<tracklet_offset[b_det].size(); b_trkl++)
+                    {
+                        b_offset = tracklet_offset[b_det][b_trkl];
+                        b_dir = tracklet_dir[b_det][b_trkl];
+
+                        TVector3 pos = a_offset;
+                        double r = a_offset.Mag();
+                        double step_size = 1.0;
+
+                        while (r > b_offset.Mag())
+                        {
+                            for (int n=0; n<3; n++)
+                            {
+                                pos[n] -= a_dir[n]*step_size; 
+                            }
+                            r = pos.Mag();
+
+                            if (r > 1000 || r < 0) {break;}
+                        }
+
+                        double offset_diff = (b_offset - pos).Mag();
+                        double angle_diff = abs(b_dir.Angle(a_dir))*TMath::RadToDeg();
+
+                        offset_diffs.push_back(offset_diff);
+                        angle_diffs.push_back(angle_diff);
+
+                        // if (a_det == 533 || a_det == 532)
+                        // {
+                        //     cout << a_det << "  " << b_det << endl;
+                        //     cout << "angle diff: " << angle_diff << endl;
+                        //     cout << "offset_diff: " << offset_diff << endl;
+                        // }
+                    }
+
+                    // select best tracklet from candidates
+                    double min_offset_diff = offset_window;
+                    double min_angle_diff = angle_window;
+                    int best_trkl;
+
+                    // needs to consider angle as well
+                    for (int trkl=0; trkl<offset_diffs.size(); trkl++)
+                    {
+                        if (offset_diffs[trkl] < min_offset_diff)
+                        {
+                            min_offset_diff = offset_diffs[trkl];
+                            min_angle_diff = angle_diffs[trkl];
+                            best_trkl = trkl;
+                            b_offset = tracklet_offset[b_det][best_trkl];
+                            b_dir = tracklet_dir[b_det][best_trkl];
+                        }
+                    }
+
+                    // best tracklet will not pass if its angle is bad
+                    if (min_offset_diff < offset_window && min_angle_diff < angle_window)
+                    {
+
+                        int a_trkl_number = tracklet_numbers[a_det][a_trkl];
+                        int best_trkl_number = tracklet_numbers[b_det][best_trkl];
+
+                        if (first)
+                        {
+                            // cout << endl << "START " << "det: " << a_det << "  " << "trkl: " << a_trkl_number << endl;
+                            tracklet_chain.push_back({a_det, a_trkl_number});
+                        }
+
+                        // cout << "MATCH! " << "det: " << b_det << "  " << "trkl: " << best_trkl_number << endl;
+                        tracklet_chain.push_back({b_det, best_trkl_number});
+
+                        a_offset = b_offset;
+                        a_dir = b_dir;
+
+                        tracklet_offset[b_det].erase(tracklet_offset[b_det].begin() + best_trkl);
+                        tracklet_dir[b_det].erase(tracklet_dir[b_det].begin() + best_trkl);
+                        tracklet_numbers[b_det].erase(tracklet_numbers[b_det].begin() + best_trkl);
+
+                        first = 0;
+                    }
+                }
+
+                if (tracklet_chain.size() > 3)
+                {
+                    tracks.push_back(tracklet_chain);
+                }
+            }
+        }
+    }
+
+    // print out beautiful tracks
+    for (int i=0; i<tracks.size(); i++)
+    {
+        cout << endl << "track: " << i << endl;
+        for (int j=0; j<tracks[i].size(); j++)
+        {
+            cout << "det: " << tracks[i][j][0] << " | tracklet: " << tracks[i][j][1] << endl;
+        }
+    }
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Draw_hist_TPC_tracklet_diffs()
+{
+    printf("Ali_TRD_ST_Analyze::Draw_hist_TPC_tracklet_diffs \n");
+
+
+}
+//----------------------------------------------------------------------------------------
