@@ -34,6 +34,7 @@ private:
     vector<TEveLine*> vec_TPL3D_helix_hull;
     vector< vector<TEveLine*> > vec_TEveLine_tracklets;
     vector< vector<TEveLine*> > vec_TEveLine_tracklets_match;
+    vector< vector<TEveLine*> > vec_TEveLine_self_matched_tracklets;
     Int_t N_tracklets_layers[6] = {0};
     Double_t scale_length = 10.0;
     Int_t track_color    = kAzure-2;
@@ -634,7 +635,7 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
             //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
             {
-                gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
+                // gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
             }
         }
     }
@@ -1146,6 +1147,36 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
             cout << "det: " << tracks[i][j][0] << " | tracklet: " << tracks[i][j][1] << endl;
         }
     }
+
+    // draw tracklets
+    vec_TEveLine_self_matched_tracklets.resize(tracks.size());
+
+    for (int i_track=0; i_track<tracks.size(); i_track++)
+    {
+        for (int i_tracklet=0; i_tracklet<tracks[i_track].size(); i_tracklet++)
+        {
+            int tracklet_number = tracks[i_track][i_tracklet][1];
+            
+            TRD_ST_Tracklet = TRD_ST_Event ->getTracklet(tracklet_number);
+            TVector3 offset = TRD_ST_Tracklet ->get_TV3_offset();
+            TVector3 dir = TRD_ST_Tracklet ->get_TV3_dir();
+
+            vec_TEveLine_self_matched_tracklets[i_track].resize(tracks[i_track].size());
+
+            vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] = new TEveLine();
+            vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] ->SetNextPoint(offset[0], offset[1], offset[2]);
+            vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] ->SetNextPoint(offset[0] + scale_length*dir[0],offset[1] + scale_length*dir[1],offset[2] + scale_length*dir[2]);
+
+            vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] ->SetLineStyle(1);
+            vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] ->SetLineWidth(6);
+            vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] ->SetMainColor(kBlue);
+
+            gEve->AddElement(vec_TEveLine_self_matched_tracklets[i_track][i_tracklet]);
+        }
+    }
+
+    gEve->Redraw3D(kTRUE);
+
 }
 //----------------------------------------------------------------------------------------
 
