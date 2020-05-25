@@ -460,7 +460,7 @@ void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
         vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetMainColor(color_layer[i_layer]);
         //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
         {
-            gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
+            // gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
         }
 
         N_tracklets_layers[i_layer]++;
@@ -651,8 +651,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window)
 {
 
-    th1d_offset_diff = new TH1D("th1d_offset_diff","difference in predicted pos vs actual pos of successive TPC matched tracklets",100,-10,75);
-    th1d_angle_diff = new TH1D("th1d_angle_diff","difference in angle of successive TPC matched tracklets",100,-10,120);
+    th1d_offset_diff = new TH1D("th1d_offset_diff","difference in predicted pos vs actual pos of successive TPC matched tracklets",100,-5,150);
+    th1d_angle_diff = new TH1D("th1d_angle_diff","difference in angle of successive TPC matched tracklets",100,-5,180);
 
     for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
     {
@@ -1026,7 +1026,6 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
 
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
-
     UShort_t NumTracks            = TRD_ST_Event ->getNumTracks(); 
     Int_t    NumTracklets         = TRD_ST_Event ->getNumTracklets();
 
@@ -1055,20 +1054,14 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
         vec_TV3_offset_tracklets[i_det].push_back(TV3_offset);
 
         // build vector of tracklet numbers so we can erase from other vectors safely
-        int trkl_num = vec_TV3_offset_tracklets[i_det].size()-1;
-        for (int m=0; m<i_det; m++)
-        {
-            trkl_num += vec_TV3_offset_tracklets[m].size();
-        }
-
-        tracklet_numbers[i_det].push_back(trkl_num);
+        tracklet_numbers[i_det].push_back(i_tracklet);
     }
 
 
     vector< vector<TVector3> > tracklet_dir = vec_TV3_dir_tracklets;
     vector< vector<TVector3> > tracklet_offset = vec_TV3_offset_tracklets;
-    vector< vector< vector<int> > > tracks;
-    vector< vector<int> > tracklet_chain;
+    vector< vector< vector<double> > > tracks;
+    vector< vector<double> > tracklet_chain;
     vector<double> angle_diffs;
     vector<double> offset_diffs;
 
@@ -1091,8 +1084,6 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                 a_dir = tracklet_dir[a_det][a_trkl];
 
                 tracklet_chain.clear();
-
-                bool first = 1;
  
                 // look for candidate matching tracklets in successive layers
                 for (int b_layer=i_layer-1; b_layer>=0; b_layer--)
@@ -1107,20 +1098,21 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                         b_offset = tracklet_offset[b_det][b_trkl];
                         b_dir = tracklet_dir[b_det][b_trkl];
 
-                        TVector3 pos = a_offset;
-                        double r = a_offset.Mag();
-                        double step_size = 1.0;
+                        TVector3 pos;
 
-                        while (r > b_offset.Mag())
+                        // sometimes a_dir is such that the dot product points away from the beam axis
+                        double cylind_radial_dist_a_b = sqrt(pow(a_offset[0], 2) + pow(a_offset[1], 2)) - sqrt(pow(b_offset[0], 2) + pow(b_offset[1], 2));
+                        TVector3 cylind_radial_unit_vec_a = (TVector3){a_offset[0], a_offset[1], 0}.Unit();
+
+                        if (a_dir.Mag() != 0)
                         {
-                            for (int n=0; n<3; n++)
-                            {
-                                pos[n] -= a_dir[n]*step_size; 
-                            }
-                            r = pos.Mag();
-
-                            if (r > 1000 || r < 0) {break;}
+                            pos = a_offset - (cylind_radial_dist_a_b) * a_dir * (1 / (a_dir * cylind_radial_unit_vec_a));
                         }
+
+                        // cout << endl << "a_offset: " << sqrt(pow(a_offset[0], 2) + pow(a_offset[1], 2)) << endl;
+                        // cout << "b_offset: " << sqrt(pow(b_offset[0], 2) + pow(b_offset[1], 2)) << endl;
+                        // cout << "pos: " << sqrt(pow(pos[0], 2) + pow(pos[1], 2)) << endl;
+
 
                         double offset_diff = (b_offset - pos).Mag();
                         double angle_diff = abs(b_dir.Angle(a_dir))*TMath::RadToDeg();
@@ -1128,20 +1120,23 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                         offset_diffs.push_back(offset_diff);
                         angle_diffs.push_back(angle_diff);
 
-                        // if (a_det == 533 || a_det == 532)
+                        // if (a_det == 419)
                         // {
                         //     cout << a_det << "  " << b_det << endl;
+                        //     cout << tracklet_numbers[a_det][a_trkl] << "  " << tracklet_numbers[b_det][b_trkl] << endl;
                         //     cout << "angle diff: " << angle_diff << endl;
                         //     cout << "offset_diff: " << offset_diff << endl;
                         // }
                     }
 
-                    // select best tracklet from candidates
-                    double min_offset_diff = offset_window;
-                    double min_angle_diff = angle_window;
+                    // these values set limits for individual successive tracklets
+                    double min_offset_diff = 30;
+                    double min_angle_diff = 90;
                     int best_trkl;
 
-                    // ought to consider angle as well
+                    // select best tracklet from candidates
+                    // ? ought to consider angle as well
+                    int count = 0;
                     for (int trkl=0; trkl<offset_diffs.size(); trkl++)
                     {
                         if (offset_diffs[trkl] < min_offset_diff)
@@ -1151,39 +1146,60 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                             best_trkl = trkl;
                             b_offset = tracklet_offset[b_det][best_trkl];
                             b_dir = tracklet_dir[b_det][best_trkl];
+
+                            // number of tracklets within acceptance radius
+                            count ++;
                         }
                     }
 
                     // best tracklet will not pass if its angle is bad
-                    if (min_offset_diff < offset_window && min_angle_diff < angle_window)
+                    if (min_offset_diff < 30 && min_angle_diff < 90 && count < 4)
                     {
 
                         int a_trkl_number = tracklet_numbers[a_det][a_trkl];
                         int best_trkl_number = tracklet_numbers[b_det][best_trkl];
 
-                        if (first)
-                        {
-                            // cout << endl << "START " << "det: " << a_det << "  " << "trkl: " << a_trkl_number << endl;
-                            tracklet_chain.push_back({a_det, a_trkl_number});
-                        }
-
                         // cout << "MATCH! " << "det: " << b_det << "  " << "trkl: " << best_trkl_number << endl;
-                        tracklet_chain.push_back({b_det, best_trkl_number});
+                        
+                        tracklet_chain.push_back({(double)b_det, (double)best_trkl_number, (double)best_trkl, min_offset_diff, min_angle_diff});
 
                         a_offset = b_offset;
                         a_dir = b_dir;
-
-                        tracklet_offset[b_det].erase(tracklet_offset[b_det].begin() + best_trkl);
-                        tracklet_dir[b_det].erase(tracklet_dir[b_det].begin() + best_trkl);
-                        tracklet_numbers[b_det].erase(tracklet_numbers[b_det].begin() + best_trkl);
-
-                        first = 0;
                     }
                 }
+                
+                // evaluate track as a whole
+                double angle_diff_sum = 0;
+                double offset_diff_sum = 0;
 
                 if (tracklet_chain.size() > 3)
                 {
-                    tracks.push_back(tracklet_chain);
+                    for (int t=0; t<tracklet_chain.size(); t++)
+                    {
+                        offset_diff_sum += tracklet_chain[t][3];
+                        angle_diff_sum += tracklet_chain[t][4];
+                    }   
+                }
+
+                if (tracklet_chain.size()+1 > 4)
+                {
+                    if (offset_diff_sum/tracklet_chain.size() < 15 && angle_diff_sum/tracklet_chain.size() < 60)
+                    {
+                        int a_trkl_number = tracklet_numbers[a_det][a_trkl];
+                        tracklet_chain.insert(tracklet_chain.begin(), {(double)a_det, double(a_trkl_number)});
+
+                        tracks.push_back(tracklet_chain);
+
+                        for (int t=0; t<tracklet_chain.size(); t++)
+                        {
+                            int b_det = (int)tracklet_chain[t][0];
+                            int best_trkl = (int)tracklet_chain[t][2];
+
+                            tracklet_offset[b_det].erase(tracklet_offset[b_det].begin() + best_trkl);
+                            tracklet_dir[b_det].erase(tracklet_dir[b_det].begin() + best_trkl);
+                            tracklet_numbers[b_det].erase(tracklet_numbers[b_det].begin() + best_trkl);
+                        }   
+                    }
                 }
             }
         }
@@ -1199,7 +1215,7 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
         }
     }
 
-    // draw matched tracklets
+    // // draw matched tracklets
     vec_TEveLine_self_matched_tracklets.resize(tracks.size());
 
     for (int i_track=0; i_track<tracks.size(); i_track++)
@@ -1220,7 +1236,7 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
 
             vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] ->SetLineStyle(1);
             vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] ->SetLineWidth(6);
-            vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] ->SetMainColor(kBlue);
+            vec_TEveLine_self_matched_tracklets[i_track][i_tracklet] ->SetMainColor(color_layer_match[i_tracklet]);
 
             gEve->AddElement(vec_TEveLine_self_matched_tracklets[i_track][i_tracklet]);
         }
