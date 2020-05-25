@@ -26,6 +26,8 @@ private:
 
     TString HistName;
     TH1D* th1d_TRD_layer_radii;
+    TH1D* th1d_offset_diff;
+    TH1D* th1d_angle_diff;
 
     TEveLine* TEveLine_beam_axis = NULL;
     TEveLine* TPL3D_helix = NULL;
@@ -649,6 +651,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window)
 {
 
+    th1d_offset_diff = new TH1D("th1d_offset_diff","difference in predicted pos vs actual pos of successive TPC matched tracklets",100,-10,75);
+    th1d_angle_diff = new TH1D("th1d_angle_diff","difference in angle of successive TPC matched tracklets",100,-10,120);
 
     for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
     {
@@ -762,6 +766,12 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching_allEvents(Double_t xy_matching_wind
             vector<TVector3> vec_TV3_helix_points_at_TRD_layers;
             vec_TV3_helix_points_at_TRD_layers.resize(6);
 
+            // for deviation histograms
+            TVector3 a_offset = {-999, 0, 0};
+            TVector3 a_dir;
+            TVector3 b_offset;
+            TVector3 b_dir;
+
             for(Int_t i_layer = 0; i_layer < 6; i_layer++)
             {
                 Double_t radius_layer_center = 0.5*(TRD_layer_radii[i_layer][0] + TRD_layer_radii[i_layer][1]);
@@ -818,6 +828,47 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching_allEvents(Double_t xy_matching_wind
                 }
 
                 if(det_best < 0 || tracklet_best < 0) continue;
+
+
+
+                // fill hists of deviations
+                if (a_offset[0] != -999)
+                {
+                    b_offset = vec_TV3_offset_tracklets[det_best][tracklet_best];
+                    b_dir = vec_TV3_dir_tracklets[det_best][tracklet_best];
+
+                    TVector3 pos = a_offset;
+                    double r = a_offset.Mag();
+                    double step_size = 1.0;
+
+                    while (r < b_offset.Mag())
+                    {
+                        for (int n=0; n<3; n++)
+                        {
+                            pos[n] += a_dir[n]*step_size; 
+                        }
+                        r = pos.Mag();
+
+                        if (r > 1000 || r < 0) {break;}
+                    }
+
+                    double offset_diff = (b_offset - pos).Mag();
+                    double angle_diff = abs(b_dir.Angle(a_dir))*TMath::RadToDeg();
+
+                    th1d_offset_diff->Fill(offset_diff);
+                    th1d_angle_diff->Fill(angle_diff);
+
+                    a_offset = b_offset;
+                    a_dir = b_dir;
+                }
+
+                if (a_offset[0] == -999)
+                {
+                    a_offset = vec_TV3_offset_tracklets[det_best][tracklet_best];
+                    a_dir = vec_TV3_dir_tracklets[det_best][tracklet_best];
+                }
+
+
 
                 Int_t size_tracklet = (Int_t)vec_TEveLine_tracklets_match[i_layer].size();
 
@@ -1090,7 +1141,7 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                     double min_angle_diff = angle_window;
                     int best_trkl;
 
-                    // needs to consider angle as well
+                    // ought to consider angle as well
                     for (int trkl=0; trkl<offset_diffs.size(); trkl++)
                     {
                         if (offset_diffs[trkl] < min_offset_diff)
@@ -1148,7 +1199,7 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
         }
     }
 
-    // draw tracklets
+    // draw matched tracklets
     vec_TEveLine_self_matched_tracklets.resize(tracks.size());
 
     for (int i_track=0; i_track<tracks.size(); i_track++)
@@ -1187,6 +1238,22 @@ void Ali_TRD_ST_Analyze::Draw_hist_TPC_tracklet_diffs()
 {
     printf("Ali_TRD_ST_Analyze::Draw_hist_TPC_tracklet_diffs \n");
 
+    th1d_offset_diff->GetXaxis()->SetTitle("Offset Difference (cm)");
+    th1d_offset_diff->GetYaxis()->SetTitle("Number of Tracklets");
+    th1d_offset_diff->GetXaxis()->CenterTitle();
+    th1d_offset_diff->GetYaxis()->CenterTitle();
 
+    TCanvas *th1d_offset_diff_can = new TCanvas("th1d_offset_diff_can", "Max");
+    th1d_offset_diff_can->cd();
+    th1d_offset_diff->Draw();
+
+    th1d_angle_diff->GetXaxis()->SetTitle("Angle Difference (deg)");
+    th1d_angle_diff->GetYaxis()->SetTitle("Number of Tracklets");
+    th1d_angle_diff->GetXaxis()->CenterTitle();
+    th1d_angle_diff->GetYaxis()->CenterTitle();
+
+    TCanvas *th1d_angle_diff_can = new TCanvas("th1d_angle_diff_can", "Plateu");
+    th1d_angle_diff_can->cd();
+    th1d_angle_diff->Draw();
 }
 //----------------------------------------------------------------------------------------
