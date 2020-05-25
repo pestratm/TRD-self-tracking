@@ -258,6 +258,8 @@ private:
     vector<TProfile*> vec_tp_Delta_vs_impact;
     vector<TH2D*> vec_TH2D_Delta_vs_impact;
 
+    vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
+
 public:
     TBase_TRD_Calib();
     ~TBase_TRD_Calib();
@@ -337,6 +339,20 @@ TBase_TRD_Calib::TBase_TRD_Calib()
     //------------------------------------------------
 
 
+    vec_TH1D_TRD_geometry.resize(3); // x,y,z
+    for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+    {
+        vec_TH1D_TRD_geometry[i_xyz].resize(8); // 8 vertices
+        for(Int_t i_vertex = 0; i_vertex < 8; i_vertex++)
+        {
+            HistName = "vec_TH1D_TRD_geometry_xyz_";
+            HistName += i_xyz;
+            HistName += "_V";
+            HistName += i_vertex;
+            vec_TH1D_TRD_geometry[i_xyz][i_vertex] = new TH1D(HistName.Data(),HistName.Data(),540,0,540);
+        }
+
+    }
     vec_TV3_Tracklet_pos.resize(540);
     vec_TV3_Tracklet_dir.resize(540);
     vec_h_diff_helix_line_impact_angle.resize(3); // [all,-,+]
@@ -557,6 +573,9 @@ TBase_TRD_Calib::TBase_TRD_Calib()
             }
 
             vec_eve_TRD_detector_box[TRD_detector]->SetVertex(i_vertex,arr_pos_glb[0],arr_pos_glb[1],arr_pos_glb[2]);
+            vec_TH1D_TRD_geometry[0][i_vertex] ->SetBinContent(TRD_detector,arr_pos_glb[0]);
+            vec_TH1D_TRD_geometry[1][i_vertex] ->SetBinContent(TRD_detector,arr_pos_glb[1]);
+            vec_TH1D_TRD_geometry[2][i_vertex] ->SetBinContent(TRD_detector,arr_pos_glb[2]);
         }
 
 
@@ -3783,6 +3802,16 @@ void TBase_TRD_Calib::Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t fac
     outputfile ->cd();
     Tree_TRD_ST_Event ->Write();
 
+#if 0
+    for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+    {
+        for(Int_t i_vertex = 0; i_vertex < 8; i_vertex++)
+        {
+            vec_TH1D_TRD_geometry[i_xyz][i_vertex] ->Write();
+        }
+
+    }
+#endif
 
     printf("All data written \n");
 
