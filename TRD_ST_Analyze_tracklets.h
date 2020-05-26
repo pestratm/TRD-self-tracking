@@ -1241,18 +1241,25 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
         }
     }
 
-    // // draw matched tracklets
+    // draw matched tracklets
+    // ? some not being drawn correctly
     vec_TEveLine_self_matched_tracklets.resize(tracks.size());
 
     for (int i_track=0; i_track<tracks.size(); i_track++)
     { 
         for (int i_tracklet=0; i_tracklet<tracks[i_track].size(); i_tracklet++)
         {
-            int det = (int)tracks[i_track][i_tracklet][0];
-            int det_trkl = (int)tracks[i_track][i_tracklet][2];
+            // int det = (int)tracks[i_track][i_tracklet][0];
+            // int det_trkl = (int)tracks[i_track][i_tracklet][2];
 
-            TVector3 offset = vec_TV3_offset_tracklets[det][det_trkl];
-            TVector3 dir =  vec_TV3_dir_tracklets[det][det_trkl];
+            // TVector3 offset = vec_TV3_offset_tracklets[det][det_trkl];
+            // TVector3 dir =  vec_TV3_dir_tracklets[det][det_trkl];
+
+            int tracklet_number = tracks[i_track][i_tracklet][1];
+            
+            TRD_ST_Tracklet = TRD_ST_Event ->getTracklet(tracklet_number);
+            TVector3 offset = TRD_ST_Tracklet ->get_TV3_offset();
+            TVector3 dir = TRD_ST_Tracklet ->get_TV3_dir();
 
             vec_TEveLine_self_matched_tracklets[i_track].resize(tracks[i_track].size());
 
