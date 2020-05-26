@@ -114,8 +114,34 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 
     //--------------------------
     // Open histogram which defines good and bad chambers
-    TFile* file_TRD_QA = TFile::Open("./Data/chamber_QC.root");
-    h_good_bad_TRD_chambers = (TH1D*)file_TRD_QA ->Get("all_defects_hist");
+    //TFile* file_TRD_QA = TFile::Open("./Data/chamber_QC.root");
+    //h_good_bad_TRD_chambers = (TH1D*)file_TRD_QA ->Get("all_defects_hist");
+
+    h_good_bad_TRD_chambers = new TH1D("h_good_bad_TRD_chambers","h_good_bad_TRD_chambers",540,0,540);
+    TFile* file_TRD_QA_flags = TFile::Open("./Data/chamber_QC_flags.root");
+    vector<int> *t_flags;
+    file_TRD_QA_flags ->GetObject("QC_flags", t_flags);
+
+    // Its a 3 digit binary number. LSB is ADC good = 0 or bad = 1, next bit is anode HV good = 0, or bad = 1, and last bit is drift HV
+    // so a 3 means that the ADC and the anode HV was bad, but the drift HV was okay
+
+    //    ADC  Anode  Drift
+    // 0   0     0      0      -> all good
+    // 1   1     0      0      -> bad ADC, rest good (shouldn't happen)
+    // 2   0     1      0      -> bad anode, rest good (shouldn't happen)
+    // 3   1     1      0      -> bad ADC + bad anode but good drift
+    // 4   0     0      1      -> bad drift
+    // 5   1     0      1      -> bad drift and bad ADC
+    // 6   0     1      1      -> bad drift and bad Anode
+    // 7   1     1      1      -> all bad
+
+    Int_t i_chamber = 0;
+    for(vector<int>::iterator it = t_flags->begin(); it != t_flags->end(); ++it)
+    {
+        cout << "chamber: " << i_chamber << ", it: "  << *it << ", " << t_flags->at(i_chamber) << endl;
+        h_good_bad_TRD_chambers ->SetBinContent(i_chamber+1,t_flags->at(i_chamber));
+        i_chamber++;
+    }
     //--------------------------
 
     //--------------------------
@@ -136,6 +162,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 
     }
     vec_eve_TRD_detector_box.resize(540);
+    Int_t color_flag_QC[8] = {kCyan,kPink,kMagenta,kMagenta+2,kOrange,kOrange+2,kRed,kRed+2};
     for(Int_t TRD_detector = 0; TRD_detector < 540; TRD_detector++)
     {
         vec_eve_TRD_detector_box[TRD_detector] = new TEveBox;
@@ -143,14 +170,15 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
         HistName = "TRD_box_";
         HistName += TRD_detector;
         vec_eve_TRD_detector_box[TRD_detector] ->SetName(HistName.Data());
-        if(h_good_bad_TRD_chambers ->GetBinContent(TRD_detector)) // chamber is OK flagged by QA
+        Int_t flag_QC = h_good_bad_TRD_chambers ->GetBinContent(TRD_detector+1);
+        if(!flag_QC) // chamber is OK flagged by QA
         {
             vec_eve_TRD_detector_box[TRD_detector]->SetMainColor(kCyan);
             vec_eve_TRD_detector_box[TRD_detector]->SetMainTransparency(95); // the higher the value the more transparent
         }
         else // bad chamber
         {
-            vec_eve_TRD_detector_box[TRD_detector]->SetMainColor(kRed);
+            vec_eve_TRD_detector_box[TRD_detector]->SetMainColor(color_flag_QC[flag_QC]);
             vec_eve_TRD_detector_box[TRD_detector]->SetMainTransparency(85); // the higher the value the more transparent
         }
         for(Int_t i_vertex = 0; i_vertex < 8; i_vertex++)
