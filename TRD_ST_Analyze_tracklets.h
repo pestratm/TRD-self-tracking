@@ -488,7 +488,7 @@ void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
         vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetMainColor(color_layer[i_layer]);
         //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
         {
-            gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
+            // gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
         }
 
         N_tracklets_layers[i_layer]++;
@@ -1119,8 +1119,8 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                     b_offset = tracklet_offset[b_det][b_trkl];
                     b_dir = tracklet_dir[b_det][b_trkl];
 
-                    // not currently used
-                    // double angle_diff_a_b = abs(b_dir.Angle(a_dir))*TMath::RadToDeg();
+                    double angle_diff_a_b = abs(b_dir.Angle(a_dir))*TMath::RadToDeg();
+                    if (angle_diff_a_b > angle_window) {continue;}
 
                     // program looks if it can draw a straight line "connecting" three tracklets
                     for (int c_det=b_det-1; c_det>(a_det-6); c_det--)
@@ -1139,7 +1139,7 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                             double cylind_radial_dist_b_c = sqrt(pow(b_offset[0], 2) + pow(b_offset[1], 2)) - sqrt(pow(c_offset[0], 2) + pow(c_offset[1], 2));
                             TVector3 cylind_radial_unit_vec_b = (TVector3){b_offset[0], b_offset[1], 0}.Unit();
 
-                            // not always an exact solution
+                            // ? not always an exact solution
                             if (a_b_unit_vec.Mag() != 0 && cylind_radial_unit_vec_b.Mag() != 0)
                             {
                                 line_predicted_point = b_offset - (cylind_radial_dist_b_c) * a_b_unit_vec * (1 / (a_b_unit_vec * cylind_radial_unit_vec_b));
@@ -1149,6 +1149,9 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                             // cout << "c radius: " << sqrt(pow(c_offset[0], 2) + pow(c_offset[1], 2)) << endl;
                             // cout << "line pred radius: " << sqrt(pow(line_predicted_point[0], 2) + pow(line_predicted_point[1], 2)) << endl;
 
+                            // ? dont use z coordinate because tracklets are planes
+                            // ? calcualte this is pad/timebin coords
+                            // ? pad tilting 
                             double offset_diff = (c_offset - line_predicted_point).Mag();
                             double angle_diff_b_c = abs(c_dir.Angle(b_dir))*TMath::RadToDeg();
 
@@ -1156,8 +1159,8 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                             angle_diffs.push_back(angle_diff_b_c);
                         }
 
-                        double min_offset_diff = 10;
-                        double min_angle_diff = 60;
+                        double min_offset_diff = offset_window;
+                        double min_angle_diff = angle_window;
                         int best_trkl;
 
                         // select best tracklet from candidates
@@ -1180,7 +1183,7 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                         }
 
                         // best tracklet will not pass if its angle is bad
-                        if (min_offset_diff < 10 && min_angle_diff < 75 && count <= 3)
+                        if (min_offset_diff < offset_window && min_angle_diff < angle_window && count <= 3)
                         {
                             int best_trkl_number = tracklet_numbers[c_det][best_trkl];
                             
@@ -1205,7 +1208,8 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                         angle_diff_sum += tracklet_chain[t][4];
                     }   
 
-                    if (tracklet_chain.size()+2 >= 5 && offset_diff_sum/tracklet_chain.size() < 20 && angle_diff_sum/tracklet_chain.size() < 50)
+                    // ? is it helpful to check these means
+                    if (tracklet_chain.size()+2 >= 5 && offset_diff_sum/tracklet_chain.size() < 10 && angle_diff_sum/tracklet_chain.size() < 30)
                     {
                         int b_trkl_number = tracklet_numbers[b_det][b_trkl];
                         tracklet_chain.insert(tracklet_chain.begin(), {(double)b_det, double(b_trkl_number), (double)b_trkl, 0, 0, b_offset[0], b_offset[1], b_offset[2]});
@@ -1225,6 +1229,9 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
                             tracklet_dir[c_det].erase(tracklet_dir[c_det].begin() + best_trkl);
                             tracklet_numbers[c_det].erase(tracklet_numbers[c_det].begin() + best_trkl);
                         }   
+
+                        // pick a new starting tracklet
+                        break;
                     }
                 }
             }
@@ -1249,12 +1256,6 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
     { 
         for (int i_tracklet=0; i_tracklet<tracks[i_track].size(); i_tracklet++)
         {
-            // int det = (int)tracks[i_track][i_tracklet][0];
-            // int det_trkl = (int)tracks[i_track][i_tracklet][2];
-
-            // TVector3 offset = vec_TV3_offset_tracklets[det][det_trkl];
-            // TVector3 dir =  vec_TV3_dir_tracklets[det][det_trkl];
-
             int tracklet_number = tracks[i_track][i_tracklet][1];
             
             TRD_ST_Tracklet = TRD_ST_Event ->getTracklet(tracklet_number);
