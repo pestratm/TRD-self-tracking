@@ -12,7 +12,7 @@ void TRD_ST_Analyze_tracklets()
     TRD_ST_Analyze ->Draw_event(event);
     TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0);
     // TRD_ST_Analyze ->Do_TPC_TRD_matching_allEvents(3.0,10.0);
-    TRD_ST_Analyze ->Do_TRD_self_matching(event,15.0,25.0);
+    TRD_ST_Analyze ->Do_TRD_self_matching(event,10.0,45.0);
 
     // TRD_ST_Analyze ->Draw_hist_TPC_tracklet_diffs();
 }
