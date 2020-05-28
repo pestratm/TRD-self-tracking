@@ -444,7 +444,7 @@ Bool_t Ali_AS_analysis_TRD_digits::UserNotify()
     h_v_fit_vs_det = new TH1D("h_v_fit_vs_det","h_v_fit_vs_det",540,0,540);
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
-        h_v_fit_vs_det ->SetBinContent(i_det+1,-1.0);
+        h_v_fit_vs_det ->SetBinContent(i_det+1,1.05);
     }
     for(Int_t i_point = 0; i_point < tg_v_fit_vs_det->GetN(); i_point++)
     {
@@ -456,7 +456,7 @@ Bool_t Ali_AS_analysis_TRD_digits::UserNotify()
     h_LA_factor_fit_vs_det = new TH1D("h_LA_factor_fit_vs_det","h_LA_factor_fit_vs_det",540,0,540);
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
-         h_LA_factor_fit_vs_det->SetBinContent(i_det+1,-1.0);
+         h_LA_factor_fit_vs_det->SetBinContent(i_det+1,-0.14);
     }
     for(Int_t i_point = 0; i_point < tg_LA_factor_fit_vs_det->GetN(); i_point++)
     {
@@ -926,7 +926,6 @@ void Ali_AS_analysis_TRD_digits::UserExec(Option_t *)
                         Double_t             TRD_drift_time           = ((Double_t)i_time)*TRD_time_per_bin*vD_calib; // 100 ns per time bin, 1.56 cm/mus drift velocity, 3 cm drift length at maximum
                         Double_t             TRD_drift_time_uncalib   = ((Double_t)i_time)*TRD_time_per_bin*1.56; // 100 ns per time bin, 1.56 cm/mus drift velocity, 3 cm drift length at maximum
 
-
                         //printf("TRD_tim0: %4.3f, vdrift: %4.3f \n",TRD_time0,ChamberVdrift->GetValue(i_det));
 
                         //Float_t lorentz_angle_corr_y = ChamberExB->GetValue(i_det)*TRD_drift_time;
@@ -986,6 +985,7 @@ void Ali_AS_analysis_TRD_digits::UserExec(Option_t *)
 
                         Double_t             TRD_radius           = TMath::Sqrt(glb_align[0]*glb_align[0] + glb_align[1]*glb_align[1]);
                         Double_t             TRD_radius_uncalib   = TMath::Sqrt(glb_align_uncalib[0]*glb_align_uncalib[0] + glb_align_uncalib[1]*glb_align_uncalib[1]);
+
 #if 0
 			if(i_det >= 0 && i_time == 0 && i_column == 0 && i_row >= 0)
 			{
@@ -1006,7 +1006,9 @@ void Ali_AS_analysis_TRD_digits::UserExec(Option_t *)
 #endif
 
 			if(ADC_amplitude > 0.0)
-			{
+                        {
+                            //printf("i_det: %d, i_column: %d, i_row: %d, i_time: %d, radius: %4.3f, TRD_time0 - TRD_drift_time: %4.3f, vD_calib: %4.3f \n",i_det,i_column,i_row,i_time,TRD_radius_uncalib,TRD_time0 - TRD_drift_time,vD_calib);
+
 			    TVector3 TV3_TRD_hit, TV3_TRD_hit_uncalib, TV3_TRD_hit_det_angle;
 			    TV3_TRD_hit.SetXYZ(glb_align[0],glb_align[1],glb_align[2]);
                             TV3_TRD_hit_uncalib.SetXYZ(glb_align_uncalib[0],glb_align_uncalib[1],glb_align_uncalib[2]);
