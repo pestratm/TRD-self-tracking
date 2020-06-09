@@ -17,6 +17,8 @@ private:
     UShort_t TPC_match;
     Int_t    n_tracklets_around;
     Double_t min_dist_to_next_trkl;
+	Int_t index;
+
 
 public:
     Ali_TRD_ST_Tracklets() :
@@ -44,7 +46,11 @@ public:
                 
         void       set_min_dist_to_next_trkl(Double_t min_dist_to_next_trkl_in) { min_dist_to_next_trkl = min_dist_to_next_trkl_in; }
         Double_t   get_min_dist_to_next_trkl() const                            { return min_dist_to_next_trkl;                     }
+		
+		void       set_TRD_index(Int_t TRD_IND_in)                   { index = TRD_IND_in;          }
+        Int_t      get_TRD_index() const                             { return index;                }
 
+		
         ClassDef(Ali_TRD_ST_Tracklets,1);
 };
 //----------------------------------------------------------------------------------------
