@@ -69,7 +69,13 @@ public:
     void Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window);
     void Do_TRD_self_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window);
     void Draw_hist_TPC_tracklet_diffs();
-
+	Ali_TRD_ST_Tracklets** Tracklets;
+	vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks;
+    Int_t Number_Tracklets;
+    void Draw_Kalman_Tracks(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks);
+    
+	
+	
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
 //----------------------------------------------------------------------------------------
@@ -307,14 +313,20 @@ void Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event)
     TVector3 TV3_offset;
     TVector3 TV3_dir;
     Int_t    i_det;
-
+	
+	Tracklets=new Ali_TRD_ST_Tracklets*[NumTracklets];
+    Number_Tracklets=NumTracklets;
+	
     for(Int_t i_tracklet = 0; i_tracklet < NumTracklets; i_tracklet++)
     {
         TRD_ST_Tracklet = TRD_ST_Event    ->getTracklet(i_tracklet);
-        TV3_offset      = TRD_ST_Tracklet ->get_TV3_offset();
+        TRD_ST_Tracklet->set_TRD_index(i_tracklet);
+		Tracklets[i_tracklet]=TRD_ST_Tracklet;
+		
+		TV3_offset      = TRD_ST_Tracklet ->get_TV3_offset();
         TV3_dir         = TRD_ST_Tracklet ->get_TV3_dir();
         i_det           = TRD_ST_Tracklet ->get_TRD_det();
-
+		
         //create "tracklets"
         Int_t i_sector = (Int_t)(i_det/30);
         Int_t i_stack  = (Int_t)(i_det%30/6);
@@ -488,7 +500,7 @@ void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
         vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetMainColor(color_layer[i_layer]);
         //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
         {
-            // gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
+             gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
         }
 
         N_tracklets_layers[i_layer]++;
@@ -526,9 +538,11 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
     // TRD tracklet loop
     vector< vector<TVector3> > vec_TV3_dir_tracklets;
     vector< vector<TVector3> > vec_TV3_offset_tracklets;
+    vector< vector<Int_t> > TRD_index_tracklets;
     vec_TV3_dir_tracklets.resize(540);
     vec_TV3_offset_tracklets.resize(540);
-
+	TRD_index_tracklets.resize(540);
+	
     Double_t ADC_val[24];
 
     TVector3 TV3_offset;
@@ -550,6 +564,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
         vec_TV3_dir_tracklets[i_det].push_back(TV3_dir);
         vec_TV3_offset_tracklets[i_det].push_back(TV3_offset);
+		TRD_index_tracklets[i_det].push_back(i_tracklet);
+        
     }
     //--------------------------------------------------
 
@@ -589,6 +605,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
         vector<TVector3> vec_TV3_helix_points_at_TRD_layers;
         vec_TV3_helix_points_at_TRD_layers.resize(6);
+		matched_tracks.resize(matched_tracks.size() +1);
+        
 
         for(Int_t i_layer = 0; i_layer < 6; i_layer++)
         {
@@ -627,6 +645,7 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
             Double_t dist          = 0.0;
             Int_t    det_best      = -1;
             Int_t    tracklet_best = -1;
+		
             for(Int_t i_det = 0; i_det < 540; i_det++)
             {
                 Int_t i_layer_from_det  = i_det%6;
@@ -644,9 +663,19 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
                     }
                 }
             }
-
+			Int_t tracks_size=matched_tracks.size()-1;
+			matched_tracks[tracks_size].push_back(NULL);
+            
             if(det_best < 0 || tracklet_best < 0) continue;
-
+			
+			Ali_TRD_ST_Tracklets* temp_tracklet=new Ali_TRD_ST_Tracklets();
+			temp_tracklet->set_TRD_det(det_best);
+			temp_tracklet->set_TV3_offset(vec_TV3_offset_tracklets[det_best][tracklet_best]);
+			temp_tracklet->set_TV3_dir(vec_TV3_dir_tracklets[det_best][tracklet_best]);
+			temp_tracklet->set_TRD_index(TRD_index_tracklets[det_best][tracklet_best]);	
+			matched_tracks[tracks_size][matched_tracks[tracks_size].size()-1]=temp_tracklet;
+			
+			
             Int_t size_tracklet = (Int_t)vec_TEveLine_tracklets_match[i_layer].size();
 
             //printf("i_layer: %d, size_tracklet: %d \n",i_layer,size_tracklet);
@@ -1280,6 +1309,47 @@ void Ali_TRD_ST_Analyze::Do_TRD_self_matching(Long64_t i_event, double offset_wi
 }
 //----------------------------------------------------------------------------------------
 
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Draw_Kalman_Tracks(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks){
+	vector< vector<TEveLine*> > TEveLine_Kalman_found;
+	TEveLine_Kalman_found.resize(found_tracks.size());
+	for(Int_t i_Track=0;i_Track<found_tracks.size();i_Track++){
+		TEveLine_Kalman_found[i_Track].resize(6);
+		
+		for(Int_t i_lay=0;i_lay<6;i_lay++){
+		    if(found_tracks[i_Track][i_lay]!=NULL){
+				TEveLine_Kalman_found[i_Track][i_lay]=new TEveLine();
+				TEveLine_Kalman_found[i_Track][i_lay]->SetNextPoint(found_tracks[i_Track][i_lay]->get_TV3_offset()[0],found_tracks[i_Track][i_lay]->get_TV3_offset()[1],found_tracks[i_Track][i_lay]->get_TV3_offset()[2]);
+				TEveLine_Kalman_found[i_Track][i_lay]->SetNextPoint(found_tracks[i_Track][i_lay]->get_TV3_offset()[0] + scale_length*found_tracks[i_Track][i_lay]->get_TV3_dir()[0],found_tracks[i_Track][i_lay]->get_TV3_offset()[1] + scale_length*found_tracks[i_Track][i_lay]->get_TV3_dir()[1],found_tracks[i_Track][i_lay]->get_TV3_offset()[2] + scale_length*found_tracks[i_Track][i_lay]->get_TV3_dir()[2]);    
+				
+		        Int_t i_det           = found_tracks[i_Track][i_lay] ->get_TRD_det();
+		        Int_t i_sector = (Int_t)(i_det/30);
+		        Int_t i_stack  = (Int_t)(i_det%30/6);
+        		Int_t i_layer  = i_det%6;
+
+				
+				HistName = "tracklet (kal) ";
+				HistName += i_Track;
+				HistName += "_";
+            	HistName += i_sector;
+				HistName += "_";
+				HistName += i_stack;
+				HistName += "_";
+            	HistName += i_lay;
+				
+				TEveLine_Kalman_found[i_Track][i_lay]	->SetName(HistName.Data());
+				TEveLine_Kalman_found[i_Track][i_lay]   ->SetLineStyle(1);
+            	TEveLine_Kalman_found[i_Track][i_lay]  	->SetLineWidth(6);
+            	TEveLine_Kalman_found[i_Track][i_lay]   ->SetMainColor(kOrange);
+				gEve->AddElement(TEveLine_Kalman_found[i_Track][i_lay]);
+
+			}
+		}
+	}
+	gEve->Redraw3D(kTRUE);
+}
+//----------------------------------------------------------------------------------------
 
 
 //----------------------------------------------------------------------------------------
