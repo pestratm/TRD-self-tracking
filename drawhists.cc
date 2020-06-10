@@ -1,5 +1,5 @@
 #include "TRD_ST_Analyze_tracklets.h"
-#include "TRD_Kalman_Tracking.h"
+#include "TRD_Kalman_Tracking_Class.h"
 
 Bool_t fitting_track(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
 		//direction is not ok 
@@ -30,7 +30,7 @@ Bool_t fitting_track(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
 	
 	return 1;
 }
-void drawhists()
+void drawhists2()
 {
 	
 	gROOT->SetStyle("Plain");
@@ -56,12 +56,13 @@ void drawhists()
     TRD_ST_Analyze ->Draw_event(event);
     TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0);
     //TRD_ST_Analyze ->Do_TPC_TRD_matching_allEvents(3.0,10.0);
-	Kalman_ID kalid=Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
-	TRD_ST_Analyze ->Draw_Kalman_Tracks(kalid.found_tracks);
+	TRD_Kalman_Trackfinder kalid;
+	vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
+	TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
 	
 	vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks;
 	vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
-	vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
+	//vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
 	vector<Double_t> track_accuracy;
 		
 	Ali_TRD_ST_Tracklets* last_tracklet;
