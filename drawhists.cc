@@ -1,5 +1,5 @@
 #include "TRD_ST_Analyze_tracklets.h"
-#include "TRD_Kalman_Tracking_Class.h"
+#include "TRD_Kalman_Tracking.h"
 
 Bool_t fitting_track(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
 		//direction is not ok 
@@ -30,7 +30,7 @@ Bool_t fitting_track(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
 	
 	return 1;
 }
-void drawhists2()
+void drawhists()
 {
 	
 	gROOT->SetStyle("Plain");
