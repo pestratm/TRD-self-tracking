@@ -3,7 +3,6 @@
 #include "Ali_TRD_ST_LinkDef.h"
 
 
-
 //----------------------------------------------------------------------------------------
 class Ali_TRD_ST_Analyze
 {
@@ -23,6 +22,7 @@ private:
     TTree* Tree_TRD_ST_Event_out;
 
     TFile* outputfile;
+    Double_t test;
 
     TString HistName;
     TH1D* th1d_TRD_layer_radii;
