@@ -53,7 +53,7 @@ private:
     };
 
     Int_t Not_installed_TRD_detectors[19] = {402,403,404,405,406,407,432,433,434,435,436,437,462,463,464,465,466,467,538};
-    TH1D* h_good_bad_TRD_chambers;
+    TH1I* h_good_bad_TRD_chambers;
 
     // TRD 3D graphics
     vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
@@ -69,7 +69,7 @@ public:
     void Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window);
     void Do_TRD_self_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window);
     void Draw_hist_TPC_tracklet_diffs();
-	TH1D* get_h_good_bad_TRD_chambers();
+	TH1I* get_h_good_bad_TRD_chambers();
 
 	Ali_TRD_ST_Tracklets** Tracklets;
 	vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks;
@@ -125,7 +125,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
     //TFile* file_TRD_QA = TFile::Open("./Data/chamber_QC.root");
     //h_good_bad_TRD_chambers = (TH1D*)file_TRD_QA ->Get("all_defects_hist");
 
-    h_good_bad_TRD_chambers = new TH1D("h_good_bad_TRD_chambers","h_good_bad_TRD_chambers",540,0,540);
+    h_good_bad_TRD_chambers = new TH1I("h_good_bad_TRD_chambers","h_good_bad_TRD_chambers",540,0,540);
     TFile* file_TRD_QA_flags = TFile::Open("./Data/chamber_QC_flags.root");
     vector<int> *t_flags;
     file_TRD_QA_flags ->GetObject("QC_flags", t_flags);
@@ -133,15 +133,13 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
     // Its a 3 digit binary number. LSB is ADC good = 0 or bad = 1, next bit is anode HV good = 0, or bad = 1, and last bit is drift HV
     // so a 3 means that the ADC and the anode HV was bad, but the drift HV was okay
 
-    //    ADC  Anode  Drift
-    // 0   0     0      0      -> all good
-    // 1   1     0      0      -> bad ADC, rest good (shouldn't happen)
-    // 2   0     1      0      -> bad anode, rest good (shouldn't happen)
-    // 3   1     1      0      -> bad ADC + bad anode but good drift
-    // 4   0     0      1      -> bad drift
-    // 5   1     0      1      -> bad drift and bad ADC
-    // 6   0     1      1      -> bad drift and bad Anode
-    // 7   1     1      1      -> all bad
+    // LSB = official QA, bit 1 = no fit, bit 2 = anode HV defect, bit 3 = drift HV defect, bit 4 = adc defect
+
+    // number   adc defect   drift HV defect   anode HD defect    no fit   official QA
+    //   0          0               0                0               0          0         --> all good
+    //   1          0               0                0               0          1         --> official QA bad, rest good
+    //  ...
+    //   31         1               1                1               1          1         --> all bad
 
     Int_t i_chamber = 0;
     for(vector<int>::iterator it = t_flags->begin(); it != t_flags->end(); ++it)
@@ -170,7 +168,48 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 
     }
     vec_eve_TRD_detector_box.resize(540);
-    Int_t color_flag_QC[8] = {kCyan,kPink,kMagenta,kMagenta+2,kOrange,kOrange+2,kRed,kRed+2};
+    Int_t color_flag_QC[32];
+    for(Int_t i_QC_flag = 0; i_QC_flag < 32; i_QC_flag++)
+    {
+        color_flag_QC[i_QC_flag] = kCyan;
+
+        Int_t k_bit = 1; // fit
+        Int_t bit_value = (i_QC_flag & ( 1 << k )) >> k;
+        if(bit_value == 1) // no fit
+        {
+            color_flag_QC[i_QC_flag] = kPink;
+        }
+
+        k_bit = 4; // ADC value
+        bit_value = (i_QC_flag & ( 1 << k )) >> k;
+        if(bit_value == 1) // ADC low
+        {
+            color_flag_QC[i_QC_flag] = kMagenta;
+        }
+
+        k_bit = 2; // anode HV
+        bit_value = (i_QC_flag & ( 1 << k )) >> k;
+        if(bit_value == 1) // anode HV low
+        {
+            color_flag_QC[i_QC_flag] = kYellow;
+        }
+
+        k_bit = 3; // drift HV bit
+        bit_value = (i_QC_flag & ( 1 << k )) >> k;
+        if(bit_value == 1) // drift HV defect
+        {
+            color_flag_QC[i_QC_flag] = kOrange;
+        }
+
+        k_bit = 0; // official QA
+        bit_value = (i_QC_flag & ( 1 << k )) >> k;
+        if(bit_value == 1) // official QA bad
+        {
+            color_flag_QC[i_QC_flag] = kRed;
+        }
+    }
+    color_flag_QC[31] = kRed;
+    //= {kCyan,kPink,kMagenta,kMagenta+2,kOrange,kOrange+2,kRed,kRed+2};
     for(Int_t TRD_detector = 0; TRD_detector < 540; TRD_detector++)
     {
         vec_eve_TRD_detector_box[TRD_detector] = new TEveBox;
@@ -1383,7 +1422,7 @@ void Ali_TRD_ST_Analyze::Draw_hist_TPC_tracklet_diffs()
 }
 //----------------------------------------------------------------------------------------
 
-TH1D* Ali_TRD_ST_Analyze::get_h_good_bad_TRD_chambers(){
+TH1I* Ali_TRD_ST_Analyze::get_h_good_bad_TRD_chambers(){
 	return h_good_bad_TRD_chambers;
 }
 	
