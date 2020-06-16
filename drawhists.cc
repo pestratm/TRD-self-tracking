@@ -93,7 +93,7 @@ void drawhists()
 	//TRD_ST_Analyze ->Draw_Kalman_Tracks(matched_tracks);
 	*/
 	matched_beautiful_tracks=matched_tracks;
-	TH1D* h_good_bad_TRD_chambers=TRD_ST_Analyze ->get_h_good_bad_TRD_chambers();;
+	TH1I* h_good_bad_TRD_chambers=TRD_ST_Analyze ->get_h_good_bad_TRD_chambers();;
 
 	
 	for(Int_t i_track=0;i_track< kalman_found_tracks.size();i_track++){
