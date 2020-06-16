@@ -69,6 +69,8 @@ public:
     void Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window);
     void Do_TRD_self_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window);
     void Draw_hist_TPC_tracklet_diffs();
+	TH1D* get_h_good_bad_TRD_chambers();
+
 	Ali_TRD_ST_Tracklets** Tracklets;
 	vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks;
     Int_t Number_Tracklets;
@@ -322,7 +324,6 @@ void Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event)
         TRD_ST_Tracklet = TRD_ST_Event    ->getTracklet(i_tracklet);
         TRD_ST_Tracklet->set_TRD_index(i_tracklet);
 		Tracklets[i_tracklet]=TRD_ST_Tracklet;
-		
 		TV3_offset      = TRD_ST_Tracklet ->get_TV3_offset();
         TV3_dir         = TRD_ST_Tracklet ->get_TV3_dir();
         i_det           = TRD_ST_Tracklet ->get_TRD_det();
@@ -352,19 +353,24 @@ void Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event)
 void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
 {
     printf("Ali_TRD_ST_Analyze::Draw_event \n");
-
+	cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
+	
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
-
+cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
+	
     //--------------------------------------------------
     // Event information (more data members available, see Ali_TRD_ST_Event class definition)
     UShort_t NumTracks            = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
+	cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
+	
     Int_t    NumTracklets         = TRD_ST_Event ->getNumTracklets();
+	cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
+	
     Double_t EventVertexX         = TRD_ST_Event ->getx();
     Double_t EventVertexY         = TRD_ST_Event ->gety();
     Double_t EventVertexZ         = TRD_ST_Event ->getz();
     //--------------------------------------------------
-
 
 
     //--------------------------------------------------
@@ -500,7 +506,7 @@ void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
         vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetMainColor(color_layer[i_layer]);
         //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
         {
-             gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
+             //gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
         }
 
         N_tracklets_layers[i_layer]++;
@@ -624,7 +630,7 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
                 {
                     track_path_layer0   = track_path;
                     radius_helix_layer0 = radius_helix;
-                    printf("radius_helix_layer0: %4.3f, track_path_add: %4.3f \n",radius_helix_layer0,track_path_add);
+                    //printf("radius_helix_layer0: %4.3f, track_path_add: %4.3f \n",radius_helix_layer0,track_path_add);
                 }
                 else
                 {
@@ -637,7 +643,7 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
                     break;
                 }
             }
-            printf("   --> i_layer: %d, track_path_layer0: %4.3f, radius_helix_layer0: %4.3f \n",i_layer,track_path_layer0,radius_helix_layer0);
+            //printf("   --> i_layer: %d, track_path_layer0: %4.3f, radius_helix_layer0: %4.3f \n",i_layer,track_path_layer0,radius_helix_layer0);
 
 
             TVector3 TV3_diff_vec;
@@ -694,7 +700,7 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
             //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
             {
-                // gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
+                 gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
             }
         }
     }
@@ -1376,3 +1382,8 @@ void Ali_TRD_ST_Analyze::Draw_hist_TPC_tracklet_diffs()
     th1d_angle_diff->Draw();
 }
 //----------------------------------------------------------------------------------------
+
+TH1D* Ali_TRD_ST_Analyze::get_h_good_bad_TRD_chambers(){
+	return h_good_bad_TRD_chambers;
+}
+	
