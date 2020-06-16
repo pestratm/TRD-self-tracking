@@ -1,6 +1,6 @@
 #include "TRD_ST_Analyze_tracklets.h"
 #include "TRD_Kalman_Tracking.h"
-
+#include "TRD_Kalman_Tracking.cxx"
 Bool_t fitting_track(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
 		//direction is not ok 
 	
@@ -45,28 +45,34 @@ void drawhists()
 	
 	
 	
-	TH1F *histo = new TH1F("histo","accuracy Kalman Trackfinder",20,0,1.2);
+	TH1F *histo = new TH1F("histogram","efficiency Kalman Trackfinder",20,0,1.2);
+	
+	TH1F *histo2 = new TH1F("histogram","purity Kalman Trackfinder",20,0,1.2);
 	
 	
     printf("TRD_ST_Analyze_tracklets started \n");
     Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze();
     TRD_ST_Analyze ->Init_tree("List_data_ADC.txt");
-    Long64_t event = 4;
+    //Long64_t event = 10;
+	for (Long64_t event=4;event<5 ;event++){
+			
     TRD_ST_Analyze ->Loop_event(event);
+	cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
+		
     TRD_ST_Analyze ->Draw_event(event);
-    TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0);
+    cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
+	TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0);
     //TRD_ST_Analyze ->Do_TPC_TRD_matching_allEvents(3.0,10.0);
 	TRD_Kalman_Trackfinder kalid;
 	vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
 	TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
-	
 	vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks;
 	vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
 	//vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
-	vector<Double_t> track_accuracy;
+	//vector<Double_t> track_accuracy;
 		
-	Ali_TRD_ST_Tracklets* last_tracklet;
-	
+	//Ali_TRD_ST_Tracklets* last_tracklet;
+	/*
 	for(Int_t i_track=0;i_track< matched_tracks.size();i_track++){
 		Bool_t beautiful=0;
 		last_tracklet=NULL;
@@ -85,18 +91,42 @@ void drawhists()
 	}
 	cout<<"len_beatutiful:"<<matched_beautiful_tracks.size()<<endl;
 	//TRD_ST_Analyze ->Draw_Kalman_Tracks(matched_tracks);
+	*/
+	matched_beautiful_tracks=matched_tracks;
+	TH1D* h_good_bad_TRD_chambers=TRD_ST_Analyze ->get_h_good_bad_TRD_chambers();;
+
 	
 	for(Int_t i_track=0;i_track< kalman_found_tracks.size();i_track++){
 		
 		Int_t number_to_find_real=0;
 		Int_t number_found_max=0;
+		Int_t number_of_noise_real=0;
+		Int_t len_found_track_real=0;
 		for(Int_t i_track_match=0;i_track_match< matched_beautiful_tracks.size();i_track_match++){
 			
 			Int_t number_to_find=0;
 			Int_t number_found=0;
+			Int_t number_of_noise=0;
+			Int_t len_found_track=kalman_found_tracks[i_track].size();
 			
-			for (Int_t i_layer=0;i_layer< kalman_found_tracks[i_track].size();i_layer++){
+			for (Int_t i_layer=0;i_layer< len_found_track;i_layer++){
+				/*if(i_track==8){
+					cout<<kalman_found_tracks[i_track][i_layer]->get_TRD_index()<<" "<<	matched_beautiful_tracks[i_track_match][i_layer]->get_TRD_index()<<endl;
+				}*/
+				if(kalman_found_tracks[i_track][i_layer]!=NULL)
+					number_of_noise++;
 				if (matched_beautiful_tracks[i_track_match][i_layer]==NULL) continue;
+				Int_t TRD_detector=matched_beautiful_tracks[i_track_match][i_layer]->get_TRD_det();
+				if (h_good_bad_TRD_chambers ->GetBinContent(TRD_detector+1)){ 
+					if(kalman_found_tracks[i_track][i_layer]!=NULL)
+						if(kalman_found_tracks[i_track][i_layer]->get_TRD_index()==matched_beautiful_tracks[i_track_match][i_layer]->get_TRD_index()){
+							number_to_find++;
+							number_found++;
+							number_of_noise--;
+						}
+					continue;
+				}
+				//cout<<"det:"<<(h_good_bad_TRD_chambers ->GetBinContent(TRD_detector+1))<<endl;
 				number_to_find++;
 				if(kalman_found_tracks[i_track][i_layer]==NULL) continue;
 				
@@ -107,21 +137,25 @@ void drawhists()
 				//Double_t rel_dir_diff=(kalman_found_tracks[i_track][i_layer]->get_TV3_dir()-matched_beautiful_tracks[i_track_match][i_layer]->get_TV3_dir()).Mag() /kalman_found_tracks[i_track][i_layer]->get_TV3_dir().Mag();
 				//if(rel_dir_diff >0.001) continue; 
 				number_found++;
+				number_of_noise--;
 		
 			}
 			if(number_found >number_found_max){
 				number_found_max=number_found;
 				number_to_find_real=number_to_find;
+				number_of_noise_real=number_of_noise;
+				len_found_track_real=len_found_track;
 			}	
 		}
 		if(number_to_find_real>0) {
-			histo->Fill(number_found_max/number_to_find_real);
-			cout<<number_found_max/number_to_find_real<<endl;}
+			histo->Fill((Double_t)number_found_max/number_to_find_real);
+			histo2->Fill((1. -(Double_t)number_of_noise_real/len_found_track_real));
+			cout<<(Double_t)number_found_max/number_to_find_real<<" "<<number_to_find_real<<" "<<i_track<<endl;}
 		else
 			cout<<"found_new_track"<<endl;
 	}
 	
-	
+	}
 	//gRandom->Rndm();
 	
     
@@ -130,11 +164,23 @@ void drawhists()
 	TColor *c3 = new TColor(9003,0,1,0);
 	histo->SetLineColor(9003);
 	
-	histo->SetTitle("Gaussverteiltes Histogramm");
-	histo->SetXTitle("X Achse");
-	histo->SetYTitle("Y Achse");
+	histo->SetTitle("Efficiency Of Tracklet Detection");
+	histo->SetXTitle("efficiency");
+	histo->SetYTitle("count");
 	
 	histo->Draw("histo");
+	TCanvas * c2= new TCanvas("c2", "fitted data",5,5,800,600);
+        
+	//TColor *c3 = new TColor(9003,0,1,0);
+	
+	
+	histo2->SetLineColor(9003);
+	
+	histo2->SetTitle("Purity Of Tracklet Detection");
+	histo2->SetXTitle("purity");
+	histo2->SetYTitle("count");
+	
+	histo2->Draw("histo");
 	
 	
 	//TRD_ST_Analyze ->Draw_Kalman_Tracks(kalid.found_tracks,kalid.nbr_tracks);
