@@ -365,11 +365,72 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 			
 	}
 	
-	if(mNbr_tracklets>1){ 
+	if(mNbr_tracklets>2){ 
 		mFound_tracks.push_back(mTrack);
 		mShow=0;
-		if (mFound_tracks.size() ==-4) mShow=1;
+		//if (mFound_tracks.size() ==-4) mShow=1;
 		mEstimates.push_back(mEstimate);
+		TVector3 x_vek;
+		x_vek[0]=mTRD_layer_radii[0][0];
+		x_vek[1]=mEstimate[0][0];
+		x_vek[2]=mEstimate[0][1];
+		x_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
+		Double_t charge=1;
+		if (mEstimate[0][4]<0) charge=-1;
+		Double_t lam=TMath::ATan( mEstimate[0][3]);
+		Double_t pxy=TMath::Cos(lam)/mEstimate[0][4] *charge;
+		TVector3 p_vek;
+		p_vek[0]=TMath::Cos(TMath::ASin(mEstimate[0][2]))*pxy;
+		p_vek[1]=mEstimate[0][2]*pxy;
+		p_vek[2]=TMath::Sin(lam)/mEstimate[0][4] *charge;
+		p_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
+		Double_t x[3];
+		x[0]=x_vek[0];
+		x[1]=x_vek[1];
+		x[2]=x_vek[2];
+		
+		Double_t p[3];
+		p[0]=p_vek[0];
+		p[1]=p_vek[1];
+		p[2]=p_vek[2];
+		
+		
+		Double_t conversion=1;
+		vector<Double_t> fHelix;
+		fHelix.resize(6);
+		Double_t pt = TMath::Sqrt(p[0]*p[0]+p[1]*p[1]);
+  //  
+  		fHelix[4] = charge/(conversion*pt); // C
+  		fHelix[3] = p[2]/pt;    // tgl
+  //  
+  		Double_t xc, yc, rc;
+  		rc  =  1/fHelix[4];
+		xc  =  x[0]  -rc*p[1]/pt;
+		yc  =  x[1]  +rc*p[0]/pt; 
+		  //
+		fHelix[5] = x[0];   // x0
+		fHelix[0] = x[1];   // y0
+		fHelix[1] = x[2];   // z0
+		  //
+		//fHelix[6] = xc;
+		//fHelix[7] = yc;
+		//fHelix[8] = TMath::Abs(rc);
+		  //
+		fHelix[5]=xc; 
+		fHelix[0]=yc; 
+		  //
+		if (TMath::Abs(p[1])<TMath::Abs(p[0])){     
+			fHelix[2]=TMath::ASin(p[1]/pt);
+			//Helix[2]=asinf(p[1]/pt);
+			if (charge*yc<charge*x[1])  fHelix[2] = TMath::Pi()-fHelix[2];
+		}
+		else{
+			fHelix[2]=TMath::ACos(p[0]/pt);
+			//fHelix[2]=acosf(p[0]/pt);
+			if (charge*xc>charge*x[0])  fHelix[2] = -fHelix[2];
+		}
+		mHelices.push_back(fHelix);
+		
 	}
 			
 }
