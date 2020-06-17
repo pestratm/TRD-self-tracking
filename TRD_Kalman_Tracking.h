@@ -51,8 +51,11 @@ class TRD_Kalman_Trackfinder
 
  public:
   vector<vector<Ali_TRD_ST_Tracklets*>> Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets, Int_t Num_Tracklets);
+<<<<<<< HEAD
   vector<vector<Double_t>> mHelices;
 
+=======
+>>>>>>> ea2fbd66992f6ea7d5f13b33b6b4fcfaf5b22db8
 };
 	
 #endif

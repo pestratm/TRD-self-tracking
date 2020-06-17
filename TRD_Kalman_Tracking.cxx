@@ -365,6 +365,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 			
 	}
 	
+<<<<<<< HEAD
 	if(mNbr_tracklets>2){ 
 		mFound_tracks.push_back(mTrack);
 		mShow=0;
@@ -431,6 +432,13 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		}
 		mHelices.push_back(fHelix);
 		
+=======
+	if(mNbr_tracklets>1){ 
+		mFound_tracks.push_back(mTrack);
+		mShow=0;
+		if (mFound_tracks.size() ==-4) mShow=1;
+		mEstimates.push_back(mEstimate);
+>>>>>>> ea2fbd66992f6ea7d5f13b33b6b4fcfaf5b22db8
 	}
 			
 }

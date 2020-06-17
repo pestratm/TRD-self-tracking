@@ -1,2 +1,6 @@
+<<<<<<< HEAD
 Single.txt_out.root
 
+=======
+TRD_Calib_ADC_check.root
+>>>>>>> ea2fbd66992f6ea7d5f13b33b6b4fcfaf5b22db8
