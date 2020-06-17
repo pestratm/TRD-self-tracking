@@ -174,55 +174,35 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
         color_flag_QC[i_QC_flag] = kCyan;
 
         Int_t k_bit = 1; // fit
-<<<<<<< HEAD
         Int_t bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
-=======
-        Int_t bit_value = (i_QC_flag & ( 1 << k )) >> k;
->>>>>>> ea2fbd66992f6ea7d5f13b33b6b4fcfaf5b22db8
         if(bit_value == 1) // no fit
         {
             color_flag_QC[i_QC_flag] = kPink;
         }
 
         k_bit = 4; // ADC value
-<<<<<<< HEAD
         bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
-=======
-        bit_value = (i_QC_flag & ( 1 << k )) >> k;
->>>>>>> ea2fbd66992f6ea7d5f13b33b6b4fcfaf5b22db8
         if(bit_value == 1) // ADC low
         {
             color_flag_QC[i_QC_flag] = kMagenta;
         }
 
         k_bit = 2; // anode HV
-<<<<<<< HEAD
         bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
-=======
-        bit_value = (i_QC_flag & ( 1 << k )) >> k;
->>>>>>> ea2fbd66992f6ea7d5f13b33b6b4fcfaf5b22db8
         if(bit_value == 1) // anode HV low
         {
             color_flag_QC[i_QC_flag] = kYellow;
         }
 
         k_bit = 3; // drift HV bit
-<<<<<<< HEAD
         bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
-=======
-        bit_value = (i_QC_flag & ( 1 << k )) >> k;
->>>>>>> ea2fbd66992f6ea7d5f13b33b6b4fcfaf5b22db8
         if(bit_value == 1) // drift HV defect
         {
             color_flag_QC[i_QC_flag] = kOrange;
         }
 
         k_bit = 0; // official QA
-<<<<<<< HEAD
         bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
-=======
-        bit_value = (i_QC_flag & ( 1 << k )) >> k;
->>>>>>> ea2fbd66992f6ea7d5f13b33b6b4fcfaf5b22db8
         if(bit_value == 1) // official QA bad
         {
             color_flag_QC[i_QC_flag] = kRed;
