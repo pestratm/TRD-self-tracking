@@ -1,5 +1,10 @@
 #include "TRD_Kalman_Tracking.h"
 
+vector<vector<Double_t>> TRD_Kalman_Trackfinder::get_Kalman_helix_params()
+{
+    return mHelices;
+}
+
 ROOT::Math::SVector<double,4> TRD_Kalman_Trackfinder::measure(Ali_TRD_ST_Tracklets* tracklet){
 	ROOT::Math::SVector<double,4> measurement;
 	TVector3 offset=tracklet->get_TV3_offset();

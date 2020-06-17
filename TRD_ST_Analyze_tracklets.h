@@ -34,6 +34,11 @@ private:
     vector<TEveLine*> vec_TPL3D_helix;
     vector<TEveLine*> vec_TPL3D_helix_inner;
     vector<TEveLine*> vec_TPL3D_helix_hull;
+
+    vector<TEveLine*> vec_TPL3D_helix_kalman;
+    vector<TEveLine*> vec_TPL3D_helix_kalman_inner;
+    vector<TEveLine*> vec_TPL3D_helix_kalman_hull;
+
     vector< vector<TEveLine*> > vec_TEveLine_tracklets;
     vector< vector<TEveLine*> > vec_TEveLine_tracklets_match;
     vector< vector<TEveLine*> > vec_TEveLine_self_matched_tracklets;
@@ -59,6 +64,9 @@ private:
     vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
     vector<TEveBox*> vec_eve_TRD_detector_box;
 
+    vector<vector<Double_t>> mHelices_kalman; // Kalman helix parameters, based on AliHelix
+    Double_t aliHelix_params[6];
+
 public:
     Ali_TRD_ST_Analyze();
     ~Ali_TRD_ST_Analyze();
@@ -75,9 +83,12 @@ public:
 	vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks;
     Int_t Number_Tracklets;
     void Draw_Kalman_Tracks(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks);
-    
-	
-	
+    void set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in);
+    void Draw_Kalman_Helix_Tracks();
+    void set_single_helix_params(vector<Double_t> vec_params);
+    void Evaluate(Double_t t, // helix evaluation, taken from AliHelix
+                     Double_t r[3]);  //radius vector
+
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
 //----------------------------------------------------------------------------------------
@@ -240,6 +251,101 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 
 
 
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in)
+{
+    mHelices_kalman = mHelices_kalman_in;
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::set_single_helix_params(vector<Double_t> vec_params)
+{
+    for(Int_t i_param = 0; i_param < 6; i_param++)
+    {
+        aliHelix_params[i_param] = vec_params[i_param];
+    }
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Evaluate(Double_t t,Double_t r[3])  //radius vector
+{
+  //--------------------------------------------------------------------
+  // Calculate position of a point on a track and some derivatives at given phase
+  //--------------------------------------------------------------------
+  float phase=aliHelix_params[4]*t+aliHelix_params[2];
+  Double_t sn=sinf(phase), cs=cosf(phase);
+  //  Double_t sn=TMath::Sin(phase), cs=TMath::Cos(phase);
+
+  r[0] = aliHelix_params[5] + sn/aliHelix_params[4];
+  r[1] = aliHelix_params[0] - cs/aliHelix_params[4];
+  r[2] = aliHelix_params[1] + aliHelix_params[3]*t;
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks()
+{
+    for(Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
+    {
+        set_single_helix_params(mHelices_kalman[i_track]);
+        Double_t track_pos[3];
+
+        vec_TPL3D_helix_kalman.resize(i_track+1);
+        vec_TPL3D_helix_kalman_hull.resize(i_track+1);
+        vec_TPL3D_helix_kalman_inner.resize(i_track+1);
+        vec_TPL3D_helix_kalman[i_track] = new TEveLine();
+        vec_TPL3D_helix_kalman_hull[i_track] = new TEveLine();
+        vec_TPL3D_helix_kalman_inner[i_track] = new TEveLine();
+
+        Double_t radius_helix = 0.0;
+        for(Double_t track_path = -300.0; track_path < 1000; track_path += 1.0)
+        {
+            Evaluate(track_path,track_pos);
+            radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
+            printf("i_track: %d, track_path: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, radius_helix: %4.3f \n",i_track,track_path,track_pos[0],track_pos[1],track_pos[2],radius_helix);
+            //if(radius_helix > 300.0) break;
+            if(fabs(track_pos[2]) > 320.0) break;
+            if(radius_helix > 80.0)
+            {
+                vec_TPL3D_helix_kalman[i_track]        ->SetNextPoint(track_pos[0],track_pos[1],track_pos[2]);
+                vec_TPL3D_helix_kalman_hull[i_track]   ->SetNextPoint(track_pos[0],track_pos[1],track_pos[2]);
+            }
+        }
+
+        HistName = "track kalman ";
+        HistName += i_track;
+        vec_TPL3D_helix_kalman[i_track]    ->SetName(HistName.Data());
+        vec_TPL3D_helix_kalman[i_track]    ->SetLineStyle(1);
+        vec_TPL3D_helix_kalman[i_track]    ->SetLineWidth(3);
+        vec_TPL3D_helix_kalman[i_track]    ->SetMainColor(kGreen);
+        vec_TPL3D_helix_kalman[i_track]    ->SetMainAlpha(1.0);
+
+        HistName = "track kalman (h) ";
+        HistName += i_track;
+        vec_TPL3D_helix_kalman_hull[i_track]    ->SetName(HistName.Data());
+        vec_TPL3D_helix_kalman_hull[i_track]    ->SetLineStyle(1);
+        vec_TPL3D_helix_kalman_hull[i_track]    ->SetLineWidth(8);
+        vec_TPL3D_helix_kalman_hull[i_track]    ->SetMainColor(kOrange);
+        vec_TPL3D_helix_kalman_hull[i_track]    ->SetMainAlpha(0.3);
+
+        gEve->AddElement(vec_TPL3D_helix_kalman[i_track]);
+        gEve->AddElement(vec_TPL3D_helix_kalman_hull[i_track]);
+    }
+
+    gEve->Redraw3D(kTRUE);
 }
 //----------------------------------------------------------------------------------------
 

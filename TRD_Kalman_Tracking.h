@@ -22,6 +22,8 @@ class TRD_Kalman_Trackfinder
   ROOT::Math::SVector<double, 4> mUnc;
   ROOT::Math::SVector<double, 4> mMu_red;
 
+  vector<vector<Double_t>> mHelices; // Kalman helix parameters, based on AliHelix
+
   Double_t mTRD_layer_radii[6][2] = {
     { 297.5, 306.5 },
     { 310.0, 320.0 },
@@ -51,7 +53,7 @@ class TRD_Kalman_Trackfinder
 
  public:
   vector<vector<Ali_TRD_ST_Tracklets*>> Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets, Int_t Num_Tracklets);
-  vector<vector<Double_t>> mHelices;
+  vector<vector<Double_t>> get_Kalman_helix_params();
 
 };
 	
