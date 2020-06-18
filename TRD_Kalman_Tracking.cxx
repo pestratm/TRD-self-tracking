@@ -109,15 +109,15 @@ void TRD_Kalman_Trackfinder::prediction(Double_t dist){
 		return;
 	
 	//calculate new estimate
-	Double_t f1= mMu[2];
-	Double_t b_field=0.5;
-	Double_t b_fak=b_field*3./2000.;
+	Double_t f1			= 	mMu[2];
+	Double_t b_field	=	0.5;
+	Double_t b_fak		=	b_field*3./2000.;
 		
-	Double_t curvature = (2.*mMu[4]*b_fak);
-	Double_t f2= f1 + dist*curvature;
+	Double_t curvature 	= 	(2.*mMu[4]*b_fak);
+	Double_t f2			= 	f1 + dist*curvature;
 	Double_t r1=TMath::Sqrt((1.- f1)*(1. + f2));
 	Double_t r2=TMath::Sqrt((1.- f1)*(1. + f2));
-	Double_t dy2dx =(f1 +f2)/(r1 +r2);
+	Double_t dy2dx 		=	(f1 +f2)/(r1 +r2);
 		
 	mMu[0]+=dist*dy2dx;
 	if (TMath::Abs(dist*curvature)<0.05)
@@ -413,8 +413,13 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		vector<Double_t> fHelix;
 		fHelix.resize(6);
 		Double_t pt = TMath::Sqrt(p[0]*p[0]+p[1]*p[1]);
-  //  
-  		fHelix[4] = mEstimate[0][4]; // C
+  //  	
+		
+		Double_t b_fak		=	0.5*3./1000.;
+		
+		Double_t curvature 	= 	(mEstimate[0][4]*b_fak);
+	
+  		fHelix[4] = curvature; // C
   		fHelix[3] = p[2]/pt;    // tgl
   //  
   		Double_t xc, yc, rc;
