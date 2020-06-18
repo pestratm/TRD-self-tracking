@@ -12,9 +12,9 @@ class TRD_Kalman_Trackfinder
   ROOT::Math::SMatrix<double, 4, 4> mSig;      //Measure uncertainty Matrix
   ROOT::Math::SMatrix<double, 5, 4> mKal_Gain; //Kalman Gain Matrix
   //Double_t curv;							//curvature
-  ROOT::Math::SVector<double, 5> mMu;                        //current estimate
-  vector<ROOT::Math::SVector<double, 5>> mEstimate;          //estimates of this track
-  vector<vector<ROOT::Math::SVector<double, 5>>> mEstimates; //estimates of all tracks
+  ROOT::Math::SVector<double, 5> mMu;                       	//current estimate
+  vector<ROOT::Math::SVector<double, 5>> mEstimate;   		//estimates of this track
+  vector<vector<ROOT::Math::SVector<double, 5>>> mEstimates; 	//estimates of all tracks
   ROOT::Math::SVector<double, 4>* mMeasurements;
   Double_t mChi_2;
   Double_t mDist;
@@ -48,7 +48,7 @@ class TRD_Kalman_Trackfinder
   void get_seed(Ali_TRD_ST_Tracklets** Tracklets, Int_t Num_Tracklets);
   void prediction(Double_t dist);
   void correction(ROOT::Math::SVector<double, 4> measure);
-  Bool_t fits(ROOT::Math::SVector<double, 4> measure);
+  //Bool_t fits(ROOT::Math::SVector<double, 4> measure);
   void Kalman(vector<Ali_TRD_ST_Tracklets*> start);
 
  public:

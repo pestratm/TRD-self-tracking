@@ -5,6 +5,7 @@ vector<vector<Double_t>> TRD_Kalman_Trackfinder::get_Kalman_helix_params()
     return mHelices;
 }
 
+//gives the 4 measurements of a tracklet (y,z,sin(phi),tan(lambda)) back
 ROOT::Math::SVector<double,4> TRD_Kalman_Trackfinder::measure(Ali_TRD_ST_Tracklets* tracklet){
 	ROOT::Math::SVector<double,4> measurement;
 	TVector3 offset=tracklet->get_TV3_offset();
@@ -17,8 +18,9 @@ ROOT::Math::SVector<double,4> TRD_Kalman_Trackfinder::measure(Ali_TRD_ST_Trackle
 	return measurement;
 }
 
+//checks if 2 tracklets are more or less in a line
 Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
-		//direction is not ok 
+	//direction is not ok 
 	TVector3 a_angle = (TVector3){a->get_TV3_dir()[0], a->get_TV3_dir()[1], 0};
 	TVector3 b_angle = (TVector3){b->get_TV3_dir()[0], b->get_TV3_dir()[1], 0};
 	
@@ -27,7 +29,7 @@ Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Trackl
 	if (abs(a->get_TV3_dir().Angle(b->get_TV3_dir())*TMath::RadToDeg() )>15)
 		return 0;	
 		
-		//position is not ok
+	//position is not ok
 	TVector3 z=a->get_TV3_offset()+a->get_TV3_dir()*((b->get_TV3_offset()[0]- a->get_TV3_offset()[0])/a->get_TV3_dir()[0] );
 	if (abs((a->get_TV3_offset()+a->get_TV3_dir()*((b->get_TV3_offset()[0]- a->get_TV3_offset()[0])/a->get_TV3_dir()[0] ) -b->get_TV3_offset())[1])>3)
 		return 0;
@@ -43,17 +45,18 @@ void TRD_Kalman_Trackfinder::get_seed( Ali_TRD_ST_Tracklets** Tracklets, Int_t N
 	Int_t nbr_stack=5;
 	Int_t nbr_layers=6; 	
 	
-	mBins.resize(nbr_sectors*nbr_stack*nbr_layers);
+	mBins.resize(nbr_sectors*nbr_stack*nbr_layers);//bins for every detector
 	vector< vector<Bool_t> >  visited;
 	visited.resize(nbr_sectors*nbr_stack*nbr_layers);
 	
+	//sort then in bins
 	for(Int_t i_tracklet=0;i_tracklet<Num_Tracklets;i_tracklet++){
 		if(Tracklets[i_tracklet]->get_TV3_offset().Mag() > 1000.0) continue;
 
 			
 		Int_t i_det = Tracklets[i_tracklet] ->get_TRD_det();
 		Int_t i_sector = (Int_t)(i_det/30);
-			
+	
 		//rotate the tracklets to the local coordiante system
 		TVector3 temp1=Tracklets[i_tracklet]->get_TV3_offset();
 		temp1.RotateZ((Double_t)(-1*(2*i_sector+1)*TMath::Pi()/18));
@@ -63,11 +66,13 @@ void TRD_Kalman_Trackfinder::get_seed( Ali_TRD_ST_Tracklets** Tracklets, Int_t N
 		temp2.RotateZ((Double_t)(-1*(2*i_sector+1)*TMath::Pi()/18));
 		Tracklets[i_tracklet]->set_TV3_dir(temp2);
 		Tracklets[i_tracklet]->set_TRD_index(i_tracklet);
-			//sort them in
+		
+		//sort them in
 		mBins[i_det].push_back(Tracklets[i_tracklet]);			
 		visited[i_det].push_back(0);
 	}		
 	
+	//check for each tracklet in the 6. and 5. layer whether there are matching tracklets in the 4. or 5. layer
 	Bool_t done=0;
 	for(int i_sec=0;i_sec<nbr_sectors;i_sec++) 
 			for(int i_stck=0;i_stck<nbr_stack;i_stck++)
@@ -93,15 +98,17 @@ void TRD_Kalman_Trackfinder::get_seed( Ali_TRD_ST_Tracklets** Tracklets, Int_t N
 							}
 						}	
 				}
-	for(int i=0;i<mBins.size();i++){
+	//for(int i=0;i<mBins.size();i++){
 		//cout<<i<<": "<<mBins[i].size()<<endl;
-	}	
+	//}	
 }
 
-
+//redict next location
 void TRD_Kalman_Trackfinder::prediction(Double_t dist){
 	if (dist ==0)
 		return;
+	
+	//calculate new estimate
 	Double_t f1= mMu[2];
 	Double_t b_field=0.5;
 	Double_t b_fak=b_field*3./2000.;
@@ -126,7 +133,7 @@ void TRD_Kalman_Trackfinder::prediction(Double_t dist){
 	mMu[2]= f2;
 		
 		
-		
+	//Build transport matrix	
 	ROOT::Math::SMatrix<double,5,5> A; //Transport Matrix
 	A=ROOT::Math::SMatrixIdentity();
 	
@@ -138,14 +145,18 @@ void TRD_Kalman_Trackfinder::prediction(Double_t dist){
    	A[1][4]=A[1][2]*dist *b_fak;
 	A[2][4]=dist *b_fak*2;
 	ROOT::Math::SMatrix<double,5,5> A_t=ROOT::Math::Transpose(A);
+	
+	//calculate new covariance
 	mCov= A * mCov * A_t +mTau;    
-		
-	mMu_red=mObs*mMu;
-	for( int i=0;i<4;i++)
+	
+	
+	mMu_red=mObs*mMu; //made once and saved for later use 
+	for( int i=0;i<4;i++)//calculate the uncertainty (useful to know)
 		mUnc[i]=TMath::Sqrt(mCov[i][i] + mSig[i][i]);	
 	if(mShow) cout<<mUnc<<endl;
 }
 
+//correction as used in every lecture
 void TRD_Kalman_Trackfinder::correction(ROOT::Math::SVector<double,4> measure){
 	ROOT::Math::SMatrix<double,4,5> C=mObs;
 	ROOT::Math::SMatrix<double,5,4> C_t=ROOT::Math::Transpose(C);
@@ -168,88 +179,88 @@ void TRD_Kalman_Trackfinder::correction(ROOT::Math::SVector<double,4> measure){
 	
 }
 
+/*
 Bool_t TRD_Kalman_Trackfinder::fits(ROOT::Math::SVector<double,4> measure){
 	ROOT::Math::SVector<double,4> abs=ROOT::Math::fabs(mMu_red -measure);
 	Bool_t bol=abs< 2*mUnc;
 	return bol;
 }
-
+*/
 
 void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		
 	{//init
-		//cout<<"a"<<endl;
+		
 		ROOT::Math::SVector<double,4> mes=measure(start[0]);
 		for( int i=0;i<4;i++)
 			mMu[i]=mes[i];
 			
 		mMu[4]=0;
-		mEstimate.resize(0);		
+		mEstimate.resize(0);
 		mEstimate.resize(6);
-		//mEstimate=new ROOT::Math::SVector<double,5>[6];
-		mCurrent_Det=start[0]->get_TRD_det();
-		Int_t ind1=	start[0]->get_TRD_det() %6;
-		Int_t ind2=	start[1]->get_TRD_det() %6;
-		mDist=mTRD_layer_radii[5][0]-mTRD_layer_radii[ind1][0];
-		
-		mEstimate[ ind1]=mMu;
-
-		mMeasurements =new ROOT::Math::SVector<double,4>[6];
-		mMeasurements[ind1] = mes;
-		
-		mMeasurements[ind2] = measure(start[1]);
 		mTrack.resize(0);
 		mTrack.resize(6);
-		TVector3 temp_vec;
-		Int_t det;
-		mTrack[ind1]=new Ali_TRD_ST_Tracklets();
-		temp_vec=start[0]->get_TV3_offset();
-		det=start[0]->get_TRD_det();
-		temp_vec.RotateZ((Double_t)(2*(Int_t)(det/30)+1)*TMath::Pi()/18);
-			
-		mTrack[ind1]->set_TRD_det(det);
-		mTrack[ind1]->set_TV3_offset(temp_vec);
-		temp_vec=start[0]->get_TV3_dir();
-		temp_vec.RotateZ((Double_t)(2*(Int_t)(det/30)+1)*TMath::Pi()/18);
-		mTrack[ind1]->set_TV3_dir(temp_vec);
-		mTrack[ind1]->set_TRD_index(start[0]->get_TRD_index());
-			
-		mTrack[ind2]=new Ali_TRD_ST_Tracklets();
-		temp_vec=start[1]->get_TV3_offset();
-		det=start[1]->get_TRD_det();
-		temp_vec.RotateZ((Double_t)((2*(Int_t)(det/30))+1)*TMath::Pi()/18);	
-		mTrack[ind2]->set_TRD_det(det);
-		mTrack[ind2]->set_TV3_offset(temp_vec);
-		temp_vec=start[1]->get_TV3_dir();
-		temp_vec.RotateZ((Double_t)((2*(Int_t)(det/30))+1)*TMath::Pi()/18);
-		mTrack[ind2]->set_TV3_dir(temp_vec);
-		mTrack[ind2]->set_TRD_index(start[1]->get_TRD_index());
-			
-		mNbr_tracklets=2;
-			
-		mObs=ROOT::Math::SMatrixIdentity();
+	
+		mCurrent_Det=start[0]->get_TRD_det();
+		mDist=mTRD_layer_radii[5][0]-mTRD_layer_radii[mCurrent_Det%6][0];
+		mEstimate[mCurrent_Det%6]=mMu;
 
-		mSig[0][0]=0.2;
-		mSig[1][1]=16;
-		mSig[2][2]=TMath::Power(TMath::Sin(6*TMath::Pi()/180),2);
-		mSig[3][3]=TMath::Power(TMath::Tan(7*TMath::Pi()/180),2);
+		
+		mObs		=	ROOT::Math::SMatrixIdentity();
+		
+		
+		mSig[0][0]	=	0.2;
+		mSig[1][1]	=	16;
+		mSig[2][2]	=	TMath::Power(TMath::Sin(6*TMath::Pi()/180),2);
+		mSig[3][3]	=	TMath::Power(TMath::Tan(7*TMath::Pi()/180),2);
 
-		mCov=ROOT::Math::SMatrixIdentity();
-		mCov[0][0]=2;
-		mCov[1][1]=20;
-		mCov[2][2]=TMath::Power(TMath::Sin(7*TMath::Pi()/180),2);
-		mCov[3][3]=TMath::Power(TMath::Tan(7*TMath::Pi()/180),2);
-		mCov[4][4]=0.09;
+		mCov		=	ROOT::Math::SMatrixIdentity();
+		mCov[0][0]	=	2;
+		mCov[1][1]	=	20;
+		mCov[2][2]	=	TMath::Power(TMath::Sin(7*TMath::Pi()/180),2);
+		mCov[3][3]	=	TMath::Power(TMath::Tan(7*TMath::Pi()/180),2);
+		mCov[4][4]	=	0.09;
 		
-		mChi_2=0;	
+		mChi_2		=	0;	
 		
+		
+		mMeasurements =new ROOT::Math::SVector<double,4>[6];
+		
+		for(Int_t ind=0; ind<start.size();ind++)
+		{
+			
+			Int_t lay			=	start[ind]->get_TRD_det() %6;
+			mMeasurements[lay] 	=	measure(start[ind]);
+			TVector3 temp_vec;
+			Int_t det;
+			mTrack[lay]			=	new Ali_TRD_ST_Tracklets();
+			temp_vec=start[ind]	->	get_TV3_offset();
+			det=start[ind]		->	get_TRD_det();
+			temp_vec.RotateZ((Double_t)(2*(Int_t)(det/30)+1)*TMath::Pi()/18);
+			
+			mTrack[lay]			->	set_TRD_det(det);
+			mTrack[lay]			->	set_TV3_offset(temp_vec);
+			temp_vec			=	start[ind]->get_TV3_dir();
+			temp_vec.RotateZ((Double_t)(2*(Int_t)(det/30)+1)*TMath::Pi()/18);
+			mTrack[lay]			->	set_TV3_dir(temp_vec);
+			mTrack[lay]			->	set_TRD_index(start[ind]->get_TRD_index());
+		}
+		
+		
+		mNbr_tracklets		=	start.size();
+					
 	}
-	Double_t chi_2_pen=18.5;
-	for(Int_t i_layer=5;i_layer>=0;i_layer--){
+	
+	
+	
+
+	Double_t chi_2_pen	=	18.5;
+	for(Int_t i_layer=5;i_layer>=0;i_layer--)
+	{
 		
 		if (mEstimate[i_layer]!=0){
-			mMu=mEstimate[i_layer];
-			mDist=mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
+			mMu		=	mEstimate[i_layer];
+			mDist	=	mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
 		
 			continue;}
 		prediction(mDist);
@@ -259,11 +270,13 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 			cout<<"cov:"<< mCov<<endl;
 			cout<<"Mu:"<< mMu<<endl;
 			cout<<"abs"<<mUnc<<endl;			
-		}	
+		}
+		
 		mDist=mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
 		if (mMeasurements[i_layer]!=0)
 				correction(mMeasurements[i_layer]);
-		else{
+		else
+		{
 			vector<Int_t> Dets;
 			if (0){} //out of border
 			
@@ -272,45 +285,42 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 			else //in border
 				Dets.push_back(mCurrent_Det-(mCurrent_Det%6) + i_layer);
 			
-			for(Int_t i_list_det=0;i_list_det<Dets.size();i_list_det++){
+			for(Int_t i_list_det=0;i_list_det<Dets.size();i_list_det++)
+			{
 
-				Int_t i_det=Dets[i_list_det];
-				Int_t i_sector = (Int_t)(i_det/30);
-        		Int_t i_stack  = (Int_t)(i_det%30/6);
+				Int_t i_det		=	Dets[i_list_det];
+				Int_t i_sector 	= 	(Int_t)(i_det/30);
+        		Int_t i_stack  	= 	(Int_t)(i_det%30/6);
         		        
 				if (i_sector != (Int_t)(mCurrent_Det/30)){} //change coord sys
 				
-				vector<Ali_TRD_ST_Tracklets*> found_tracklets;
-				vector<Int_t> found_in;
-				vector<Double_t> chis;
+				vector<Ali_TRD_ST_Tracklets*> 			found_tracklets;
+				vector<Int_t> 							found_in;
+				vector<Double_t> 						chis;
 				
-				vector<ROOT::Math::SVector<double,4>> resses;
-				vector<ROOT::Math::SMatrix<double,4,4> >Cov_resses;
-				vector<ROOT::Math::SVector<double,4>> meas_list;
+				vector<ROOT::Math::SVector<double,4>> 	resses;
+				vector<ROOT::Math::SMatrix<double,4,4>>	Cov_resses;
+				vector<ROOT::Math::SVector<double,4>> 	meas_list;
 				
 				for(Int_t i_tracklet=0; i_tracklet<mBins[i_det].size();i_tracklet++){
-					ROOT::Math::SVector<double,4> measurement=measure(mBins[i_det][i_tracklet]);
-					ROOT::Math::SVector<double,4> abs=ROOT::Math::fabs(mMu_red -measurement);
-					if(mShow) 
-					cout<<"meas"<<measurement<<", "<<mBins[i_det][i_tracklet]->get_TV3_offset()[0]<<endl;
-					ROOT::Math::SVector<double,4> res= measurement- mMu_red;
-					ROOT::Math::SMatrix<double,4,4>  Cov_res=mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+					ROOT::Math::SVector<double,4> 	measurement	=	measure(mBins[i_det][i_tracklet]);
+					ROOT::Math::SVector<double,4> 	abs			=	ROOT::Math::fabs(mMu_red -measurement);
+					ROOT::Math::SVector<double,4> 	res			= 	measurement- mMu_red;
+					ROOT::Math::SMatrix<double,4,4> Cov_res		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+					
+					if(mShow) cout<<"meas"<<measurement<<", "<<mBins[i_det][i_tracklet]->get_TV3_offset()[0]<<endl;
+					
+					
 					Cov_res.Invert();
 					Double_t chi_2=ROOT::Math::Dot(res,(Cov_res*res));
-					if(mShow)
-					cout<<"chi:"<<chi_2<<endl;
 					
-					
-					
+					if(mShow)cout<<"chi:"<<chi_2<<endl;
 					
 					//Bool_t fitting= ((abs[0]<2*mUnc[0]) && (abs[1]<3*mUnc[1]) && (abs[2]<2*mUnc[2]));
 					if (1)// (fitting)
 					{
 						found_tracklets.push_back(mBins[i_det][i_tracklet]);
 						found_in.push_back(i_det);
-						//Double_t dist=0;
-						//for (int i=0;i<4;i++)
-						//	dist+=abs[i];
 						chis.push_back(chi_2);
 						resses.push_back(res);
 						Cov_resses.push_back(Cov_res);
@@ -319,14 +329,17 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 					}
 				}
 				
-				Int_t min_ind=-1;
-				Double_t min_chi=chi_2_pen;
+				Int_t 		min_ind	=-1;
+				Double_t 	min_chi	=chi_2_pen;
 				for(Int_t i=0 ;i<found_tracklets.size();i++)
-					if (min_chi>chis[i]){
+					if (min_chi>chis[i])
+					{
 						min_ind=i;
 						min_chi=chis[i];
 					}
-				if(min_chi<chi_2_pen){
+				
+				if(min_chi<chi_2_pen)
+				{
 					
 					if ((Int_t)(found_in[min_ind]/30) !=(Int_t)(mCurrent_Det/30)){}
 						//change_coord_sys(found_in_det[min_ind]); //MuST BE IMPLEMENTET !!!!!!!!
@@ -334,72 +347,66 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 					mMeasurements[i_layer]=measure(found_tracklets[min_ind]);
 					correction(mMeasurements[i_layer]);
 					
-					if(mShow)
-					{
-						cout<<"Layer:"<< i_layer<<endl;
-						cout<<"cov:"<< mCov<<endl;
-						cout<<"Mu:"<< mMu<<endl;
-						cout<<"abs"<<mUnc<<endl;			
-					}	
-
+					Ali_TRD_ST_Tracklets* temp_tracklet	=new Ali_TRD_ST_Tracklets();
+					mTrack[i_layer]						=temp_tracklet;
 					
 					TVector3 temp_vec;
-					Int_t det;
-					Ali_TRD_ST_Tracklets* temp_tracklet=new Ali_TRD_ST_Tracklets();
-					mTrack[i_layer]=temp_tracklet;
-					temp_vec=found_tracklets[min_ind]->get_TV3_offset();
-					det=found_in[min_ind];
+					Int_t det							=found_in[min_ind];
+					mTrack[i_layer]						->set_TRD_det(det);
+				
+					temp_vec							=found_tracklets[min_ind]->get_TV3_offset();
 					temp_vec.RotateZ((Double_t)(2*(Int_t)(det/30)+1)*TMath::Pi()/18);
-					mTrack[i_layer]->set_TRD_det(det);
-					mTrack[i_layer]->set_TV3_offset(temp_vec);
-					temp_vec=found_tracklets[min_ind]->get_TV3_dir();
+					mTrack[i_layer]						->set_TV3_offset(temp_vec);
+					
+					temp_vec=found_tracklets[min_ind]	->get_TV3_dir();
 					temp_vec.RotateZ((Double_t)(2*(Int_t)(det/30)+1)*TMath::Pi()/18);
-					mTrack[i_layer]->set_TV3_dir(temp_vec);
-					mTrack[i_layer]->set_TRD_index(found_tracklets[min_ind]->get_TRD_index());
+					mTrack[i_layer]						->set_TV3_dir(temp_vec);
+					
+					mTrack[i_layer]						->set_TRD_index(found_tracklets[min_ind]->get_TRD_index());
 					mNbr_tracklets++;
-					mChi_2+=min_chi;
+					mChi_2								+=min_chi;
 				}
-				else{									
-					mTrack[i_layer]=NULL;
-					mChi_2+=chi_2_pen;	
+				else
+				{									
+					mTrack[i_layer]	=NULL;
+					mChi_2			+=chi_2_pen;	
 				}
 			}
 			
 		}
-		mEstimate[i_layer]=mMu;
+		mEstimate[i_layer]	=mMu;
 			
 	}
-	
+	//if Track
 	if(mNbr_tracklets>2){ 
+		//save Track
 		mFound_tracks.push_back(mTrack);
-		mShow=0;
-		//if (mFound_tracks.size() ==-4) mShow=1;
 		mEstimates.push_back(mEstimate);
 		
-		
-		TVector3 x_vek;
-		x_vek[0]=mTRD_layer_radii[0][0];
-		x_vek[1]=mEstimate[0][0];
-		x_vek[2]=mEstimate[0][1];
-		x_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
+		//calculate Helix param
 		Double_t charge=1.;
 		if (mEstimate[0][4]<0) charge=-1.;
 		Double_t lam=TMath::ATan( mEstimate[0][3]);
 		Double_t pxy=charge/mEstimate[0][4] ;
+		
+		TVector3 x_vek;
 		TVector3 p_vek;
-		p_vek[0]=TMath::Cos(TMath::ASin(mEstimate[0][2]))*pxy;
-		p_vek[1]=mEstimate[0][2]*pxy;
-		p_vek[2]=mEstimate[0][3]*pxy;
+		x_vek[0]	=	mTRD_layer_radii[0][0];
+		x_vek[1]	=	mEstimate[0][0];
+		x_vek[2]	=	mEstimate[0][1];
+		p_vek[0]	=	TMath::Cos(TMath::ASin(mEstimate[0][2]))*pxy;
+		p_vek[1]	=	mEstimate[0][2]*pxy;
+		p_vek[2]	=	mEstimate[0][3]*pxy;
+		x_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
 		p_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
 		Double_t x[3];
-		x[0]=x_vek[0];
-		x[1]=x_vek[1];
-		x[2]=x_vek[2];
-		
 		Double_t p[3];
-		p[0]=p_vek[0];
-		p[1]=p_vek[1];
-		p[2]=p_vek[2];
+		x[0]		=	x_vek[0];
+		x[1]		=	x_vek[1];
+		x[2]		=	x_vek[2]; 
+		p[0]		=	p_vek[0];
+		p[1]		=	p_vek[1];
+		p[2]		=	p_vek[2];
 		
 		
 		Double_t conversion=1;
@@ -407,11 +414,11 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		fHelix.resize(6);
 		Double_t pt = TMath::Sqrt(p[0]*p[0]+p[1]*p[1]);
   //  
-  		fHelix[4] = charge/(conversion*pt); // C
+  		fHelix[4] = mEstimate[0][4]; // C
   		fHelix[3] = p[2]/pt;    // tgl
   //  
   		Double_t xc, yc, rc;
-  		rc  =  1/fHelix[4];
+  		rc	=  1/fHelix[4];
 		xc  =  x[0]  -rc*p[1]/pt;
 		yc  =  x[1]  +rc*p[0]/pt; 
 		  //
@@ -423,8 +430,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		//fHelix[7] = yc;
 		//fHelix[8] = TMath::Abs(rc);
 		  //
-		fHelix[5]=xc; 
-		fHelix[0]=yc; 
+		fHelix[5] = xc; 
+		fHelix[0] = yc; 
 		  //
 		if (TMath::Abs(p[1])<TMath::Abs(p[0])){     
 			fHelix[2]=TMath::ASin(p[1]/pt);
@@ -438,6 +445,10 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		}
 		mHelices.push_back(fHelix);
 		
+		cout<<mHelices.size()<<": ";
+		for(int i=0;i<fHelix.size();i++)
+		cout<<fHelix[i]<<" ";
+		cout<<endl;
 	}
 			
 }
@@ -447,8 +458,7 @@ vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind
 	
 	mShow=0;
 	get_seed(Tracklets,Num_Tracklets);
-	cout<<"Nbr:"<<mSeed[0][0]<<endl;
-	//mShow=1;
+	cout<<"TRD_Kalman_Trackfinder::Kalman_Trackfind"<<endl;
 	for (int i=0; i<mSeed.size();i++){
 		//if (i == 3 || i==4) mShow=1;
 		Kalman(mSeed[i]);

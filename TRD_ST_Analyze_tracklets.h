@@ -315,6 +315,7 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks()
         {
             Evaluate(track_path,track_pos);
             radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
+			if (!(track_path))
             printf("i_track: %d, track_path: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, radius_helix: %4.3f \n",i_track,track_path,track_pos[0],track_pos[1],track_pos[2],radius_helix);
             //if(radius_helix > 300.0) break;
             if(fabs(track_pos[2]) > 320.0) break;
@@ -498,20 +499,14 @@ void Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event)
 void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
 {
     printf("Ali_TRD_ST_Analyze::Draw_event \n");
-	cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
 	
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
-cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
 	
     //--------------------------------------------------
     // Event information (more data members available, see Ali_TRD_ST_Event class definition)
     UShort_t NumTracks            = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
-	cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
-	
     Int_t    NumTracklets         = TRD_ST_Event ->getNumTracklets();
-	cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
-	
     Double_t EventVertexX         = TRD_ST_Event ->getx();
     Double_t EventVertexY         = TRD_ST_Event ->gety();
     Double_t EventVertexZ         = TRD_ST_Event ->getz();
@@ -542,7 +537,7 @@ cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
         Float_t TPCdEdx         = TRD_ST_TPC_Track ->getTPCdEdx();
         Float_t TOFsignal       = TRD_ST_TPC_Track ->getTOFsignal(); // in ps (1E-12 s)
         Float_t Track_length    = TRD_ST_TPC_Track ->getTrack_length();
-
+		
         Float_t momentum        = TLV_part.P();
         Float_t eta_track       = TLV_part.Eta();
         Float_t pT_track        = TLV_part.Pt();
@@ -557,7 +552,10 @@ cout<<"a"<<Tracklets[2]->get_TRD_index()<<endl;
         vec_TPL3D_helix[i_track] = new TEveLine();
         vec_TPL3D_helix_hull[i_track] = new TEveLine();
         vec_TPL3D_helix_inner[i_track] = new TEveLine();
-
+		cout<<i_track<<": ";
+		for(Int_t i_param=0;i_param<6;i_param++)
+			cout<<TRD_ST_TPC_Track ->getHelix_param(i_param)<<" ";
+		cout<<endl;
         for(Double_t track_path = 0.0; track_path < 1000; track_path += 1.0)
         {
             TRD_ST_TPC_Track ->Evaluate(track_path,track_pos);
