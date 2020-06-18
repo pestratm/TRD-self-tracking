@@ -104,7 +104,7 @@ void TRD_Kalman_Trackfinder::prediction(Double_t dist){
 		return;
 	Double_t f1= mMu[2];
 	Double_t b_field=0.5;
-	Double_t b_fak=b_field*1000./6.;
+	Double_t b_fak=b_field*3./2000.;
 		
 	Double_t curvature = (2.*mMu[4]*b_fak);
 	Double_t f2= f1 + dist*curvature;
@@ -385,11 +385,11 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		Double_t charge=1.;
 		if (mEstimate[0][4]<0) charge=-1.;
 		Double_t lam=TMath::ATan( mEstimate[0][3]);
-		Double_t pxy=TMath::Cos(lam)/mEstimate[0][4] *charge;
+		Double_t pxy=charge/mEstimate[0][4] ;
 		TVector3 p_vek;
 		p_vek[0]=TMath::Cos(TMath::ASin(mEstimate[0][2]))*pxy;
 		p_vek[1]=mEstimate[0][2]*pxy;
-		p_vek[2]=TMath::Sin(lam)/mEstimate[0][4] *charge;
+		p_vek[2]=mEstimate[0][3]*pxy;
 		p_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
 		Double_t x[3];
 		x[0]=x_vek[0];
