@@ -465,7 +465,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		
 		TVector3 x_vek;
 		TVector3 p_vek;
-		x_vek[0]	=	mTRD_layer_radii[0][0];
+		x_vek[0]	=	mTRD_layer_radii[5][0];
 		x_vek[1]	=	mMu[0];
 		x_vek[2]	=	mMu[1];
 		p_vek[0]	=	TMath::Cos(TMath::ASin(mMu[2]))*pxy;
