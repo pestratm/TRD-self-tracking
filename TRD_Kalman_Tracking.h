@@ -34,7 +34,7 @@ class TRD_Kalman_Trackfinder
   };
 
   vector<vector<Ali_TRD_ST_Tracklets*>> mSeed;
-
+  vector< vector<Bool_t> >  mVisited;
   vector<vector<Ali_TRD_ST_Tracklets*>> mBins; //Bins for all Tracklets corresponding to each Module and Layer
                                                //how many entries there are per bin
   vector<Ali_TRD_ST_Tracklets*> mTrack;        //Array with the Tracklets of the current Track
