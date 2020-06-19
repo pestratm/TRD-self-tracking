@@ -21,7 +21,7 @@ ROOT::Math::SVector<double,4> TRD_Kalman_Trackfinder::measure(Ali_TRD_ST_Trackle
 //checks if 2 tracklets are more or less in a line
 Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
 	//direction is not ok 
-	if ((a->get_TRD_index()==1648)&&(b->get_TRD_index()==1643)) cout<<"a2";
+	if ((a->get_TRD_index()==1400)&&(b->get_TRD_index()==389)) cout<<"a2";
 	
 	
 	TVector3 dir_a		=	a->get_TV3_dir();
@@ -29,14 +29,14 @@ Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Trackl
 	TVector3 a_angle 	= 	(TVector3){dir_a[0], dir_a[1], 0};
 	TVector3 b_angle 	= 	(TVector3){dir_b[0], dir_b[1], 0};
 	
-	if ((a->get_TRD_index()==1648)&&(b->get_TRD_index()==1643)){ 
+	if ((a->get_TRD_index()==1400)&&(b->get_TRD_index()==389)){ 
 		cout<<"a ";
 		dir_a.Print();
 		cout<<" b ";
 		dir_b.Print();
 		cout<<abs(a_angle.Angle(b_angle)*TMath::RadToDeg())<<" "<<abs(dir_a.Angle(dir_b)*TMath::RadToDeg() )<<endl;
 	}
-	if (abs(a_angle.Angle(b_angle)*TMath::RadToDeg() )>5)
+	if (abs(a_angle.Angle(b_angle)*TMath::RadToDeg() )>15)
 		return 0;
 	if (abs(dir_a.Angle(dir_b)*TMath::RadToDeg() )>15)
 		return 0;	
@@ -46,7 +46,7 @@ Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Trackl
 	TVector3 off_b 		=	b->get_TV3_offset();
 	TVector3 off_a 		=	a->get_TV3_offset();
 	TVector3 z			=	off_a+dir_a*((off_b[0]- off_a[0])/dir_a[0] );
-	if ((a->get_TRD_index()==1648)&&(b->get_TRD_index()==1643)){ 
+	if ((a->get_TRD_index()==1400)&&(b->get_TRD_index()==389)){ 
 		cout<<"a ";
 		z.Print();
 		cout<<" b ";
@@ -440,23 +440,37 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		//save Track
 		mFound_tracks.push_back(mTrack);
 		mEstimates.push_back(mEstimate);
-		if(mFound_tracks.size()==35)mShow=1;
+		if(mFound_tracks.size()==-35)mShow=1;
 		
 		if(mFound_tracks.size()==36)mShow=0;
+		
+		//Loop again for better fit
+		for(Int_t i_layer=1;i_layer<6;i_layer++){
+			mDist	=	mTRD_layer_radii[i_layer][0]-mTRD_layer_radii[i_layer-1][0];
+			prediction(mDist);
+			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
+			if (mMeasurements[i_layer]!=0){
+				if ((Int_t)(mTrack[i_layer]->get_TRD_det() /30) !=(Int_t)(mCurrent_Det/30)){}
+
+				correction(mMeasurements[i_layer]);
+			}
+		}
+		
+		
 		//calculate Helix param
 		Double_t charge=1.;
-		if (mEstimate[0][4]<0) charge=-1.;
-		Double_t lam=TMath::ATan( mEstimate[0][3]);
-		Double_t pxy=charge/mEstimate[0][4] ;
+		if (mMu[4]<0) charge=-1.;
+		Double_t lam=TMath::ATan( mMu[3]);
+		Double_t pxy=charge/mMu[4] ;
 		
 		TVector3 x_vek;
 		TVector3 p_vek;
 		x_vek[0]	=	mTRD_layer_radii[0][0];
-		x_vek[1]	=	mEstimate[0][0];
-		x_vek[2]	=	mEstimate[0][1];
-		p_vek[0]	=	TMath::Cos(TMath::ASin(mEstimate[0][2]))*pxy;
-		p_vek[1]	=	mEstimate[0][2]*pxy;
-		p_vek[2]	=	mEstimate[0][3]*pxy;
+		x_vek[1]	=	mMu[0];
+		x_vek[2]	=	mMu[1];
+		p_vek[0]	=	TMath::Cos(TMath::ASin(mMu[2]))*pxy;
+		p_vek[1]	=	mMu[2]*pxy;
+		p_vek[2]	=	mMu[3]*pxy;
 		x_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
 		p_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
 		Double_t x[3];
@@ -477,7 +491,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 		
 		Double_t b_fak		=	0.5*3./1000.;
 		
-		Double_t curvature 	= 	(mEstimate[0][4]*b_fak);
+		Double_t curvature 	= 	(mMu[4]*b_fak);
 	
   		fHelix[4] = curvature; // C
   		fHelix[3] = p[2]/pt;    // tgl
