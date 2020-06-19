@@ -54,7 +54,7 @@ void drawhists()
     Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze();
     TRD_ST_Analyze ->Init_tree("List_data_ADC.txt");
     //Long64_t event = 10;
-    for (Long64_t event=4;event<5 ;event++){
+    for (Long64_t event=1;event<2 ;event++){
 
         TRD_ST_Analyze ->Loop_event(event);
         cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
@@ -72,6 +72,7 @@ void drawhists()
         vector<vector<Double_t>> mHelices_kalman = kalid.get_Kalman_helix_params();
         TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_kalman);
         TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks();
+        TRD_ST_Analyze ->Calculate_secondary_vertices();
         //vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
         //vector<Double_t> track_accuracy;
 

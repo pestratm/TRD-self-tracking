@@ -66,6 +66,8 @@ private:
 
     vector<vector<Double_t>> mHelices_kalman; // Kalman helix parameters, based on AliHelix
     Double_t aliHelix_params[6];
+    vector<Ali_Helix*> vec_helices;
+    TEvePointSet* TEveP_sec_vertices;
 
 public:
     Ali_TRD_ST_Analyze();
@@ -87,7 +89,10 @@ public:
     void Draw_Kalman_Helix_Tracks();
     void set_single_helix_params(vector<Double_t> vec_params);
     void Evaluate(Double_t t, // helix evaluation, taken from AliHelix
-                     Double_t r[3]);  //radius vector
+                  Double_t r[3]);  //radius vector
+    void fHelixAtoPointdca(TVector3 space_vec, Ali_Helix* helixA, Float_t &pathA, Float_t &dcaAB);
+    void fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
+    void Calculate_secondary_vertices();
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
@@ -257,9 +262,234 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 
 
 //----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::fHelixAtoPointdca(TVector3 space_vec, Ali_Helix* helixA, Float_t &pathA, Float_t &dcaAB)
+{
+    // V1.1
+    Float_t pA[2] = {0.0,-100.0}; // the two start values for pathB, 0.0 is the origin of the helix at the first measured point
+    Float_t distarray[2];
+    TVector3 testA;
+    Double_t helix_point[3];
+    for(Int_t r = 0; r < 2; r++)
+    {
+        helixA ->Evaluate(pA[r],helix_point);  // 3D-vector of helixB point at path pB[r]
+        testA.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+        distarray[r] = (testA-space_vec).Mag(); // dca between helixA and helixB
+    }
+    Int_t loopcounter = 0;
+    Float_t scale = 1.0;
+    Float_t flip  = 1.0; // checks if the minimization direction changed
+    Float_t scale_length = 100.0;
+    while(fabs(scale_length) > 0.01 && loopcounter < 100) // stops when the length is too small
+    {
+        //cout << "n = " << loopcounter << ", pA[0] = " << pA[0]
+        //    << ", pA[1] = " << pA[1] << ", d[0] = " << distarray[0]
+        //    << ", d[1] = " << distarray[1] << ", flip = " << flip
+        //    << ", scale_length = " << scale_length << endl;
+        if(distarray[0] > distarray[1])
+        {
+            if(loopcounter != 0)
+            {
+                if(flip == 1.0) scale = 0.4; // if minimization direction changes -> go back, but only the way * 0.4
+                else scale = 0.7; // go on in this direction but only by the way * 0.7
+            }
+            scale_length = (pA[1]-pA[0])*scale; // the next length interval
+            pA[0]     = pA[1] + scale_length; // the new path
+
+            helixA ->Evaluate(pA[0],helix_point);  // 3D-vector of helixB point at path pB[r]
+            testA.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+            distarray[0] = (testA-space_vec).Mag(); // new dca
+            flip = 1.0;
+        }
+        else
+        {
+            if(loopcounter != 0)
+            {
+                if(flip == -1.0) scale = 0.4;
+                else scale = 0.7;
+            }
+            scale_length = (pA[0]-pA[1])*scale;
+            pA[1]     = pA[0] + scale_length;
+            helixA ->Evaluate(pA[1],helix_point);  // 3D-vector of helixB point at path pB[r]
+            testA.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+            distarray[1] = (testA-space_vec).Mag();
+            flip = -1.0;
+        }
+        loopcounter++;
+    }
+    if(distarray[0] < distarray[1])
+    {
+        pathA = pA[0];
+        dcaAB = distarray[0];
+    }
+    else
+    {
+        pathA = pA[1];
+        dcaAB = distarray[1];
+    }
+    //cout << "pathA = " << pathA << ", dcaAB = " << dcaAB << endl;
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+// V1.0
+void Ali_TRD_ST_Analyze::fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB)
+{
+    //cout << "Standard fHelixABdca called..." << endl;
+    Float_t pA[2] = {0.0,0.0};
+    Float_t pB[2] = {0.0,-70.0}; // the two start values for pathB, 0.0 is the origin of the helix at the first measured point
+    Float_t distarray[2];
+    TVector3 testA, testB;
+    Double_t helix_point[3];
+    for(Int_t r = 0; r < 2; r++)
+    {
+        helixB ->Evaluate(pB[r],helix_point);  // 3D-vector of helixB point at path pB[r]
+        testB.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+        Float_t pathA_dca = -999.0;
+        Float_t dcaAB_dca = -999.0;
+        fHelixAtoPointdca(testB,helixA,pathA_dca,dcaAB_dca); // new helix to point dca calculation
+
+        helixA ->Evaluate(pathA_dca,helix_point);  // 3D-vector of helixB point at path pB[r]
+        testA.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+        distarray[r] = (testA-testB).Mag(); // dca between helixA and helixB
+    }
+    Int_t loopcounter = 0;
+    Float_t scale = 1.0;
+    Float_t flip  = 1.0; // checks if the minimization direction changed
+    Float_t scale_length = 100.0;
+    while(fabs(scale_length) > 0.05 && loopcounter < 100) // stops when the length is too small
+    {
+        //cout << "n = " << loopcounter << ", pB[0] = " << pB[0]
+        //    << ", pB[1] = " << pB[1] << ", d[0] = " << distarray[0]
+        //    << ", d[1] = " << distarray[1] << ", flip = " << flip
+        //    << ", scale_length = " << scale_length << endl;
+        if(distarray[0] > distarray[1])
+        {
+            if(loopcounter != 0)
+            {
+                if(flip == 1.0) scale = 0.4; // if minimization direction changes -> go back, but only the way * 0.4
+                else scale = 0.7; // go on in this direction but only by the way * 0.7
+            }
+            scale_length = (pB[1]-pB[0])*scale; // the next length interval
+            pB[0]     = pB[1] + scale_length; // the new path
+            helixB ->Evaluate(pB[0],helix_point);  // 3D-vector of helixB point at path pB[r]
+            testB.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+            Float_t pathA_dca = -999.0;
+            Float_t dcaAB_dca = -999.0;
+            fHelixAtoPointdca(testB,helixA,pathA_dca,dcaAB_dca); // new helix to point dca calculation
+            pA[0] = pathA_dca;
+            //pA[0]     = helixA.pathLength(testB); // pathA at dca to helixB
+
+            helixA ->Evaluate(pA[0],helix_point);  // 3D-vector of helixB point at path pB[r]
+            testA.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+            distarray[0] = (testA-testB).Mag(); // new dca
+            flip = 1.0;
+        }
+        else
+        {
+            if(loopcounter != 0)
+            {
+                if(flip == -1.0) scale = 0.4;
+                else scale = 0.7;
+            }
+            scale_length = (pB[0]-pB[1])*scale;
+            pB[1]     = pB[0] + scale_length;
+            helixB ->Evaluate(pB[1],helix_point);  // 3D-vector of helixB point at path pB[r]
+            testB.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+            Float_t pathA_dca = -999.0;
+            Float_t dcaAB_dca = -999.0;
+            fHelixAtoPointdca(testB,helixA,pathA_dca,dcaAB_dca); // new helix to point dca calculation
+            pA[1] = pathA_dca;
+            //pA[1]     = helixA.pathLength(testB); // pathA at dca to helixB
+
+            helixA ->Evaluate(pA[1],helix_point);  // 3D-vector of helixB point at path pB[r]
+            testA.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+            distarray[1] = (testA-testB).Mag();
+            flip = -1.0;
+        }
+        loopcounter++;
+    }
+    if(distarray[0] < distarray[1])
+    {
+        pathB = pB[0];
+        pathA = pA[0];
+        dcaAB = distarray[0];
+    }
+    else
+    {
+        pathB = pB[1];
+        pathA = pA[1];
+        dcaAB = distarray[1];
+    }
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Calculate_secondary_vertices()
+{
+    Double_t helix_pointA[3];
+    Double_t helix_pointB[3];
+    Double_t vertex_point[3];
+
+    TEveP_sec_vertices = new TEvePointSet();
+
+    Int_t i_vertex = 0;
+    for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices.size() - 1); i_track_A++)
+    {
+        for(Int_t i_track_B = (i_track_A+1); i_track_B < (Int_t)vec_helices.size(); i_track_B++)
+        {
+            Float_t pathA, pathB, dcaAB;
+            fHelixABdca(vec_helices[i_track_A],vec_helices[i_track_B],pathA,pathB,dcaAB);
+            printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
+            if(dcaAB < 10.0)
+            {
+                vec_helices[i_track_A] ->Evaluate(pathA,helix_pointA);
+                vec_helices[i_track_B] ->Evaluate(pathB,helix_pointB);
+                for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+                {
+                    vertex_point[i_xyz] = (helix_pointA[i_xyz] + helix_pointB[i_xyz])/2.0;
+                }
+                TEveP_sec_vertices ->SetPoint(i_vertex,vertex_point[0],vertex_point[1],vertex_point[2]);
+                i_vertex++;
+            }
+        }
+    }
+
+   TEveP_sec_vertices  ->SetMarkerSize(3);
+   TEveP_sec_vertices  ->SetMarkerStyle(20);
+   TEveP_sec_vertices  ->SetMarkerColor(kOrange);
+
+    gEve->AddElement(TEveP_sec_vertices);
+    gEve->Redraw3D(kTRUE);
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
 void Ali_TRD_ST_Analyze::set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in)
 {
+    printf("Ali_TRD_ST_Analyze::set_Kalman_helix_params");
     mHelices_kalman = mHelices_kalman_in;
+
+    vec_helices.clear();
+    vec_helices.resize((Int_t)mHelices_kalman.size());
+
+    for(Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
+    {
+        vec_helices[i_track] = new Ali_Helix();
+        vec_helices[i_track] ->setHelix(mHelices_kalman[i_track][0],mHelices_kalman[i_track][1],mHelices_kalman[i_track][2],mHelices_kalman[i_track][3],mHelices_kalman[i_track][4],mHelices_kalman[i_track][5]);
+    }
+
 }
 //----------------------------------------------------------------------------------------
 
@@ -317,7 +547,7 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks()
             radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
 			if (!(track_path))
             printf("i_track: %d, track_path: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, radius_helix: %4.3f \n",i_track,track_path,track_pos[0],track_pos[1],track_pos[2],radius_helix);
-            //if(radius_helix > 300.0) break;
+            if(radius_helix > 370.0) break;
             if(fabs(track_pos[2]) > 320.0) break;
             if(radius_helix > 80.0)
             {
