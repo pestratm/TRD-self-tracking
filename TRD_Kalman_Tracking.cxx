@@ -212,8 +212,8 @@ Bool_t TRD_Kalman_Trackfinder::fits(ROOT::Math::SVector<double,4> measure){
 }
 */
 
-void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
-		
+void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
+{
 	{//init
 		
 		ROOT::Math::SVector<double,4> mes=measure(start[0]);
@@ -523,27 +523,31 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start){
 			if (charge*xc>charge*x[0])  fHelix[2] = -fHelix[2];
 		}
 		mHelices.push_back(fHelix);
-		
+
+                /*
 		cout<<mHelices.size()<<": ";
 		for(int i=0;i<fHelix.size();i++)
 		cout<<fHelix[i]<<" ";
-		cout<<endl;
+                cout<<endl;
+                */
 	}
 			
 }
 
-vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets,Int_t Num_Tracklets){
-	
-	
-	mShow=0;
-	cout<<"TRD_Kalman_Trackfinder::Kalman_Trackfind"<<endl;
-	get_seed(Tracklets,Num_Tracklets);
-	/*for (int i=0; i<mSeed.size();i++){
-		if (i == 55 ) mShow=1;
-		Kalman(mSeed[i]);
-		mShow=0;
-	}*/
-	cout<<mFound_tracks[0][4]->get_TRD_index()<<endl;
-	return mFound_tracks;
+vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets,Int_t Num_Tracklets)
+{
+    mShow=0;
+    mHelices.clear();
+    mFound_tracks.clear();
+    mEstimates.clear();
+    //cout<<"TRD_Kalman_Trackfinder::Kalman_Trackfind"<<endl;
+    get_seed(Tracklets,Num_Tracklets);
+    /*for (int i=0; i<mSeed.size();i++){
+     if (i == 55 ) mShow=1;
+     Kalman(mSeed[i]);
+     mShow=0;
+     }*/
+    //cout<<mFound_tracks[0][4]->get_TRD_index()<<endl;
+    return mFound_tracks;
 }
 

@@ -54,25 +54,28 @@ void drawhists()
     Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze();
     TRD_ST_Analyze ->Init_tree("List_data_ADC.txt");
     //Long64_t event = 10;
-    for (Long64_t event=1;event<2 ;event++){
+
+    TRD_Kalman_Trackfinder kalid;
+    for (Long64_t event = 1; event < 2 ; event++)
+    {
 
         TRD_ST_Analyze ->Loop_event(event);
-        cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
+        //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
 
-        TRD_ST_Analyze ->Draw_event(event);
-        cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
+        //TRD_ST_Analyze ->Draw_event(event);
+        //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
         TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0);
         //TRD_ST_Analyze ->Do_TPC_TRD_matching_allEvents(3.0,10.0);
-        TRD_Kalman_Trackfinder kalid;
-        vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
+        vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
         TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks;
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
 
         vector<vector<Double_t>> mHelices_kalman = kalid.get_Kalman_helix_params();
+        printf("size of mHelices_kalman: %d \n",(Int_t)mHelices_kalman.size());
         TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_kalman);
         TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks();
-        TRD_ST_Analyze ->Calculate_secondary_vertices();
+        TRD_ST_Analyze ->Calculate_secondary_vertices(1); // 0 = no graphics
         //vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
         //vector<Double_t> track_accuracy;
 
@@ -97,6 +100,8 @@ void drawhists()
          cout<<"len_beatutiful:"<<matched_beautiful_tracks.size()<<endl;
          //TRD_ST_Analyze ->Draw_Kalman_Tracks(matched_tracks);
          */
+
+        /*
         matched_beautiful_tracks=matched_tracks;
         TH1I* h_good_bad_TRD_chambers=TRD_ST_Analyze ->get_h_good_bad_TRD_chambers();;
 
@@ -115,9 +120,6 @@ void drawhists()
                 Int_t len_found_track=kalman_found_tracks[i_track].size();
 
                 for (Int_t i_layer=0;i_layer< len_found_track;i_layer++){
-                    /*if(i_track==8){
-                     cout<<kalman_found_tracks[i_track][i_layer]->get_TRD_index()<<" "<<	matched_beautiful_tracks[i_track_match][i_layer]->get_TRD_index()<<endl;
-                     }*/
                     if(kalman_found_tracks[i_track][i_layer]!=NULL)
                         number_of_noise++;
                     if (matched_beautiful_tracks[i_track_match][i_layer]==NULL) continue;
@@ -159,7 +161,7 @@ void drawhists()
             else
                 cout<<"found_new_track"<<endl;
         }
-
+        */
     }
     //gRandom->Rndm();
 

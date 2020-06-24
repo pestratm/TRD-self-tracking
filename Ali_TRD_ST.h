@@ -378,12 +378,12 @@ public:
 
         void setHelix(Float_t a, Float_t b,Float_t c,Float_t d,Float_t e,Float_t f)
         {
-            aliHelix_params[0] = a;
-            aliHelix_params[1] = b;
+            aliHelix_params[0] = a; // y0
+            aliHelix_params[1] = b; // z0
             aliHelix_params[2] = c;
             aliHelix_params[3] = d;
-            aliHelix_params[4] = e;
-            aliHelix_params[5] = f;
+            aliHelix_params[4] = e; // c curvature
+            aliHelix_params[5] = f; // x0
         }
 
         Float_t getHelix_param(Int_t i_param) const              {return aliHelix_params[i_param]; }

@@ -92,7 +92,9 @@ public:
                   Double_t r[3]);  //radius vector
     void fHelixAtoPointdca(TVector3 space_vec, Ali_Helix* helixA, Float_t &pathA, Float_t &dcaAB);
     void fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
-    void Calculate_secondary_vertices();
+    Int_t fCross_points_Circles(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
+    Int_t fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
+    void Calculate_secondary_vertices(Int_t graphics);
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
@@ -335,6 +337,205 @@ void Ali_TRD_ST_Analyze::fHelixAtoPointdca(TVector3 space_vec, Ali_Helix* helixA
 
 
 //----------------------------------------------------------------------------------------
+Int_t Ali_TRD_ST_Analyze::fCross_points_Circles(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,
+                           Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c)
+{
+    // (x1,y1) -> center of circle 1, r1 -> radius of circle 1
+    // (x2,y2) -> center of circle 2, r2 -> radius of circle 2
+    // (x1_c,y1_c) -> crossing point 1
+    // (x2_c,y2_c) -> crossing point 2
+    // Solution see Wikipedia
+
+    Double_t s = sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));  // distance between the center of the circles
+
+    x1_c = 0;
+    y1_c = 0;
+    x2_c = 0;
+    y2_c = 0;
+
+    if(x1 != x2 && y1 != y2 && s < (r1+r2))
+    {
+        Double_t m  = (x1-x2)/(y2-y1);
+        Double_t n  = (-r2*r2 + r1*r1 + y2*y2 - y1*y1 + x2*x2 - x1*x1)/(2.0*(y2-y1));
+        Double_t p  = (2.0*(-x1 + m*(n-y1)))/(1.0 + m*m);
+        Double_t q  = (x1*x1 + (n-y1)*(n-y1) -r1*r1)/(1.0 + m*m);
+        Double_t p2 = (p/2.0)*(p/2.0);
+
+        if(p2 >= q)
+        {
+            x1_c = (-p/2.0) + sqrt(p2 - q);
+            x2_c = (-p/2.0) - sqrt(p2 - q);
+            y1_c = m*x1_c + n;
+            y2_c = m*x2_c + n;
+            return 1;
+        }
+        else return 0;
+    }
+    else return 0;
+
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB)
+{
+
+    // Calculates the 2D crossing point, calculates the corresponding 3D point and returns pathA and pathB
+
+    Double_t helix_point[3];
+
+    Double_t x1 = helixA->getHelix_param(5);
+    Double_t y1 = helixA->getHelix_param(0);
+    Double_t x2 = helixB->getHelix_param(5);
+    Double_t y2 = helixB->getHelix_param(0);
+    Double_t c1 = helixA->getHelix_param(4);
+    Double_t c2 = helixB->getHelix_param(4);
+    Double_t r1 = 0.0;
+    Double_t r2 = 0.0;
+    if(c1 != 0 && c2 != 0)
+    {
+        r1 = 1.0/c1;
+        r2 = 1.0/c2;
+    } else return 0;
+
+    Double_t x1_c = 0.0;
+    Double_t y1_c = 0.0;
+    Double_t x2_c = 0.0;
+    Double_t y2_c = 0.0;
+
+    Int_t bCross_points = fCross_points_Circles(x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c);
+
+    pathA = 0.0;
+    pathB = 0.0;
+    dcaAB = 0.0;
+
+    printf("2D circle cross points: {%4.3f, %4.3f}, {%4.3f, %4.3f} \n",x1_c,y1_c,x2_c,y2_c);
+
+    /*
+    //cout << "bCross_points = " << bCross_points << ", xyr(1) = {" << x1 << ", " << y1 << ", " << r1
+    //    << "}, xyr(2) = {"  << x2 << ", " << y2 << ", " << r2 << "}, p1 = {" << x1_c << ", " << y1_c << "}, p2 = {" << x2_c << ", " << y2_c << "}" << endl;
+
+    if(bCross_points == 0) return 0;
+
+    TVector3 pointA,pointB,pointA1,pointB1,pointA2,pointB2;
+
+    Double_t path_lengthA_c1,path_lengthA_c2,path_lengthB_c1,path_lengthB_c2;
+
+    // first crossing point for helix A
+    pair< double, double > path_lengthA = helixA.pathLength(sqrt(x1_c*x1_c+y1_c*y1_c));
+    Double_t path_lengthA1 = path_lengthA.first;
+    Double_t path_lengthA2 = path_lengthA.second;
+
+    helixA ->Evaluate(path_lengthA1,helix_point);
+    pointA1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+    helixA ->Evaluate(path_lengthA2,helix_point);
+    pointA2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+    if( ((x1_c-pointA1.x())*(x1_c-pointA1.x()) + (y1_c-pointA1.y())*(y1_c-pointA1.y())) <
+       ((x1_c-pointA2.x())*(x1_c-pointA2.x()) + (y1_c-pointA2.y())*(y1_c-pointA2.y())))
+    {
+        path_lengthA_c1 = path_lengthA1;
+    }
+    else
+    {
+        path_lengthA_c1 = path_lengthA2;
+    }
+
+    // second crossing point for helix A
+    path_lengthA = helixA.pathLength(sqrt(x2_c*x2_c+y2_c*y2_c));
+    path_lengthA1 = path_lengthA.first;
+    path_lengthA2 = path_lengthA.second;
+
+    helixA ->Evaluate(path_lengthA1,helix_point);
+    pointA1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+    helixA ->Evaluate(path_lengthA2,helix_point);
+    pointA2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+    if( ((x2_c-pointA1.x())*(x2_c-pointA1.x()) + (y2_c-pointA1.y())*(y2_c-pointA1.y())) <
+       ((x2_c-pointA2.x())*(x2_c-pointA2.x()) + (y2_c-pointA2.y())*(y2_c-pointA2.y())))
+    {
+        path_lengthA_c2 = path_lengthA1;
+    }
+    else
+    {
+        path_lengthA_c2 = path_lengthA2;
+    }
+
+    // first crossing point for helix B
+    pair< double, double > path_lengthB = helixB.pathLength(sqrt(x1_c*x1_c+y1_c*y1_c));
+    Double_t path_lengthB1 = path_lengthB.first;
+    Double_t path_lengthB2 = path_lengthB.second;
+
+    helixB ->Evaluate(path_lengthB1,helix_point);
+    pointB1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+    helixB ->Evaluate(path_lengthB2,helix_point);
+    pointB2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+    if( ((x1_c-pointB1.x())*(x1_c-pointB1.x()) + (y1_c-pointB1.y())*(y1_c-pointB1.y())) <
+       ((x1_c-pointB2.x())*(x1_c-pointB2.x()) + (y1_c-pointB2.y())*(y1_c-pointB2.y())))
+    {
+        path_lengthB_c1 = path_lengthB1;
+    }
+    else
+    {
+        path_lengthB_c1 = path_lengthB2;
+    }
+
+    // second crossing point for helix B
+    path_lengthB = helixB.pathLength(sqrt(x2_c*x2_c+y2_c*y2_c));
+    path_lengthB1 = path_lengthB.first;
+    path_lengthB2 = path_lengthB.second;
+
+    helixB ->Evaluate(path_lengthB1,helix_point);
+    pointB1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+    helixB ->Evaluate(path_lengthB2,helix_point);
+    pointB2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+    if( ((x2_c-pointB1.x())*(x2_c-pointB1.x()) + (y2_c-pointB1.y())*(y2_c-pointB1.y())) <
+       ((x2_c-pointB2.x())*(x2_c-pointB2.x()) + (y2_c-pointB2.y())*(y2_c-pointB2.y())))
+    {
+        path_lengthB_c2 = path_lengthB1;
+    }
+    else
+    {
+        path_lengthB_c2 = path_lengthB2;
+    }
+
+    helixA ->Evaluate(path_lengthA_c1,helix_point);
+    pointA1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+    helixA ->Evaluate(path_lengthA_c2,helix_point);
+    pointA2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+    helixB ->Evaluate(path_lengthB_c1,helix_point);
+    pointB1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+    helixB ->Evaluate(path_lengthB_c2,helix_point);
+    pointB2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
+
+
+    if((pointA1-pointB1).mag() < (pointA2-pointB2).mag())
+    {
+        pathA = path_lengthA_c1;
+        pathB = path_lengthB_c1;
+        dcaAB = (pointA1-pointB1).mag();
+    }
+    else
+    {
+        pathA = path_lengthA_c2;
+        pathB = path_lengthB_c2;
+        dcaAB = (pointA2-pointB2).mag();
+    }
+
+    */
+    return 1;
+
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
 // V1.0
 void Ali_TRD_ST_Analyze::fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB)
 {
@@ -434,22 +635,24 @@ void Ali_TRD_ST_Analyze::fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float
 
 
 //----------------------------------------------------------------------------------------
-void Ali_TRD_ST_Analyze::Calculate_secondary_vertices()
+void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 {
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
     Double_t vertex_point[3];
 
-    TEveP_sec_vertices = new TEvePointSet();
+    if(graphics) TEveP_sec_vertices = new TEvePointSet();
 
     Int_t i_vertex = 0;
+    printf("N_helices: %d \n",(Int_t)vec_helices.size());
     for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices.size() - 1); i_track_A++)
     {
         for(Int_t i_track_B = (i_track_A+1); i_track_B < (Int_t)vec_helices.size(); i_track_B++)
         {
+
             Float_t pathA, pathB, dcaAB;
             fHelixABdca(vec_helices[i_track_A],vec_helices[i_track_B],pathA,pathB,dcaAB);
-            printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
+            //printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
             if(dcaAB < 10.0)
             {
                 vec_helices[i_track_A] ->Evaluate(pathA,helix_pointA);
@@ -458,18 +661,32 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices()
                 {
                     vertex_point[i_xyz] = (helix_pointA[i_xyz] + helix_pointB[i_xyz])/2.0;
                 }
-                TEveP_sec_vertices ->SetPoint(i_vertex,vertex_point[0],vertex_point[1],vertex_point[2]);
-                i_vertex++;
+
+                Float_t pathA_est, pathB_est, dcaAB_est;
+                fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
+                printf("3D cross point: {%4.3f, %4.3f, %4.3f} \n",vertex_point[0],vertex_point[1],vertex_point[2]);
+
+                Double_t radius_vertex = TMath::Sqrt(vertex_point[0]*vertex_point[0] + vertex_point[1]*vertex_point[1]);
+                if(radius_vertex > 240.0 && radius_vertex < 360.0)
+                {
+                    if(graphics) TEveP_sec_vertices ->SetPoint(i_vertex,vertex_point[0],vertex_point[1],vertex_point[2]);
+                    i_vertex++;
+                }
             }
         }
     }
 
-   TEveP_sec_vertices  ->SetMarkerSize(3);
-   TEveP_sec_vertices  ->SetMarkerStyle(20);
-   TEveP_sec_vertices  ->SetMarkerColor(kOrange);
+    printf("Number of secondary vertices found: %d \n",i_vertex);
 
-    gEve->AddElement(TEveP_sec_vertices);
-    gEve->Redraw3D(kTRUE);
+    if(graphics)
+    {
+        TEveP_sec_vertices  ->SetMarkerSize(3);
+        TEveP_sec_vertices  ->SetMarkerStyle(20);
+        TEveP_sec_vertices  ->SetMarkerColor(kRed);
+
+        gEve->AddElement(TEveP_sec_vertices);
+        gEve->Redraw3D(kTRUE);
+    }
 }
 //----------------------------------------------------------------------------------------
 
@@ -478,7 +695,7 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices()
 //----------------------------------------------------------------------------------------
 void Ali_TRD_ST_Analyze::set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in)
 {
-    printf("Ali_TRD_ST_Analyze::set_Kalman_helix_params");
+    //printf("Ali_TRD_ST_Analyze::set_Kalman_helix_params");
     mHelices_kalman = mHelices_kalman_in;
 
     vec_helices.clear();
@@ -636,7 +853,7 @@ void Ali_TRD_ST_Analyze::Init_tree(TString SEList)
 //----------------------------------------------------------------------------------------
 void Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event)
 {
-    printf("Ali_TRD_ST_Analyze::Loop_event \n");
+    //printf("Ali_TRD_ST_Analyze::Loop_event \n");
 
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
@@ -651,7 +868,7 @@ void Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event)
     Float_t  V0MEq                = TRD_ST_Event ->getcent_class_V0MEq();
     //--------------------------------------------------
 
-
+    printf("Event: %lld, TPC tracks: %d, TRD tracklets: %d \n",i_event,NumTracks,NumTracklets);
 
     //--------------------------------------------------
     // TPC track loop
@@ -699,8 +916,8 @@ void Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event)
     {
         TRD_ST_Tracklet = TRD_ST_Event    ->getTracklet(i_tracklet);
         TRD_ST_Tracklet->set_TRD_index(i_tracklet);
-		Tracklets[i_tracklet]=TRD_ST_Tracklet;
-		TV3_offset      = TRD_ST_Tracklet ->get_TV3_offset();
+        Tracklets[i_tracklet]=TRD_ST_Tracklet;
+        TV3_offset      = TRD_ST_Tracklet ->get_TV3_offset();
         TV3_dir         = TRD_ST_Tracklet ->get_TV3_dir();
         i_det           = TRD_ST_Tracklet ->get_TRD_det();
 		
@@ -717,9 +934,9 @@ void Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event)
     //--------------------------------------------------
 
 
-    TCanvas* can_TRD_layer_radii = new TCanvas("can_TRD_layer_radii","can_TRD_layer_radii",10,10,500,500);
-    can_TRD_layer_radii ->cd();
-    th1d_TRD_layer_radii ->DrawCopy("h");
+    //TCanvas* can_TRD_layer_radii = new TCanvas("can_TRD_layer_radii","can_TRD_layer_radii",10,10,500,500);
+    //can_TRD_layer_radii ->cd();
+    //th1d_TRD_layer_radii ->DrawCopy("h");
 }
 //----------------------------------------------------------------------------------------
 
@@ -728,7 +945,7 @@ void Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event)
 //----------------------------------------------------------------------------------------
 void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
 {
-    printf("Ali_TRD_ST_Analyze::Draw_event \n");
+    //printf("Ali_TRD_ST_Analyze::Draw_event \n");
 	
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
@@ -895,7 +1112,7 @@ void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
 //----------------------------------------------------------------------------------------
 void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window)
 {
-    printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching \n");
+    //printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching \n");
 
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
