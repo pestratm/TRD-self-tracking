@@ -95,7 +95,7 @@ public:
     Int_t fCross_points_Circles(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
     Int_t fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
     void Calculate_secondary_vertices(Int_t graphics);
-	pair<Double_t,Double_t>fpathLength(Double_t r) const;
+	pair<Double_t,Double_t>fpathLength(Double_t r,Ali_Helix* helixA) const;
 	Int_t fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2);
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
@@ -378,6 +378,9 @@ Int_t Ali_TRD_ST_Analyze::fCross_points_Circles(Double_t x1, Double_t y1, Double
 } 
 //----------------------------------------------------------------------------------------
 
+
+
+//-----------------------------------------------------------------------------------------
 Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2)
 {
 	Double_t dif_x=(x1-x2);
@@ -412,26 +415,31 @@ Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_
 	
 	return 1;
 }	
+//------------------------------------------------------------------------------------------------------------
+
+
 
 //---------------------------------------------------------------------------------------------------------
-pair<Double_t,Double_t> Ali_TRD_ST_Analyze::fpathLength(Double_t r) const
+pair<Double_t,Double_t> Ali_TRD_ST_Analyze::fpathLength(Double_t r,Ali_Helix* helixA) const
 {
+	//taken from https://www.star.bnl.gov/webdata/dox/html/StHelix_8cc_source.html
+	
 	pair<Double_t,Double_t> value;
 	pair<Double_t,Double_t> VALUE(999999999.,999999999.);
-	Double_t curvature=aliHelix_params[4];
+	Double_t curvature=helixA->getHelix_param(4);
 	Double_t radius=1/curvature;
-	Double_t x0=aliHelix_params[5] +radius*TMath::Sin(aliHelix_params[2]);
-	Double_t y0=aliHelix_params[0] -radius*TMath::Cos(aliHelix_params[2]);
-	Double_t z0=aliHelix_params[1];
+	Double_t x0=helixA->getHelix_param(5) +radius*TMath::Sin(helixA->getHelix_param(2));
+	Double_t y0=helixA->getHelix_param(0) -radius*TMath::Cos(helixA->getHelix_param(2));
+	Double_t z0=helixA->getHelix_param(1);
 
-	Double_t phase=aliHelix_params[2] -TMath::Pi()/2;
-	if(phase<0) phase=2*TMath::Pi() -	aliHelix_params[2];
+	Double_t phase=helixA->getHelix_param(2) -TMath::Pi()/2;
+	if(phase<0) phase=2*TMath::Pi() -	helixA->getHelix_param(2);
 	Double_t cosphase=TMath::Cos(phase);	
 	Double_t sinphase=TMath::Sin(phase);
-	Double_t dipangle=TMath::ATan(aliHelix_params[3]);
+	Double_t dipangle=TMath::ATan(helixA->getHelix_param(3));
 	Double_t cosdipangle=TMath::Cos(dipangle);
 	Double_t sindipangle=TMath::Sin(dipangle);
-	Double_t h= TMath::Sign(1,aliHelix_params[4]);
+	Double_t h= TMath::Sign(1,helixA->getHelix_param(4));
 	
 	Double_t t1 = y0*curvature;
   	
@@ -486,6 +494,10 @@ pair<Double_t,Double_t> Ali_TRD_ST_Analyze::fpathLength(Double_t r) const
 	
 }
 //----------------------------------------------------------------------------------------
+
+
+
+//--------------------------------------------------------------------------------------------
 Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB)
 {
 
