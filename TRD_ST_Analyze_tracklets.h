@@ -95,6 +95,8 @@ public:
     Int_t fCross_points_Circles(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
     Int_t fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
     void Calculate_secondary_vertices(Int_t graphics);
+	pair<Double_t,Double_t>fpathLength(Double_t r) const;
+	Int_t fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2);
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
@@ -373,11 +375,116 @@ Int_t Ali_TRD_ST_Analyze::fCross_points_Circles(Double_t x1, Double_t y1, Double
     }
     else return 0;
 
-}
+} 
 //----------------------------------------------------------------------------------------
 
+Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2)
+{
+	Double_t dif_x=(x1-x2);
+	Double_t dif_y=(y1-y2);
+	Double_t dist=TMath::Sqrt( (dif_x*dif_x) +(dif_y*dif_y) );
+	Double_t dist_inv =1/dist;
+	if (dist==0){};
+	
+	if (dist<(r1+r2)){
+	//2 intersections
+		Double_t x_loc 		=((dist*dist +r1*r1 -r2*r2)*(0.5*dist_inv));
+		Double_t y_loc		=TMath::Sqrt(r1*r1 -x_loc*x_loc);
+		
+		Double_t x_glob1	=(x1*dist+x_loc*dif_x -y_loc*dif_y)*dist_inv;
+		Double_t y_glob1	=(y1*dist+x_loc*dif_y +y_loc*dif_x)*dist_inv;
+		
+		Double_t x_glob2	=(x1*dist+x_loc*dif_x +y_loc*dif_y)*dist_inv;
+		Double_t y_glob2	=(y1*dist-x_loc*dif_y +y_loc*dif_x)*dist_inv;
+		
+	}
+	else{
+	//no intersection (maybe 1)
+		Double_t normrad	=r1*dist_inv;
+		Double_t px1		=x1+ normrad*dif_x;
+		Double_t py1		=y1+ normrad*dif_y;
+		
+		normrad				=(dist-r2)/dist;
+		Double_t px2		=x1+ normrad*dif_x;
+		Double_t py2		=y1+ normrad*dif_y;
+		
+	}	
+	
+	return 1;
+}	
 
+//---------------------------------------------------------------------------------------------------------
+pair<Double_t,Double_t> Ali_TRD_ST_Analyze::fpathLength(Double_t r) const
+{
+	pair<Double_t,Double_t> value;
+	pair<Double_t,Double_t> VALUE(999999999.,999999999.);
+	Double_t curvature=aliHelix_params[4];
+	Double_t radius=1/curvature;
+	Double_t x0=aliHelix_params[5] +radius*TMath::Sin(aliHelix_params[2]);
+	Double_t y0=aliHelix_params[0] -radius*TMath::Cos(aliHelix_params[2]);
+	Double_t z0=aliHelix_params[1];
 
+	Double_t phase=aliHelix_params[2] -TMath::Pi()/2;
+	if(phase<0) phase=2*TMath::Pi() -	aliHelix_params[2];
+	Double_t cosphase=TMath::Cos(phase);	
+	Double_t sinphase=TMath::Sin(phase);
+	Double_t dipangle=TMath::ATan(aliHelix_params[3]);
+	Double_t cosdipangle=TMath::Cos(dipangle);
+	Double_t sindipangle=TMath::Sin(dipangle);
+	Double_t h= TMath::Sign(1,aliHelix_params[4]);
+	
+	Double_t t1 = y0*curvature;
+  	
+	Double_t t2 = sinphase;
+  	Double_t t3 = curvature*curvature;
+  	Double_t t4  =y0*t2;
+	Double_t t5 = cosphase;
+	Double_t t6 = x0*t5;
+	Double_t t8 = x0*x0;
+	Double_t t11 = x0*x0;
+	Double_t t14 = r*r;
+	Double_t t15 = t14*curvature;
+	Double_t t17 = t8*t8;
+	Double_t t19 = t11*t11;
+	Double_t t21 = t11*t3;
+	Double_t t23 = t5*t5;
+	Double_t t32 = t14*t14;
+	Double_t t35 = t14*t3;
+	Double_t t38 = 8.0*t4*t6 - 4.0*t1*t2*t8 - 4.0*t11*curvature*t6 +
+				4.0*t15*t6 + t17*t3 + t19*t3 + 2.0*t21*t8 + 4.0*t8*t23 -
+				4.0*t8*x0*curvature*t5 - 4.0*t11*t23 -
+				4.0*t11*x0*curvature*t2 + 4.0*t11 - 4.0*t14 +
+				t32*t3 + 4.0*t15*t4 - 2.0*t35*t11 - 2.0*t35*t8;
+	Double_t t40 = (-t3*t38);
+	if (t40<0.) return VALUE;
+	t40 = ::sqrt(t40);
+
+	Double_t t43 = x0*curvature;
+	Double_t t45 = 2.0*t5 - t35 + t21 + 2.0 - 2.0*t1*t2 -2.0*t43 - 2.0*t43*t5 + t8*t3;
+	Double_t t46 = h*cosdipangle*curvature;
+
+	value.first = (-phase + 2.0*atan((-2.0*t1 + 2.0*t2 + t40)/t45))/t46;
+	value.second = -(phase + 2.0*atan((2.0*t1 - 2.0*t2 + t40)/t45))/t46;
+
+	//
+	//   Solution can be off by +/- one period, select smallest
+	//
+	Double_t p = fabs(2*TMath::Pi()/(h*curvature*cosdipangle));;
+	if (! std::isnan(value.first)) {
+		if (fabs(value.first-p) < fabs(value.first)) value.first = value.first-p;
+	   	else if (fabs(value.first+p) < fabs(value.first)) value.first = value.first+p;
+	}
+	if (! std::isnan(value.second)) {
+	   	if (fabs(value.second-p) < fabs(value.second)) value.second = value.second-p;
+	   	else if (fabs(value.second+p) < fabs(value.second)) value.second = value.second+p;
+	}
+	
+	if (value.first > value.second)
+	swap(value.first,value.second);
+	return(value);
+
+	
+}
 //----------------------------------------------------------------------------------------
 Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB)
 {
@@ -1096,7 +1203,7 @@ void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
         vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetMainColor(color_layer[i_layer]);
         //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
         {
-             //gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
+             gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
         }
 
         N_tracklets_layers[i_layer]++;
