@@ -414,13 +414,12 @@ Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_
         else
         {
 	//no intersection (maybe 1)
-		Double_t normrad	=r1*dist_inv;
+		Double_t normrad	=(r1+dist-r2)*dist_inv*0.5;
                 x1_c		=x1+ normrad*dif_x;
                 y1_c		=y1+ normrad*dif_y;
 		
-		normrad				=(dist-r2)/dist;
-                x2_c		=x1+ normrad*dif_x;
-                y2_c		=y1+ normrad*dif_y;
+                x2_c		=x1_c;
+                y2_c		=y1_c;
 
                 return 2;
 	}	
