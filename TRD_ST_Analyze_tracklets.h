@@ -417,15 +417,15 @@ Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_
         else
         {
 	//no intersection (maybe 1)
-            //Double_t normrad	=(r1+dist-r2)*dist_inv*0.5;
-            /*
-            Double_t normrad	= (r1 + 0.5*(dist - r1 - r2))*dist_inv;
+            Double_t normrad	=(r1+dist-r2)*dist_inv*0.5;
+            
+            //Double_t normrad	= (r1 + 0.5*(dist - r1 - r2))*dist_inv;
                 x1_c		=x1 + normrad*dif_x;
                 y1_c		=y1 + normrad*dif_y;
 		
                 x2_c		=x1_c;
                 y2_c		=y1_c;
-           */
+           /*
 
                 Double_t s      = (r1 + 0.5*(dist - r1 - r2));
                 Double_t n_vecx = dif_x/dist;
@@ -435,8 +435,8 @@ Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_
 
                 x2_c		=x1_c;
                 y2_c		=y1_c;
-
-                return 2;
+				*/
+            	return 2;
 	}	
 	
 	return 3;

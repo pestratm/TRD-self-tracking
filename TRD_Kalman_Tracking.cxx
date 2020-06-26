@@ -491,7 +491,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		Double_t b_fak		=	0.5*3./1000.;
 		
-		Double_t curvature 	= 	(mMu[4]*b_fak);
+		Double_t curvature 	= 	-(mMu[4]*b_fak);
 	
   		fHelix[4] = curvature; // C
   		fHelix[3] = p[2]/pt;    // tgl
