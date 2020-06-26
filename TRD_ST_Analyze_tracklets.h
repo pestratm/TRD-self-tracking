@@ -86,7 +86,7 @@ public:
     Int_t Number_Tracklets;
     void Draw_Kalman_Tracks(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks);
     void set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in);
-    void Draw_Kalman_Helix_Tracks();
+    void Draw_Kalman_Helix_Tracks(Int_t n_track);
     void set_single_helix_params(vector<Double_t> vec_params);
     void Evaluate(Double_t t, // helix evaluation, taken from AliHelix
                   Double_t r[3]);  //radius vector
@@ -355,6 +355,8 @@ Int_t Ali_TRD_ST_Analyze::fCross_points_Circles(Double_t x1, Double_t y1, Double
     x2_c = 0;
     y2_c = 0;
 
+    //printf("s: %4.3f, r1+r2: %4.3f, pos1: {%4.3f, %4.3f}, pos2: {%4.3f, %4.3f}, r1: %4.3f, r2: %4.3f \n",s,r1+r2,x1,y1,x2,y2,r1,r2);
+
     if(x1 != x2 && y1 != y2 && s < (r1+r2))
     {
         Double_t m  = (x1-x2)/(y2-y1);
@@ -362,6 +364,7 @@ Int_t Ali_TRD_ST_Analyze::fCross_points_Circles(Double_t x1, Double_t y1, Double
         Double_t p  = (2.0*(-x1 + m*(n-y1)))/(1.0 + m*m);
         Double_t q  = (x1*x1 + (n-y1)*(n-y1) -r1*r1)/(1.0 + m*m);
         Double_t p2 = (p/2.0)*(p/2.0);
+
 
         if(p2 >= q)
         {
@@ -414,10 +417,22 @@ Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_
         else
         {
 	//no intersection (maybe 1)
-		Double_t normrad	=(r1+dist-r2)*dist_inv*0.5;
-                x1_c		=x1+ normrad*dif_x;
-                y1_c		=y1+ normrad*dif_y;
+            //Double_t normrad	=(r1+dist-r2)*dist_inv*0.5;
+            /*
+            Double_t normrad	= (r1 + 0.5*(dist - r1 - r2))*dist_inv;
+                x1_c		=x1 + normrad*dif_x;
+                y1_c		=y1 + normrad*dif_y;
 		
+                x2_c		=x1_c;
+                y2_c		=y1_c;
+           */
+
+                Double_t s      = (r1 + 0.5*(dist - r1 - r2));
+                Double_t n_vecx = dif_x/dist;
+                Double_t n_vecy = dif_y/dist;
+                x1_c = x1 + s*n_vecx;
+                y1_c = y1 + s*n_vecy;
+
                 x2_c		=x1_c;
                 y2_c		=y1_c;
 
@@ -437,8 +452,8 @@ pair<Double_t,Double_t> Ali_TRD_ST_Analyze::fpathLength(Double_t r,Ali_Helix* he
 	
 	pair<Double_t,Double_t> value;
 	pair<Double_t,Double_t> VALUE(999999999.,999999999.);
-	Double_t curvature=helixA->getHelix_param(4);
-	Double_t radius=1/curvature;
+	Double_t curvature=fabs(helixA->getHelix_param(4));
+	Double_t radius=fabs(1/curvature);
 	Double_t x0=helixA->getHelix_param(5) +radius*TMath::Sin(helixA->getHelix_param(2));
 	Double_t y0=helixA->getHelix_param(0) -radius*TMath::Cos(helixA->getHelix_param(2));
 	Double_t z0=helixA->getHelix_param(1);
@@ -526,8 +541,8 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     Double_t r2 = 0.0;
     if(c1 != 0 && c2 != 0)
     {
-        r1 = 1.0/c1;
-        r2 = 1.0/c2;
+        r1 = fabs(1.0/c1);
+        r2 = fabs(1.0/c2);
     } else return 0;
 
     Double_t x1_c = 0.0;
@@ -535,8 +550,8 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     Double_t x2_c = 0.0;
     Double_t y2_c = 0.0;
 
-    //Int_t bCross_points = fCross_points_Circles(x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c);
-    //printf("2D circle cross points (Alex): {%4.3f, %4.3f}, {%4.3f, %4.3f} \n",x1_c,y1_c,x2_c,y2_c);
+    Int_t bCross_points = fCross_points_Circles(x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c);
+    printf("2D circle cross points (Alex): {%4.3f, %4.3f}, {%4.3f, %4.3f} \n",x1_c,y1_c,x2_c,y2_c);
 
     pathA = 0.0;
     pathB = 0.0;
@@ -647,17 +662,28 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     pointB2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
 
 
-    if((pointA1-pointB1).Mag() < (pointA2-pointB2).Mag())
+    Double_t dcaAB1 = (pointA1-pointB1).Mag();
+    Double_t dcaAB2 = (pointA2-pointB2).Mag();
+    Double_t dcaAB3 = (pointA1-pointB2).Mag();
+    Double_t dcaAB4 = (pointA2-pointB1).Mag();
+
+    printf("pointA1: {%4.3f, %4.3f, %4.3f} \n",pointA1.X(),pointA1.Y(),pointA1.Z());
+    printf("pointA2: {%4.3f, %4.3f, %4.3f} \n",pointA2.X(),pointA2.Y(),pointA2.Z());
+    printf("pointB1: {%4.3f, %4.3f, %4.3f} \n",pointB1.X(),pointB1.Y(),pointB1.Z());
+    printf("pointB2: {%4.3f, %4.3f, %4.3f} \n",pointB2.X(),pointB2.Y(),pointB2.Z());
+    printf("dcaAB1: %4.3f, dcaAB2: %4.3f, dcaAB3: %4.3f, dcaAB4: %4.3f \n",dcaAB1,dcaAB2,dcaAB3,dcaAB4);
+
+    if(dcaAB1 < dcaAB2)
     {
         pathA = path_lengthA_c1;
         pathB = path_lengthB_c1;
-        dcaAB = (pointA1-pointB1).Mag();
+        dcaAB = dcaAB1;
     }
     else
     {
         pathA = path_lengthA_c2;
         pathB = path_lengthB_c2;
-        dcaAB = (pointA2-pointB2).Mag();
+        dcaAB = dcaAB2;
     }
 
 
@@ -780,12 +806,12 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     if(graphics) TEveP_sec_vertices = new TEvePointSet();
 
     Int_t i_vertex = 0;
+    Int_t i_comb   = 0;
     printf("N_helices: %d \n",(Int_t)vec_helices.size());
     for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices.size() - 1); i_track_A++)
     {
         for(Int_t i_track_B = (i_track_A+1); i_track_B < (Int_t)vec_helices.size(); i_track_B++)
         {
-
             Float_t pathA, pathB, dcaAB;
             fHelixABdca(vec_helices[i_track_A],vec_helices[i_track_B],pathA,pathB,dcaAB);
             //printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
@@ -799,6 +825,7 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                 }
 
                 Float_t pathA_est, pathB_est, dcaAB_est;
+                printf("i_track_A: %d, i_track_B: %d, i_comb: %d \n",i_track_A,i_track_B,i_comb);
                 printf("3D cross point: {%4.3f, %4.3f, %4.3f} \n",vertex_point[0],vertex_point[1],vertex_point[2]);
 
                 fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
@@ -811,12 +838,20 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                 printf(" --> est 3D cross point: {%4.3f, %4.3f, %4.3f} \n",vertex_point_est[0],vertex_point_est[1],vertex_point_est[2]);
                 printf(" \n");
 
+                if(i_comb == 0)
+                {
+                    Draw_Kalman_Helix_Tracks(i_track_A);
+                    Draw_Kalman_Helix_Tracks(i_track_B);
+                }
+
                 Double_t radius_vertex = TMath::Sqrt(vertex_point[0]*vertex_point[0] + vertex_point[1]*vertex_point[1]);
-                if(radius_vertex > 240.0 && radius_vertex < 360.0)
+                //if(radius_vertex > 240.0 && radius_vertex < 360.0)
+                if(i_comb == 0)
                 {
                     if(graphics) TEveP_sec_vertices ->SetPoint(i_vertex,vertex_point[0],vertex_point[1],vertex_point[2]);
                     i_vertex++;
                 }
+                i_comb++;
             }
         }
     }
@@ -888,9 +923,17 @@ void Ali_TRD_ST_Analyze::Evaluate(Double_t t,Double_t r[3])  //radius vector
 
 
 //----------------------------------------------------------------------------------------
-void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks()
+void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track)
 {
-    for(Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
+    // n_track = -1 -> all tracks drawn
+    Int_t i_track_start = 0;
+    Int_t i_track_stop  = (Int_t)mHelices_kalman.size();
+    if(n_track != -1)
+    {
+        i_track_start = n_track;
+        i_track_stop  = n_track + 1;
+    }
+    for(Int_t i_track = i_track_start; i_track < i_track_stop; i_track++)
     {
         set_single_helix_params(mHelices_kalman[i_track]);
         Double_t track_pos[3];
@@ -903,14 +946,14 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks()
         vec_TPL3D_helix_kalman_inner[i_track] = new TEveLine();
 
         Double_t radius_helix = 0.0;
-        for(Double_t track_path = -300.0; track_path < 1000; track_path += 1.0)
+        for(Double_t track_path = -500.0; track_path < 1000; track_path += 1.0)
         {
             Evaluate(track_path,track_pos);
             radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
 			if (!(track_path))
             printf("i_track: %d, track_path: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, radius_helix: %4.3f \n",i_track,track_path,track_pos[0],track_pos[1],track_pos[2],radius_helix);
-            if(radius_helix > 370.0) break;
-            if(fabs(track_pos[2]) > 320.0) break;
+            //if(radius_helix > 370.0) break;
+            //if(fabs(track_pos[2]) > 320.0) break;
             if(radius_helix > 80.0)
             {
                 vec_TPL3D_helix_kalman[i_track]        ->SetNextPoint(track_pos[0],track_pos[1],track_pos[2]);

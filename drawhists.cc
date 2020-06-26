@@ -62,19 +62,24 @@ void drawhists()
         TRD_ST_Analyze ->Loop_event(event);
         //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
 
+
         //TRD_ST_Analyze ->Draw_event(event);
         //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
         TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0);
         //TRD_ST_Analyze ->Do_TPC_TRD_matching_allEvents(3.0,10.0);
+
         vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
         TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
+
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks;
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
 
         vector<vector<Double_t>> mHelices_kalman = kalid.get_Kalman_helix_params();
         printf("size of mHelices_kalman: %d \n",(Int_t)mHelices_kalman.size());
         TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_kalman);
-        TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks();
+
+        //TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1); // -1 -> all tracks drawn
+
         TRD_ST_Analyze ->Calculate_secondary_vertices(1); // 0 = no graphics
         //vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
         //vector<Double_t> track_accuracy;
