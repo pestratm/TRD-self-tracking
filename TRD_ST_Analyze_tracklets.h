@@ -96,7 +96,7 @@ public:
     Int_t fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
     void Calculate_secondary_vertices(Int_t graphics);
 	pair<Double_t,Double_t>fpathLength(Double_t r,Ali_Helix* helixA) const;
-	Int_t fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2);
+	Int_t fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
@@ -381,39 +381,51 @@ Int_t Ali_TRD_ST_Analyze::fCross_points_Circles(Double_t x1, Double_t y1, Double
 
 
 //-----------------------------------------------------------------------------------------
-Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2)
+Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,
+                                               Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c)
 {
-	Double_t dif_x=(x1-x2);
-	Double_t dif_y=(y1-y2);
-	Double_t dist=TMath::Sqrt( (dif_x*dif_x) +(dif_y*dif_y) );
-	Double_t dist_inv =1/dist;
-	if (dist==0){};
+	Double_t dif_x = -(x1 - x2);
+	Double_t dif_y = -(y1 - y2);
+	Double_t dist=TMath::Sqrt( (dif_x*dif_x) + (dif_y*dif_y) );
+        if(dist==0) // circles overlap -> most likely identical helices
+        {
+            x1_c = 0.0;
+            y1_c = 0.0;
+            x2_c = 0.0;
+            y2_c = 0.0;
+            return 0;
+        };
+        Double_t dist_inv =1/dist;
 	
-	if (dist<(r1+r2)){
+        if(dist<(r1+r2))
+        {
 	//2 intersections
 		Double_t x_loc 		=((dist*dist +r1*r1 -r2*r2)*(0.5*dist_inv));
 		Double_t y_loc		=TMath::Sqrt(r1*r1 -x_loc*x_loc);
 		
-		Double_t x_glob1	=(x1*dist+x_loc*dif_x -y_loc*dif_y)*dist_inv;
-		Double_t y_glob1	=(y1*dist+x_loc*dif_y +y_loc*dif_x)*dist_inv;
+                x1_c	=(x1*dist+x_loc*dif_x -y_loc*dif_y)*dist_inv;
+                y1_c	=(y1*dist+x_loc*dif_y +y_loc*dif_x)*dist_inv;
 		
-		Double_t x_glob2	=(x1*dist+x_loc*dif_x +y_loc*dif_y)*dist_inv;
-		Double_t y_glob2	=(y1*dist-x_loc*dif_y +y_loc*dif_x)*dist_inv;
-		
+                x2_c	=(x1*dist+x_loc*dif_x +y_loc*dif_y)*dist_inv;
+                y2_c	=(y1*dist+x_loc*dif_y -y_loc*dif_x)*dist_inv;
+
+                return 1;
 	}
-	else{
+        else
+        {
 	//no intersection (maybe 1)
 		Double_t normrad	=r1*dist_inv;
-		Double_t px1		=x1+ normrad*dif_x;
-		Double_t py1		=y1+ normrad*dif_y;
+                x1_c		=x1+ normrad*dif_x;
+                y1_c		=y1+ normrad*dif_y;
 		
 		normrad				=(dist-r2)/dist;
-		Double_t px2		=x1+ normrad*dif_x;
-		Double_t py2		=y1+ normrad*dif_y;
-		
+                x2_c		=x1+ normrad*dif_x;
+                y2_c		=y1+ normrad*dif_y;
+
+                return 2;
 	}	
 	
-	return 1;
+	return 3;
 }	
 //------------------------------------------------------------------------------------------------------------
 
@@ -524,26 +536,29 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     Double_t x2_c = 0.0;
     Double_t y2_c = 0.0;
 
-    Int_t bCross_points = fCross_points_Circles(x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c);
+    //Int_t bCross_points = fCross_points_Circles(x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c);
+    //printf("2D circle cross points (Alex): {%4.3f, %4.3f}, {%4.3f, %4.3f} \n",x1_c,y1_c,x2_c,y2_c);
 
     pathA = 0.0;
     pathB = 0.0;
     dcaAB = 0.0;
 
-    printf("2D circle cross points: {%4.3f, %4.3f}, {%4.3f, %4.3f} \n",x1_c,y1_c,x2_c,y2_c);
 
-    /*
+    Int_t cCross_points = fCircle_Interception(x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c);
+    printf("2D circle cross points (Sven): {%4.3f, %4.3f}, {%4.3f, %4.3f}, return: %d \n",x1_c,y1_c,x2_c,y2_c,cCross_points);
+
+
     //cout << "bCross_points = " << bCross_points << ", xyr(1) = {" << x1 << ", " << y1 << ", " << r1
     //    << "}, xyr(2) = {"  << x2 << ", " << y2 << ", " << r2 << "}, p1 = {" << x1_c << ", " << y1_c << "}, p2 = {" << x2_c << ", " << y2_c << "}" << endl;
 
-    if(bCross_points == 0) return 0;
+    //if(bCross_points == 0) return 0;
 
     TVector3 pointA,pointB,pointA1,pointB1,pointA2,pointB2;
 
     Double_t path_lengthA_c1,path_lengthA_c2,path_lengthB_c1,path_lengthB_c2;
 
     // first crossing point for helix A
-    pair< double, double > path_lengthA = helixA.pathLength(sqrt(x1_c*x1_c+y1_c*y1_c));
+    pair< double, double > path_lengthA = fpathLength(sqrt(x1_c*x1_c+y1_c*y1_c),helixA);
     Double_t path_lengthA1 = path_lengthA.first;
     Double_t path_lengthA2 = path_lengthA.second;
 
@@ -563,7 +578,7 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     }
 
     // second crossing point for helix A
-    path_lengthA = helixA.pathLength(sqrt(x2_c*x2_c+y2_c*y2_c));
+    path_lengthA = fpathLength(sqrt(x2_c*x2_c+y2_c*y2_c),helixA);
     path_lengthA1 = path_lengthA.first;
     path_lengthA2 = path_lengthA.second;
 
@@ -583,7 +598,7 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     }
 
     // first crossing point for helix B
-    pair< double, double > path_lengthB = helixB.pathLength(sqrt(x1_c*x1_c+y1_c*y1_c));
+    pair< double, double > path_lengthB = fpathLength(sqrt(x1_c*x1_c+y1_c*y1_c),helixB);
     Double_t path_lengthB1 = path_lengthB.first;
     Double_t path_lengthB2 = path_lengthB.second;
 
@@ -603,7 +618,7 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     }
 
     // second crossing point for helix B
-    path_lengthB = helixB.pathLength(sqrt(x2_c*x2_c+y2_c*y2_c));
+    path_lengthB = fpathLength(sqrt(x2_c*x2_c+y2_c*y2_c),helixB);
     path_lengthB1 = path_lengthB.first;
     path_lengthB2 = path_lengthB.second;
 
@@ -633,20 +648,20 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     pointB2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
 
 
-    if((pointA1-pointB1).mag() < (pointA2-pointB2).mag())
+    if((pointA1-pointB1).Mag() < (pointA2-pointB2).Mag())
     {
         pathA = path_lengthA_c1;
         pathB = path_lengthB_c1;
-        dcaAB = (pointA1-pointB1).mag();
+        dcaAB = (pointA1-pointB1).Mag();
     }
     else
     {
         pathA = path_lengthA_c2;
         pathB = path_lengthB_c2;
-        dcaAB = (pointA2-pointB2).mag();
+        dcaAB = (pointA2-pointB2).Mag();
     }
 
-    */
+
     return 1;
 
 }
@@ -759,6 +774,9 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
     Double_t vertex_point[3];
+    Double_t helix_pointA_est[3];
+    Double_t helix_pointB_est[3];
+    Double_t vertex_point_est[3];
 
     if(graphics) TEveP_sec_vertices = new TEvePointSet();
 
@@ -782,8 +800,17 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                 }
 
                 Float_t pathA_est, pathB_est, dcaAB_est;
-                fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
                 printf("3D cross point: {%4.3f, %4.3f, %4.3f} \n",vertex_point[0],vertex_point[1],vertex_point[2]);
+
+                fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
+                vec_helices[i_track_A] ->Evaluate(pathA_est,helix_pointA_est);
+                vec_helices[i_track_B] ->Evaluate(pathB_est,helix_pointB_est);
+                for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+                {
+                    vertex_point_est[i_xyz] = (helix_pointA_est[i_xyz] + helix_pointB_est[i_xyz])/2.0;
+                }
+                printf(" --> est 3D cross point: {%4.3f, %4.3f, %4.3f} \n",vertex_point_est[0],vertex_point_est[1],vertex_point_est[2]);
+                printf(" \n");
 
                 Double_t radius_vertex = TMath::Sqrt(vertex_point[0]*vertex_point[0] + vertex_point[1]*vertex_point[1]);
                 if(radius_vertex > 240.0 && radius_vertex < 360.0)
