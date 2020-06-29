@@ -452,58 +452,64 @@ pair<Double_t,Double_t> Ali_TRD_ST_Analyze::fpathLength(Double_t r,Ali_Helix* he
 	
 	pair<Double_t,Double_t> value;
 	pair<Double_t,Double_t> VALUE(999999999.,999999999.);
-	Double_t curvature=fabs(helixA->getHelix_param(4));
-	Double_t radius=fabs(1/curvature);
-	Double_t x0=helixA->getHelix_param(5) +radius*TMath::Sin(helixA->getHelix_param(2));
-	Double_t y0=helixA->getHelix_param(0) -radius*TMath::Cos(helixA->getHelix_param(2));
-	Double_t z0=helixA->getHelix_param(1);
+	Double_t curvature		= fabs(helixA->getHelix_param(4));
+	Double_t radius			= fabs(1/curvature);
+	Double_t x0				= helixA->getHelix_param(5) +radius*TMath::Sin(helixA->getHelix_param(2));
+	Double_t y0				= helixA->getHelix_param(0) -radius*TMath::Cos(helixA->getHelix_param(2));
+	Double_t z0				= helixA->getHelix_param(1);
 
-	Double_t phase=helixA->getHelix_param(2) -TMath::Pi()/2;
-	if(phase<0) phase=2*TMath::Pi() -	helixA->getHelix_param(2);
-	Double_t cosphase=TMath::Cos(phase);	
-	Double_t sinphase=TMath::Sin(phase);
-	Double_t dipangle=TMath::ATan(helixA->getHelix_param(3));
-	Double_t cosdipangle=TMath::Cos(dipangle);
-	Double_t sindipangle=TMath::Sin(dipangle);
-	Double_t h= TMath::Sign(1,helixA->getHelix_param(4));
+	Double_t phase			= helixA->getHelix_param(2) -TMath::Pi()/2;
+	//Double_t phase=atan2f(-(x0-helixA->getHelix_param(5)),(y0-helixA->getHelix_param(0)));
 	
-	Double_t t1 = y0*curvature;
-  	
-	Double_t t2 = sinphase;
-  	Double_t t3 = curvature*curvature;
-  	Double_t t4  =y0*t2;
-	Double_t t5 = cosphase;
-	Double_t t6 = x0*t5;
-	Double_t t8 = x0*x0;
-	Double_t t11 = x0*x0;
-	Double_t t14 = r*r;
-	Double_t t15 = t14*curvature;
-	Double_t t17 = t8*t8;
-	Double_t t19 = t11*t11;
-	Double_t t21 = t11*t3;
-	Double_t t23 = t5*t5;
-	Double_t t32 = t14*t14;
-	Double_t t35 = t14*t3;
-	Double_t t38 = 8.0*t4*t6 - 4.0*t1*t2*t8 - 4.0*t11*curvature*t6 +
+	while(phase<-TMath::Pi()) phase	+= 2.*TMath::Pi() ;
+	while(phase>TMath::Pi()) phase	-= 2.*TMath::Pi() ;
+	
+	Double_t dipangle		= TMath::ATan(helixA->getHelix_param(3));
+	Double_t cosdipangle	= TMath::Cos(dipangle);
+	Double_t sindipangle	= TMath::Sin(dipangle);
+	Double_t h				= TMath::Sign(1,helixA->getHelix_param(4));
+	if(phase>TMath::Pi()) phase	-= 2.*TMath::Pi() ;
+	Double_t cosphase		= TMath::Cos(phase);	
+	Double_t sinphase		= TMath::Sin(phase);
+	
+	
+	Double_t t1 	= y0*curvature;
+	Double_t t2 	= sinphase;
+  	Double_t t3 	= curvature*curvature;
+  	Double_t t4 	= y0*t2;
+	Double_t t5 	= cosphase;
+	Double_t t6 	= x0*t5;
+	Double_t t8 	= x0*x0;
+	Double_t t11	= y0*y0;
+	Double_t t14 	= r*r;
+	Double_t t15 	= t14*curvature;
+	Double_t t17 	= t8*t8;
+	Double_t t19 	= t11*t11;
+	Double_t t21 	= t11*t3;
+	Double_t t23 	= t5*t5;
+	Double_t t32 	= t14*t14;
+	Double_t t35 	= t14*t3;
+	Double_t t38 	= 8.0*t4*t6 - 4.0*t1*t2*t8 - 4.0*t11*curvature*t6 +
 				4.0*t15*t6 + t17*t3 + t19*t3 + 2.0*t21*t8 + 4.0*t8*t23 -
 				4.0*t8*x0*curvature*t5 - 4.0*t11*t23 -
-				4.0*t11*x0*curvature*t2 + 4.0*t11 - 4.0*t14 +
+				4.0*t11*y0*curvature*t2 + 4.0*t11 - 4.0*t14 +
 				t32*t3 + 4.0*t15*t4 - 2.0*t35*t11 - 2.0*t35*t8;
-	Double_t t40 = (-t3*t38);
+	cout<<t38<<endl;
+	Double_t t40 	= (-t3*t38);
 	if (t40<0.) return VALUE;
 	t40 = ::sqrt(t40);
 
-	Double_t t43 = x0*curvature;
-	Double_t t45 = 2.0*t5 - t35 + t21 + 2.0 - 2.0*t1*t2 -2.0*t43 - 2.0*t43*t5 + t8*t3;
-	Double_t t46 = h*cosdipangle*curvature;
+	Double_t t43 	= x0*curvature;
+	Double_t t45 	= 2.0*t5 - t35 + t21 + 2.0 - 2.0*t1*t2 -2.0*t43 - 2.0*t43*t5 + t8*t3;
+	Double_t t46 	= h*cosdipangle*curvature;
 
-	value.first = (-phase + 2.0*atan((-2.0*t1 + 2.0*t2 + t40)/t45))/t46;
-	value.second = -(phase + 2.0*atan((2.0*t1 - 2.0*t2 + t40)/t45))/t46;
+	value.first 	= (-phase + 2.0*atan((-2.0*t1 + 2.0*t2 + t40)/t45))/t46;
+	value.second 	= -(phase + 2.0*atan((2.0*t1 - 2.0*t2 + t40)/t45))/t46;
 
 	//
 	//   Solution can be off by +/- one period, select smallest
 	//
-	Double_t p = fabs(2*TMath::Pi()/(h*curvature*cosdipangle));;
+	Double_t p 		= fabs(2*TMath::Pi()/(h*curvature*cosdipangle));
 	if (! std::isnan(value.first)) {
 		if (fabs(value.first-p) < fabs(value.first)) value.first = value.first-p;
 	   	else if (fabs(value.first+p) < fabs(value.first)) value.first = value.first+p;
