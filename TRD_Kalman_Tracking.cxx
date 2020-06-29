@@ -1,4 +1,9 @@
 #include "TRD_Kalman_Tracking.h"
+#include <chrono>
+
+double T_calc;                          //Variable for the calculation time
+double T_wall;
+	
 
 vector<vector<Double_t>> TRD_Kalman_Trackfinder::get_Kalman_helix_params()
 {
@@ -116,8 +121,12 @@ void TRD_Kalman_Trackfinder::get_seed( Ali_TRD_ST_Tracklets** Tracklets, Int_t N
 										temp_seed[1]=mBins[j_det][j_tracklet];
 										mSeed.push_back(temp_seed);
 										done=1;
-										
+										chrono::high_resolution_clock::time_point start_calc_time=chrono::high_resolution_clock::now();
+
 										Kalman(mSeed[mSeed.size()-1]);
+										chrono::high_resolution_clock::time_point end_calc_time=chrono::high_resolution_clock::now();
+										T_calc += chrono::duration_cast<chrono::microseconds>(end_calc_time-start_calc_time).count();
+	
 									}			
 								if (done) break;
 							}
@@ -181,37 +190,34 @@ void TRD_Kalman_Trackfinder::prediction(Double_t dist){
 	if(mShow) cout<<mUnc<<endl;
 }
 
+
+//----------------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------------
+
 //correction as used in every lecture
-void TRD_Kalman_Trackfinder::correction(ROOT::Math::SVector<double,4> measure){
-	ROOT::Math::SMatrix<double,4,5> C=mObs;
-	ROOT::Math::SMatrix<double,5,4> C_t=ROOT::Math::Transpose(C);
-	ROOT::Math::SMatrix<double,5,5> P=mCov;
-	ROOT::Math::SMatrix<double,5,5> Eye=ROOT::Math::SMatrixIdentity();
-		
-		
-	ROOT::Math::SMatrix<double,4,4> A= C*P*C_t +mSig;
-	A.Invert();
-		
-	ROOT::Math::SMatrix<double,5,4> K=P*C_t*A;
+void TRD_Kalman_Trackfinder::correction(ROOT::Math::SVector<double,4> measure)
+{
 	
-	ROOT::Math::SVector<double,4> res=measure - C * mMu;
-	mMu+=K*(res);
+	ROOT::Math::SMatrix<double,4,5> C	= mObs;
+	ROOT::Math::SMatrix<double,5,4> C_t	= ROOT::Math::Transpose(C);
+	ROOT::Math::SMatrix<double,5,5> P	= mCov;
+	ROOT::Math::SMatrix<double,5,5> Eye	= ROOT::Math::SMatrixIdentity();
 		
-	mKal_Gain=K;
-	mCov=(Eye -K*C) *P;	
+	mKal_Gain							= P*C_t*mCov_Res_Inv;
 	
-	mChi_2+=ROOT::Math::Dot(res,(A*res));
+	ROOT::Math::SVector<double,4> res	=measure - C * mMu;
+	mMu+=mKal_Gain*(res);
+		
+	mCov=(Eye -mKal_Gain*C) *P;	
+	mChi_2+=ROOT::Math::Dot(res,(mCov_Res_Inv*res));
+					
 	
 }
 
-/*
-Bool_t TRD_Kalman_Trackfinder::fits(ROOT::Math::SVector<double,4> measure){
-	ROOT::Math::SVector<double,4> abs=ROOT::Math::fabs(mMu_red -measure);
-	Bool_t bol=abs< 2*mUnc;
-	return bol;
-}
-*/
+//----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
 void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 {
 	{//init
@@ -286,6 +292,9 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		prediction(mDist);
 		mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
+		mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+		mCov_Res_Inv.Invert();
+		
 		
 		if(mShow)
 		{
@@ -311,14 +320,17 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 	for(Int_t i_layer=5;i_layer>=0;i_layer--)
 	{
 		
-		if (mEstimate[i_layer]!=0){
-			mMu		=	mEstimate[i_layer];
-			mCurrent_Det=mTrack[i_layer]->get_TRD_det();
-			mDist	=	mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
-			mCov=cov_per_layer[i_layer];
-			continue;}
+		if (mEstimate[i_layer]!=0)
+		{
+			mMu				= mEstimate[i_layer];
+			mCurrent_Det	= mTrack[i_layer]->get_TRD_det();
+			mDist			= mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
+			mCov			= cov_per_layer[i_layer];
+			continue;
+		}
+		
 		prediction(mDist);
-		mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
+		
 		if(mShow)
 		{
 			cout<<"Layer:"<< i_layer<<endl;
@@ -327,9 +339,17 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			cout<<"unc"<<mUnc<<endl;			
 		}
 		
-		mDist=mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
+		mCurrent_Det	= mCurrent_Det-(mCurrent_Det%6) + i_layer;
+		mDist			= mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
+		
+		ROOT::Math::SMatrix<double,4,4> Cov_res		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+		Cov_res.Invert();
+				
 		if (mMeasurements[i_layer]!=0)
-				correction(mMeasurements[i_layer]);
+		{	
+			mCov_Res_Inv	= Cov_res;
+			correction(mMeasurements[i_layer]);	
+		}
 		else
 		{
 			vector<Int_t> Dets;
@@ -354,23 +374,19 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 				vector<Int_t> 							ind_nbr;
 				vector<Double_t> 						chis;
 				
-				vector<ROOT::Math::SVector<double,4>> 	resses;
-				vector<ROOT::Math::SMatrix<double,4,4>>	Cov_resses;
-				vector<ROOT::Math::SVector<double,4>> 	meas_list;
+				//vector<ROOT::Math::SVector<double,4>> 	resses;
+				//vector<ROOT::Math::SVector<double,4>> 	meas_list;
+					
 				
 				for(Int_t i_tracklet=0; i_tracklet<mBins[i_det].size();i_tracklet++){
-					ROOT::Math::SVector<double,4> 	measurement	=	measure(mBins[i_det][i_tracklet]);
-					ROOT::Math::SVector<double,4> 	abs			=	ROOT::Math::fabs(mMu_red -measurement);
-					ROOT::Math::SVector<double,4> 	res			= 	measurement- mMu_red;
-					ROOT::Math::SMatrix<double,4,4> Cov_res		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+					ROOT::Math::SVector<double,4> 	measurement	= measure(mBins[i_det][i_tracklet]);
+					ROOT::Math::SVector<double,4> 	abs			= ROOT::Math::fabs(mMu_red -measurement);
+					ROOT::Math::SVector<double,4> 	res			= measurement- mMu_red;
+					Double_t 						chi_2		= ROOT::Math::Dot(res,(Cov_res*res));
 					
-					if(mShow) cout<<"meas"<<measurement<<", "<<mBins[i_det][i_tracklet]->get_TV3_offset()[0]<<", "<<mBins[i_det][i_tracklet]->get_TRD_index()<<endl;
-					
-					
-					Cov_res.Invert();
-					Double_t chi_2=ROOT::Math::Dot(res,(Cov_res*res));
-					
-					if(mShow)cout<<"chi:"<<chi_2<<endl;
+					if(mShow){
+						cout<<"meas"<<measurement<<", "<<mBins[i_det][i_tracklet]->get_TV3_offset()[0]<<", "<<mBins[i_det][i_tracklet]->get_TRD_index()<<endl;
+						cout<<"chi:"<<chi_2<<endl;}
 					
 					//Bool_t fitting= ((abs[0]<2*mUnc[0]) && (abs[1]<3*mUnc[1]) && (abs[2]<2*mUnc[2]));
 					if (1)// (fitting)
@@ -378,9 +394,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 						found_tracklets.push_back(mBins[i_det][i_tracklet]);
 						found_in.push_back(i_det);
 						chis.push_back(chi_2);
-						resses.push_back(res);
-						Cov_resses.push_back(Cov_res);
-						meas_list.push_back(measurement);
+						//resses.push_back(res);
+						//meas_list.push_back(measurement);
 						ind_nbr.push_back(i_tracklet);
 						
 					}
@@ -403,6 +418,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
        				
 					mVisited[found_in[min_ind]][ind_nbr[min_ind]]=1;
 					mMeasurements[i_layer]=measure(found_tracklets[min_ind]);
+					mCov_Res_Inv=Cov_res;
+	
 					correction(mMeasurements[i_layer]);
 					
 					Ali_TRD_ST_Tracklets* temp_tracklet	=new Ali_TRD_ST_Tracklets();
@@ -451,7 +468,9 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
 			if (mMeasurements[i_layer]!=0){
 				if ((Int_t)(mTrack[i_layer]->get_TRD_det() /30) !=(Int_t)(mCurrent_Det/30)){}
-
+				mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+				mCov_Res_Inv.Invert();
+		
 				correction(mMeasurements[i_layer]);
 			}
 		}
@@ -493,24 +512,24 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		Double_t curvature 	= 	(mMu[4]*b_fak);
 	
-  		fHelix[4] = curvature; // C
-  		fHelix[3] = p[2]/pt;    // tgl
+  		fHelix[4] 	= curvature; // C
+  		fHelix[3] 	= p[2]/pt;    // tgl
   //  
   		Double_t xc, yc, rc;
-  		rc	=  1/fHelix[4];
-		xc  =  x[0]  -rc*p[1]/pt;
-		yc  =  x[1]  +rc*p[0]/pt; 
+  		rc			=  1/fHelix[4];
+		xc  		=  x[0]  -rc*p[1]/pt;
+		yc  		=  x[1]  +rc*p[0]/pt; 
 		  //
-		fHelix[5] = x[0];   // x0
-		fHelix[0] = x[1];   // y0
-		fHelix[1] = x[2];   // z0
+		fHelix[5] 	= x[0];   // x0
+		fHelix[0] 	= x[1];   // y0
+		fHelix[1] 	= x[2];   // z0
 		  //
 		//fHelix[6] = xc;
 		//fHelix[7] = yc;
 		//fHelix[8] = TMath::Abs(rc);
 		  //
-		fHelix[5] = xc; 
-		fHelix[0] = yc; 
+		fHelix[5] 	= xc; 
+		fHelix[0] 	= yc; 
 		  //
 		if (TMath::Abs(p[1])<TMath::Abs(p[0])){     
 			fHelix[2]=TMath::ASin(p[1]/pt);
@@ -541,8 +560,17 @@ vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind
     mFound_tracks.clear();
     mEstimates.clear();
     //cout<<"TRD_Kalman_Trackfinder::Kalman_Trackfind"<<endl;
+	T_calc=0.;
+	chrono::high_resolution_clock::time_point start_wall_time=chrono::high_resolution_clock::now();
+	
     get_seed(Tracklets,Num_Tracklets);
-    /*for (int i=0; i<mSeed.size();i++){
+    
+	chrono::high_resolution_clock::time_point end_wall_time=chrono::high_resolution_clock::now();
+	T_wall= chrono::duration_cast<chrono::microseconds>(end_wall_time-start_wall_time).count();
+	printf("T_wall is %f us\n",T_wall);
+	printf("T_calc is %f us\n",T_calc);
+	
+	/*for (int i=0; i<mSeed.size();i++){
      if (i == 55 ) mShow=1;
      Kalman(mSeed[i]);
      mShow=0;

@@ -11,6 +11,7 @@ class TRD_Kalman_Trackfinder
   ROOT::Math::SMatrix<double, 5, 5> mTau;      //Propagation uncertainty Matrix
   ROOT::Math::SMatrix<double, 4, 4> mSig;      //Measure uncertainty Matrix
   ROOT::Math::SMatrix<double, 5, 4> mKal_Gain; //Kalman Gain Matrix
+  ROOT::Math::SMatrix<double, 4, 4> mCov_Res_Inv;   
   //Double_t curv;							//curvature
   ROOT::Math::SVector<double, 5> mMu;                       	//current estimate
   vector<ROOT::Math::SVector<double, 5>> mEstimate;   		//estimates of this track
@@ -21,6 +22,8 @@ class TRD_Kalman_Trackfinder
   Int_t mCurrent_Det;
   ROOT::Math::SVector<double, 4> mUnc;
   ROOT::Math::SVector<double, 4> mMu_red;
+  ROOT::Math::SVector<double, 4> mRes;
+  
 
   vector<vector<Double_t>> mHelices; // Kalman helix parameters, based on AliHelix
 
