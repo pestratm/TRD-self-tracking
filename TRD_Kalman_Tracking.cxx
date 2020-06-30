@@ -26,14 +26,14 @@ ROOT::Math::SVector<double,4> TRD_Kalman_Trackfinder::measure(Ali_TRD_ST_Trackle
 //checks if 2 tracklets are more or less in a line
 Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
 	//direction is not ok 
-	if ((a->get_TRD_index()==1400)&&(b->get_TRD_index()==389)) cout<<"a2";
+	//if ((a->get_TRD_index()==1400)&&(b->get_TRD_index()==389)) cout<<"a2";
 	
 	
 	TVector3 dir_a		=	a->get_TV3_dir();
 	TVector3 dir_b		=	b->get_TV3_dir();
 	TVector3 a_angle 	= 	(TVector3){dir_a[0], dir_a[1], 0};
 	TVector3 b_angle 	= 	(TVector3){dir_b[0], dir_b[1], 0};
-	
+	/*
 	if ((a->get_TRD_index()==1400)&&(b->get_TRD_index()==389)){ 
 		cout<<"a ";
 		dir_a.Print();
@@ -41,6 +41,7 @@ Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Trackl
 		dir_b.Print();
 		cout<<abs(a_angle.Angle(b_angle)*TMath::RadToDeg())<<" "<<abs(dir_a.Angle(dir_b)*TMath::RadToDeg() )<<endl;
 	}
+	*/
 	if (abs(a_angle.Angle(b_angle)*TMath::RadToDeg() )>15)
 		return 0;
 	if (abs(dir_a.Angle(dir_b)*TMath::RadToDeg() )>15)
@@ -51,12 +52,13 @@ Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Trackl
 	TVector3 off_b 		=	b->get_TV3_offset();
 	TVector3 off_a 		=	a->get_TV3_offset();
 	TVector3 z			=	off_a+dir_a*((off_b[0]- off_a[0])/dir_a[0] );
+	/*
 	if ((a->get_TRD_index()==1400)&&(b->get_TRD_index()==389)){ 
 		cout<<"a ";
 		z.Print();
 		cout<<" b ";
 		off_b.Print();
-	}
+	}*/
 	
 	if (abs((z -off_b)[1])>7.)
 		return 0;
@@ -73,8 +75,9 @@ void TRD_Kalman_Trackfinder::get_seed( Ali_TRD_ST_Tracklets** Tracklets, Int_t N
 	Int_t nbr_sectors=18;
 	Int_t nbr_stack=5;
 	Int_t nbr_layers=6; 	
-	
+	mBins.clear();
 	mBins.resize(nbr_sectors*nbr_stack*nbr_layers);//bins for every detector
+	mVisited.clear();
 	mVisited.resize(nbr_sectors*nbr_stack*nbr_layers);
 	
 	//sort then in bins
@@ -565,7 +568,7 @@ vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind
     //cout<<"TRD_Kalman_Trackfinder::Kalman_Trackfind"<<endl;
 	T_calc=0.;
 	chrono::high_resolution_clock::time_point start_wall_time=chrono::high_resolution_clock::now();
-	
+				
     get_seed(Tracklets,Num_Tracklets);
     
 	chrono::high_resolution_clock::time_point end_wall_time=chrono::high_resolution_clock::now();
