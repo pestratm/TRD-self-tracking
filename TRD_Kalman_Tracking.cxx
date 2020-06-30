@@ -504,7 +504,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		Double_t conversion=1;
 		vector<Double_t> fHelix;
-		fHelix.resize(6);
+		fHelix.resize(8);
 		Double_t pt = TMath::Sqrt(p[0]*p[0]+p[1]*p[1]);
   //  	
 		
@@ -529,7 +529,10 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		//fHelix[8] = TMath::Abs(rc);
 		  //
 		fHelix[5] 	= xc; 
-		fHelix[0] 	= yc; 
+                fHelix[0] 	= yc;
+
+                fHelix[6]       = pt;
+                fHelix[7]       = p[2];
 		  //
 		if (TMath::Abs(p[1])<TMath::Abs(p[0])){     
 			fHelix[2]=TMath::ASin(p[1]/pt);

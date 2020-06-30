@@ -56,7 +56,7 @@ void drawhists()
     //Long64_t event = 10;
 
     TRD_Kalman_Trackfinder kalid;
-    for (Long64_t event = 1; event < 2 ; event++)
+    for (Long64_t event = 2; event < 3 ; event++)
     {
 
         TRD_ST_Analyze ->Loop_event(event);
@@ -77,7 +77,6 @@ void drawhists()
         vector<vector<Double_t>> mHelices_kalman = kalid.get_Kalman_helix_params();
         printf("size of mHelices_kalman: %d \n",(Int_t)mHelices_kalman.size());
         TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_kalman);
-
         //TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1); // -1 -> all tracks drawn
 
         TRD_ST_Analyze ->Calculate_secondary_vertices(1); // 0 = no graphics
@@ -170,6 +169,7 @@ void drawhists()
     }
     //gRandom->Rndm();
 
+    TRD_ST_Analyze ->Plot_AP();
 
     TCanvas * c1= new TCanvas("c1", "fitted data",5,5,800,600);
 
