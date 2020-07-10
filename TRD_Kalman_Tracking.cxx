@@ -416,16 +416,19 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 					}
 				
 				if(min_chi<chi_2_pen)
-				{
+				{ 	//new tracklet was found 
 					
 					if ((Int_t)(found_in[min_ind]/30) !=(Int_t)(mCurrent_Det/30)){}
 						//change_coord_sys(found_in_det[min_ind]); //MuST BE IMPLEMENTET !!!!!!!!
        				
+					//save tracklet info
 					mVisited[found_in[min_ind]][ind_nbr[min_ind]]=1;
 					mMeasurements[i_layer]=measure(found_tracklets[min_ind]);
 					mCov_Res_Inv=Cov_res;
-	
+					
+					
 					correction(mMeasurements[i_layer]);
+					
 					
 					Ali_TRD_ST_Tracklets* temp_tracklet	=new Ali_TRD_ST_Tracklets();
 					mTrack[i_layer]						=temp_tracklet;
@@ -444,12 +447,10 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 					
 					mTrack[i_layer]						->set_TRD_index(found_tracklets[min_ind]->get_TRD_index());
 					mNbr_tracklets++;
-					mChi_2								+=min_chi;
 				}
 				else
 				{									
-					mTrack[i_layer]	=NULL;
-					mChi_2			+=chi_2_pen;	
+					mTrack[i_layer]	=NULL;	
 				}
 			}
 			
@@ -462,8 +463,9 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		//save Track
 		mFound_tracks.push_back(mTrack);
 		mEstimates.push_back(mEstimate);
-		if(mFound_tracks.size()==-35)mShow=1;
 		
+		//used to look at specific track
+		if(mFound_tracks.size()==-35)mShow=1;
 		if(mFound_tracks.size()==36)mShow=0;
 		
 		//Loop again for better fit
@@ -480,6 +482,19 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			}
 		}
 		
+		//Loop again for better fit
+		for(Int_t i_layer=4;i_layer<=0;i_layer--){
+			mDist	=	mTRD_layer_radii[i_layer][0]-mTRD_layer_radii[i_layer+1][0];
+			prediction(mDist);
+			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
+			if (mMeasurements[i_layer]!=0){
+				if ((Int_t)(mTrack[i_layer]->get_TRD_det() /30) !=(Int_t)(mCurrent_Det/30)){}
+				mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+				mCov_Res_Inv.Invert();
+		
+				correction(mMeasurements[i_layer]);
+			}
+		}
 		
 		//calculate Helix param
 		Double_t charge=1.;
@@ -487,27 +502,21 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		Double_t lam=TMath::ATan( mMu[3]);
 		Double_t pxy=charge/mMu[4] ;
 		
-		TVector3 x_vek;
-		TVector3 p_vek;
-		x_vek[0]	=	mTRD_layer_radii[5][0];
-		x_vek[1]	=	mMu[0];
-		x_vek[2]	=	mMu[1];
-		p_vek[0]	=	TMath::Cos(TMath::ASin(mMu[2]))*pxy;
-		p_vek[1]	=	mMu[2]*pxy;
-		p_vek[2]	=	mMu[3]*pxy;
-		x_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
-		p_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
-		Double_t x[3];
-		Double_t p[3];
-		x[0]		=	x_vek[0];
-		x[1]		=	x_vek[1];
-		x[2]		=	x_vek[2]; 
-		p[0]		=	p_vek[0];
-		p[1]		=	p_vek[1];
-		p[2]		=	p_vek[2];
+		TVector3 x; //current position...
+		TVector3 p; //current monmentum...
+		//...in local coordinate system
+		x[0]	=	mTRD_layer_radii[0][0];  
+		x[1]	=	mMu[0];
+		x[2]	=	mMu[1];
+		p[0]	=	TMath::Cos(TMath::ASin(mMu[2]))*pxy;
+		p[1]	=	mMu[2]*pxy;
+		p[2]	=	mMu[3]*pxy;
+		//... in global coordiante system
+		x.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
+		p.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
 		
-		
-		Double_t conversion=1;
+		//calculation of Helixparameter taken from http://alidoc.cern.ch/AliRoot/v5-09-36/_ali_helix_8cxx_source.html 
+		//AliHelix::AliHelix(Double_t x[3], Double_t p[3], Double_t charge, Double_t conversion)
 		vector<Double_t> fHelix;
 		fHelix.resize(8);
 		Double_t pt = TMath::Sqrt(p[0]*p[0]+p[1]*p[1]);
