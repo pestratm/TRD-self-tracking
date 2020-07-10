@@ -151,8 +151,8 @@ void TRD_Kalman_Trackfinder::prediction(Double_t dist){
 		
 	Double_t curvature 	= 	(2.*mMu[4]*b_fak);
 	Double_t f2			= 	f1 + dist*curvature;
-	Double_t r1=TMath::Sqrt((1.- f1)*(1. + f2));
-	Double_t r2=TMath::Sqrt((1.- f1)*(1. + f2));
+	Double_t r1=TMath::Sqrt((1.- f1)*(1. + f1));
+	Double_t r2=TMath::Sqrt((1.- f2)*(1. + f2));
 	Double_t dy2dx 		=	(f1 +f2)/(r1 +r2);
 		
 	mMu[0]+=dist*dy2dx;
@@ -211,7 +211,8 @@ void TRD_Kalman_Trackfinder::correction(ROOT::Math::SVector<double,4> measure)
 	ROOT::Math::SVector<double,4> res	=measure - C * mMu;
 	mMu+=mKal_Gain*(res);
 		
-	mCov=(Eye -mKal_Gain*C) *P;	
+	mCov=(Eye -mKal_Gain*C) *P;
+	res	=measure - C * mMu;
 	mChi_2+=ROOT::Math::Dot(res,(mCov_Res_Inv*res));
 					
 	
@@ -229,6 +230,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			mMu[i]=mes[i];
 			
 		mMu[4]=0;
+		
 		mEstimate.resize(0);
 		mEstimate.resize(6);
 		mTrack.resize(0);
