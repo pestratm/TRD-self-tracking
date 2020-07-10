@@ -23,7 +23,8 @@ class TRD_Kalman_Trackfinder
   ROOT::Math::SVector<double, 4> mUnc;
   ROOT::Math::SVector<double, 4> mMu_red;
   ROOT::Math::SVector<double, 4> mRes;
-  
+
+  Double_t b_field	=	0.1;
 
   vector<vector<Double_t>> mHelices; // Kalman helix parameters, based on AliHelix
 

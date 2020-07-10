@@ -22,6 +22,7 @@ private:
     TTree* Tree_TRD_ST_Event_out;
 
     TH2D* TH2D_AP_plot;
+    TH2D* TH2D_pT_TPC_vs_Kalman;
 
     TFile* outputfile;
     Double_t test;
@@ -71,13 +72,18 @@ private:
     vector<Ali_Helix*> vec_helices;
     TEvePointSet* TEveP_sec_vertices;
 
+    TEvePointSet* TEveP_first_point_helix;
+    TEvePointSet* TEveP_second_point_helix;
+    vector<TEveLine*> TEveLine_mother;
+    vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets;
+
 public:
     Ali_TRD_ST_Analyze();
     ~Ali_TRD_ST_Analyze();
     void Init_tree(TString SEList);
     void Loop_event(Long64_t i_event);
     void Draw_event(Long64_t i_event);
-    void Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window);
+    void Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window, Int_t graphics);
     void Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window);
     void Do_TRD_self_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window);
     void Draw_hist_TPC_tracklet_diffs();
@@ -85,9 +91,12 @@ public:
 
     Ali_TRD_ST_Tracklets** Tracklets;
     vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks;
+    vector<Int_t> vec_idx_matched_TPC_track;
     Int_t Number_Tracklets;
     void Draw_Kalman_Tracks(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks);
     void set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in);
+    void set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_in);
+    void Match_kalman_tracks_to_TPC_tracks();
     void Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color);
     void set_single_helix_params(vector<Double_t> vec_params);
     void Evaluate(Double_t t, // helix evaluation, taken from AliHelix
@@ -100,6 +109,7 @@ public:
     pair<Double_t,Double_t>fpathLength(Double_t r,Ali_Helix* helixA) const;
     Int_t fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
     void Plot_AP();
+    void Plot_pT_TPC_vs_Kalman();
 
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
@@ -263,7 +273,8 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
     //--------------------------
 
 
-    TH2D_AP_plot = new TH2D("TH2D_AP_plot","TH2D_AP_plot",100,-1,1,100,0.0,0.4);
+    TH2D_AP_plot          = new TH2D("TH2D_AP_plot","TH2D_AP_plot",200,-2.0,2.0,400,-0.1,4.0);
+    TH2D_pT_TPC_vs_Kalman = new TH2D("TH2D_pT_TPC_vs_Kalman","TH2D_pT_TPC_vs_Kalman",200,-10.0,10.0,200,-10.0,10.0);
 
 }
 //----------------------------------------------------------------------------------------
@@ -843,11 +854,20 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     TVector3 TV3_dirA;
     TVector3 TV3_dirB;
     TVector3 TV3_dirAB;
+    TLorentzVector TLV_A;
+    TLorentzVector TLV_B;
+    TLorentzVector TLV_AB;
 
-    if(graphics) TEveP_sec_vertices = new TEvePointSet();
+    if(graphics)
+    {
+        TEveP_sec_vertices        = new TEvePointSet();
+        TEveP_first_point_helix   = new TEvePointSet();
+        TEveP_second_point_helix  = new TEvePointSet();
+    }
 
-    Int_t i_vertex = 0;
-    Int_t i_comb   = 0;
+    Int_t i_vertex     = 0;
+    Int_t i_comb       = 0;
+    Int_t i_vertex_acc = 0;
     //printf("N_helices: %d \n",(Int_t)vec_helices.size());
     for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices.size() - 1); i_track_A++)
     {
@@ -882,7 +902,7 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             //printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
             if(dcaAB < 10.0)
             {
-                //if(i_comb == 53) // 26
+                //if(i_comb == 38)
                 {
                     vec_helices[i_track_A] ->Evaluate(pathA,helix_pointA);
                     vec_helices[i_track_B] ->Evaluate(pathB,helix_pointB);
@@ -904,7 +924,7 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 #if 1
                     //-------------------------------------------------
                     // Armenteros-Podolanski
-                    if(radius_vertex < 240.0)
+                    if(radius_vertex < 250.0)
                     {
                         Double_t pTA = mHelices_kalman[i_track_A][6]; // pT
                         Double_t pzA = mHelices_kalman[i_track_A][7]; // pz
@@ -925,20 +945,38 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         TV3_dirAB = TV3_dirA + TV3_dirB;
                         TV3_dirAB *= 1.0/TV3_dirAB.Mag();
                         Double_t projA = TV3_dirA.Dot(TV3_dirAB);
+                        Double_t projB = TV3_dirB.Dot(TV3_dirAB);
                         Double_t AP_pT = TMath::Sqrt(TMath::Power(TV3_dirA.Mag(),2) - projA*projA);
+                        Double_t AP_pTB = TMath::Sqrt(TMath::Power(TV3_dirB.Mag(),2) - projB*projB);
+                        Double_t AP_alpha = (projA - projB)/(projA + projB);
+                        if(CA < CB) AP_alpha *= -1.0;
 
 
-                        if(pTA > 0.4 && pTB > 0.4 && CA*CB < 0.0 && (pzA + pzB) != 0.0)
+                        printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
+
+                        if(graphics)
+                        {
+                            TEveP_first_point_helix  ->SetPoint(i_vertex_acc,helix_pointA[0],helix_pointA[1],helix_pointA[2]);
+                            TEveP_second_point_helix ->SetPoint(i_vertex_acc,helix_pointAs[0],helix_pointAs[1],helix_pointAs[2]);
+                            TEveP_first_point_helix  ->SetPoint(i_vertex_acc+2,helix_pointB[0],helix_pointB[1],helix_pointB[2]);
+                            TEveP_second_point_helix ->SetPoint(i_vertex_acc+2,helix_pointBs[0],helix_pointBs[1],helix_pointBs[2]);
+
+                            TEveLine_mother.resize(i_vertex_acc+1);
+                            TEveLine_mother[i_vertex_acc] = new TEveLine();
+
+                            TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0],vertex_point[1],vertex_point[2]);
+                            TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0] + 30.0*TV3_dirAB[0],vertex_point[1] + 30.0*TV3_dirAB[1],vertex_point[2] + 30.0*TV3_dirAB[2]);
+                        }
+
+                        if(pTA > 0.3 && pTB > 0.3 && CA*CB < 0.0 && (pzA + pzB) != 0.0)
                         {
                             //printf("CA: %4.3f, CB: %4.3f \n",CA,CB);
 
 
-                            Double_t AP_alpha = (pzA - pzB)/(pzA + pzB);
-                            if(CA < CB) AP_alpha *= -1.0;
-
-                            //printf("AP_alpha: %4.3f, AP_pT: %4.3f \n",AP_alpha,AP_pT);
+                            printf("   ----> AP_alpha: %4.3f, AP_pT: %4.3f, AP_pTB: %4.3f, projA: %4.3f, projB: %4.3f \n",AP_alpha,AP_pT,AP_pTB,projA,projB);
                             TH2D_AP_plot ->Fill(AP_alpha,AP_pT);
                         }
+                        i_vertex_acc++;
                     }
                     //-------------------------------------------------
 #endif
@@ -957,8 +995,27 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         TEveP_sec_vertices  ->SetMarkerSize(3);
         TEveP_sec_vertices  ->SetMarkerStyle(20);
         TEveP_sec_vertices  ->SetMarkerColor(kRed);
-
         gEve->AddElement(TEveP_sec_vertices);
+
+        TEveP_first_point_helix  ->SetMarkerSize(3);
+        TEveP_first_point_helix  ->SetMarkerStyle(20);
+        TEveP_first_point_helix  ->SetMarkerColor(kBlue);
+        gEve->AddElement(TEveP_first_point_helix);
+
+        TEveP_second_point_helix  ->SetMarkerSize(3);
+        TEveP_second_point_helix  ->SetMarkerStyle(20);
+        TEveP_second_point_helix  ->SetMarkerColor(kMagenta);
+        gEve->AddElement(TEveP_second_point_helix);
+
+        for(Int_t i_mother = 0; i_mother < (Int_t)TEveLine_mother.size(); i_mother++)
+        {
+            TEveLine_mother[i_mother]    ->SetLineStyle(1);
+            TEveLine_mother[i_mother]    ->SetLineWidth(3);
+            TEveLine_mother[i_mother]    ->SetMainColor(kMagenta);
+            TEveLine_mother[i_mother]    ->SetMainAlpha(1.0);
+            gEve->AddElement(TEveLine_mother[i_mother]);
+        }
+
         gEve->Redraw3D(kTRUE);
     }
 }
@@ -981,6 +1038,101 @@ void Ali_TRD_ST_Analyze::set_Kalman_helix_params(vector<vector<Double_t>> mHelic
         vec_helices[i_track] ->setHelix(mHelices_kalman[i_track][0],mHelices_kalman[i_track][1],mHelices_kalman[i_track][2],mHelices_kalman[i_track][3],mHelices_kalman[i_track][4],mHelices_kalman[i_track][5]);
     }
 
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_in)
+{
+    vec_kalman_TRD_trackets = vec_kalman_TRD_trackets_in;
+    //printf("size: %d \n",(Int_t)vec_kalman_TRD_trackets.size());
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks()
+{
+    //printf("size: %d \n",(Int_t)vec_kalman_TRD_trackets.size());
+    // Loop over kalman matched TRD tracklets
+    for(Int_t i_kalm_track = 0; i_kalm_track < (Int_t)vec_kalman_TRD_trackets.size(); i_kalm_track++)
+    {
+        vector<Int_t> vec_N_layers_matched;
+        Int_t N_TPC_tracks = (Int_t)matched_tracks.size();
+        vec_N_layers_matched.resize(N_TPC_tracks);
+        Int_t N_layers_matched_all = 0;
+        vector<Int_t> index_TPC_track_matched;
+        for(Int_t i_TPC_track = 0; i_TPC_track < N_TPC_tracks; i_TPC_track++)
+        {
+            vec_N_layers_matched[i_TPC_track] = 0;
+        }
+        index_TPC_track_matched.clear();
+        vec_N_layers_matched.clear();
+
+        //printf("layers: %d \n",(Int_t)vec_kalman_TRD_trackets[i_kalm_track].size());
+        Int_t N_good_kalman_tracklets = 0;
+        for(Int_t i_layer = 0; i_layer < (Int_t)vec_kalman_TRD_trackets[i_kalm_track].size(); i_layer++)
+        {
+            if(vec_kalman_TRD_trackets[i_kalm_track][i_layer] == NULL) continue;
+            N_good_kalman_tracklets++;
+            TVector3 kalman_TV3_offset = vec_kalman_TRD_trackets[i_kalm_track][i_layer] ->get_TV3_offset();
+            //printf("i_kalman_tracklet: %d, i_layer: %d, offset: {%4.3f, %4.3f, %4.3f} \n",i_kalm_track,i_layer,kalman_TV3_offset.X(),kalman_TV3_offset.Y(),kalman_TV3_offset.Z());
+
+            // Loop over TPC tracks
+            for(Int_t i_TPC_track = 0; i_TPC_track < N_TPC_tracks; i_TPC_track++)
+            {
+                Int_t flag_match = 0;
+                for(Int_t i_layer_TPC = 0; i_layer_TPC < (Int_t)matched_tracks[i_TPC_track].size(); i_layer_TPC++)
+                {
+                    //matched_tracks
+                    if(matched_tracks[i_TPC_track][i_layer_TPC] == NULL) continue;
+                    TVector3 TPC_TV3_offset = matched_tracks[i_TPC_track][i_layer_TPC]->get_TV3_offset();
+                    TVector3 TV3_diff =  kalman_TV3_offset - TPC_TV3_offset;
+                    if(TV3_diff.Mag() < 0.1)
+                    {
+                        vec_N_layers_matched[i_TPC_track]++;
+                        N_layers_matched_all++;
+                        flag_match = 1;
+                        //printf("i_kalm_track: %d, matched: %d \n",i_kalm_track,N_layers_matched_all);
+                    }
+                }
+                if(vec_N_layers_matched[i_TPC_track] == 1 && flag_match) index_TPC_track_matched.push_back(i_TPC_track);
+            }
+        }
+
+        if(N_layers_matched_all >= 2)
+        {
+            printf("Kalman track %d with %d total matches \n",i_kalm_track,N_layers_matched_all);
+            for(Int_t index_TPC_track = 0; index_TPC_track < (Int_t)index_TPC_track_matched.size(); index_TPC_track++)
+            {
+                Double_t matches_percent = 100.0*(Double_t)vec_N_layers_matched[index_TPC_track_matched[index_TPC_track]]/(Double_t)N_good_kalman_tracklets;
+                printf("  --> TPC_track: %d, N_good_kalman_tracklets: %d N_matches: %d, %4.1f%% matches \n",index_TPC_track_matched[index_TPC_track],N_good_kalman_tracklets,vec_N_layers_matched[index_TPC_track_matched[index_TPC_track]],matches_percent);
+
+                if(matches_percent >= 90.0 && vec_N_layers_matched[index_TPC_track_matched[index_TPC_track]] >= 5)
+                {
+                    Int_t idx_matched_TPC_track = vec_idx_matched_TPC_track[index_TPC_track_matched[index_TPC_track]];
+
+                    TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(idx_matched_TPC_track);
+                    TLorentzVector TLV_part = TRD_ST_TPC_Track ->get_TLV_part();
+                    Float_t momentum        = TLV_part.P();
+                    Float_t pT_track        = TLV_part.Pt();
+                    Double_t dca            = TRD_ST_TPC_Track ->getdca();  // charge * distance of closest approach to the primary vertex
+
+                    Double_t pT_kalman   = mHelices_kalman[i_kalm_track][6]; // pT
+                    Double_t pz_kalman   = mHelices_kalman[i_kalm_track][7]; // pz
+                    Double_t curv_kalman = mHelices_kalman[i_kalm_track][4]; // curvature
+
+                    printf("pT (TPC): %4.3f, pT (kalman): %4.3f \n",pT_track,pT_kalman);
+
+                    TH2D_pT_TPC_vs_Kalman ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
+                }
+            }
+        }
+
+    }
 }
 //----------------------------------------------------------------------------------------
 
@@ -1040,14 +1192,14 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color)
         vec_TPL3D_helix_kalman_inner[i_track] = new TEveLine();
 
         Double_t radius_helix = 0.0;
-        for(Double_t track_path = -500.0; track_path < 1000; track_path += 1.0)
+        for(Double_t track_path = 0.0; track_path > -350; track_path -= 1.0)
         {
             Evaluate(track_path,track_pos);
             radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
             //printf("i_track: %d, track_path: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, radius_helix: %4.3f \n",i_track,track_path,track_pos[0],track_pos[1],track_pos[2],radius_helix);
-            //if(radius_helix > 370.0) break;
-            //if(fabs(track_pos[2]) > 320.0) break;
-            if(radius_helix > 80.0)
+            if(radius_helix > 370.0) break;
+            if(fabs(track_pos[2]) > 320.0) break;
+            //if(radius_helix > 80.0)
             {
                 vec_TPL3D_helix_kalman[i_track]        ->SetNextPoint(track_pos[0],track_pos[1],track_pos[2]);
                 vec_TPL3D_helix_kalman_hull[i_track]   ->SetNextPoint(track_pos[0],track_pos[1],track_pos[2]);
@@ -1391,12 +1543,14 @@ void Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
 
 
 //----------------------------------------------------------------------------------------
-void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window)
+void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window, Int_t graphics)
 {
     //printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching \n");
 
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
+    matched_tracks.clear();
+    vec_idx_matched_TPC_track.clear();
 
     //--------------------------------------------------
     // Event information (more data members available, see Ali_TRD_ST_Event class definition)
@@ -1411,15 +1565,15 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
 
     //--------------------------------------------------
-    // Store all TRD tracklet in an array to keep it in memory
+    // Store all TRD tracklets in an array to keep it in memory
     // TRD tracklet loop
     vector< vector<TVector3> > vec_TV3_dir_tracklets;
     vector< vector<TVector3> > vec_TV3_offset_tracklets;
     vector< vector<Int_t> > TRD_index_tracklets;
     vec_TV3_dir_tracklets.resize(540);
     vec_TV3_offset_tracklets.resize(540);
-	TRD_index_tracklets.resize(540);
-	
+    TRD_index_tracklets.resize(540);
+
     Double_t ADC_val[24];
 
     TVector3 TV3_offset;
@@ -1441,8 +1595,7 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
         vec_TV3_dir_tracklets[i_det].push_back(TV3_dir);
         vec_TV3_offset_tracklets[i_det].push_back(TV3_offset);
-		TRD_index_tracklets[i_det].push_back(i_tracklet);
-        
+        TRD_index_tracklets[i_det].push_back(i_tracklet);
     }
     //--------------------------------------------------
 
@@ -1451,7 +1604,7 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
     Double_t track_pos[3];
     Double_t radius_helix;
     for(Int_t i_track = 0; i_track < NumTracks; i_track++)
-    //for(Int_t i_track = 3; i_track < 4; i_track++)
+        //for(Int_t i_track = 3; i_track < 4; i_track++)
     {
         TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
 
@@ -1482,8 +1635,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
         vector<TVector3> vec_TV3_helix_points_at_TRD_layers;
         vec_TV3_helix_points_at_TRD_layers.resize(6);
-		matched_tracks.resize(matched_tracks.size() +1);
-        
+        matched_tracks.resize(matched_tracks.size() + 1);
+        vec_idx_matched_TPC_track.push_back(i_track);
 
         for(Int_t i_layer = 0; i_layer < 6; i_layer++)
         {
@@ -1522,7 +1675,7 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
             Double_t dist          = 0.0;
             Int_t    det_best      = -1;
             Int_t    tracklet_best = -1;
-		
+
             for(Int_t i_det = 0; i_det < 540; i_det++)
             {
                 Int_t i_layer_from_det  = i_det%6;
@@ -1540,44 +1693,48 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
                     }
                 }
             }
-			Int_t tracks_size=matched_tracks.size()-1;
-			matched_tracks[tracks_size].push_back(NULL);
-            
+
+            Int_t tracks_size = matched_tracks.size() - 1;
+            matched_tracks[tracks_size].push_back(NULL);
+
             if(det_best < 0 || tracklet_best < 0) continue;
-			
-			Ali_TRD_ST_Tracklets* temp_tracklet=new Ali_TRD_ST_Tracklets();
-			temp_tracklet->set_TRD_det(det_best);
-			temp_tracklet->set_TV3_offset(vec_TV3_offset_tracklets[det_best][tracklet_best]);
-			temp_tracklet->set_TV3_dir(vec_TV3_dir_tracklets[det_best][tracklet_best]);
-			temp_tracklet->set_TRD_index(TRD_index_tracklets[det_best][tracklet_best]);	
-			matched_tracks[tracks_size][matched_tracks[tracks_size].size()-1]=temp_tracklet;
-			
-			
+
+            Ali_TRD_ST_Tracklets* temp_tracklet = new Ali_TRD_ST_Tracklets();
+            temp_tracklet->set_TRD_det(det_best);
+            temp_tracklet->set_TV3_offset(vec_TV3_offset_tracklets[det_best][tracklet_best]);
+            temp_tracklet->set_TV3_dir(vec_TV3_dir_tracklets[det_best][tracklet_best]);
+            temp_tracklet->set_TRD_index(TRD_index_tracklets[det_best][tracklet_best]);
+            matched_tracks[tracks_size][matched_tracks[tracks_size].size() - 1] = temp_tracklet;
+
             Int_t size_tracklet = (Int_t)vec_TEveLine_tracklets_match[i_layer].size();
 
             //printf("i_layer: %d, size_tracklet: %d \n",i_layer,size_tracklet);
 
-            vec_TEveLine_tracklets_match[i_layer].resize(size_tracklet+1);
-            vec_TEveLine_tracklets_match[i_layer][size_tracklet] = new TEveLine();
-            vec_TEveLine_tracklets_match[i_layer][size_tracklet] ->SetNextPoint(vec_TV3_offset_tracklets[det_best][tracklet_best][0],vec_TV3_offset_tracklets[det_best][tracklet_best][1],vec_TV3_offset_tracklets[det_best][tracklet_best][2]);
-            vec_TEveLine_tracklets_match[i_layer][size_tracklet] ->SetNextPoint(vec_TV3_offset_tracklets[det_best][tracklet_best][0] + scale_length*vec_TV3_dir_tracklets[det_best][tracklet_best][0],vec_TV3_offset_tracklets[det_best][tracklet_best][1] + scale_length*vec_TV3_dir_tracklets[det_best][tracklet_best][1],vec_TV3_offset_tracklets[det_best][tracklet_best][2] + scale_length*vec_TV3_dir_tracklets[det_best][tracklet_best][2]);
-
-            HistName = "tracklet (m) ";
-            HistName += size_tracklet;
-            vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetName(HistName.Data());
-            vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetLineStyle(1);
-            vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetLineWidth(6);
-            vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetMainColor(color_layer_match[i_layer]);
-
-            //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
+            if(graphics)
             {
-                 gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
+                vec_TEveLine_tracklets_match[i_layer].resize(size_tracklet+1);
+                vec_TEveLine_tracklets_match[i_layer][size_tracklet] = new TEveLine();
+                vec_TEveLine_tracklets_match[i_layer][size_tracklet] ->SetNextPoint(vec_TV3_offset_tracklets[det_best][tracklet_best][0],vec_TV3_offset_tracklets[det_best][tracklet_best][1],vec_TV3_offset_tracklets[det_best][tracklet_best][2]);
+                vec_TEveLine_tracklets_match[i_layer][size_tracklet] ->SetNextPoint(vec_TV3_offset_tracklets[det_best][tracklet_best][0] + scale_length*vec_TV3_dir_tracklets[det_best][tracklet_best][0],vec_TV3_offset_tracklets[det_best][tracklet_best][1] + scale_length*vec_TV3_dir_tracklets[det_best][tracklet_best][1],vec_TV3_offset_tracklets[det_best][tracklet_best][2] + scale_length*vec_TV3_dir_tracklets[det_best][tracklet_best][2]);
+
+                HistName = "tracklet (m) ";
+                HistName += size_tracklet;
+                vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetName(HistName.Data());
+                vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetLineStyle(1);
+                vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetLineWidth(6);
+                vec_TEveLine_tracklets_match[i_layer][size_tracklet]    ->SetMainColor(color_layer_match[i_layer]);
+
+                //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
+                {
+                    gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
+                }
             }
         }
     }
     //--------------------------------------------------
 
-    gEve->Redraw3D(kTRUE);
+    if(graphics) gEve->Redraw3D(kTRUE);
+    printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching, N TPC Tracks: %d, matched_tracks: %d \n",NumTracks,(Int_t)matched_tracks.size());
 }
 //----------------------------------------------------------------------------------------
 
@@ -2236,6 +2393,17 @@ void Ali_TRD_ST_Analyze::Plot_AP()
     TCanvas *can_AP_plot = new TCanvas("can_AP_plot", "can_AP_plot",10,10,500,500);
     can_AP_plot->cd();
     TH2D_AP_plot ->DrawCopy("colz");
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Plot_pT_TPC_vs_Kalman()
+{
+    TCanvas *can_pT_TPC_vs_Kalman = new TCanvas("can_pT_TPC_vs_Kalman", "can_pT_TPC_vs_Kalman",10,10,500,500);
+    can_pT_TPC_vs_Kalman->cd();
+    TH2D_pT_TPC_vs_Kalman ->DrawCopy("colz");
 }
 //----------------------------------------------------------------------------------------
 

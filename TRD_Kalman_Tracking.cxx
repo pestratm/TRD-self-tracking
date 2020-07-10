@@ -147,8 +147,7 @@ void TRD_Kalman_Trackfinder::prediction(Double_t dist){
 	
 	//calculate new estimate
 	Double_t f1			= 	mMu[2];
-	Double_t b_field	=	0.5;
-	Double_t b_fak		=	b_field*3./2000.;
+        Double_t b_fak		=	b_field*3./2000.;
 		
 	Double_t curvature 	= 	(2.*mMu[4]*b_fak);
 	Double_t f2			= 	f1 + dist*curvature;
@@ -253,8 +252,9 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		mCov[1][1]	=	4;
 		mCov[2][2]	=	TMath::Power(TMath::Sin(7*TMath::Pi()/180),2);
 		mCov[3][3]	=	TMath::Power(TMath::Tan(20*TMath::Pi()/180),2);
-		mCov[4][4]	=	0.09;
-		
+		//mCov[4][4]	=	0.09; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
+                mCov[4][4]	=	1.0*1.0; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
+	        
 		mChi_2		=	0;	
 		
 		
@@ -511,7 +511,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		Double_t pt = TMath::Sqrt(p[0]*p[0]+p[1]*p[1]);
   //  	
 		
-		Double_t b_fak		=	0.5*3./1000.;
+		Double_t b_fak		=	b_field*3./1000.;
 		
 		Double_t curvature 	= 	(mMu[4]*b_fak);
 	
@@ -573,8 +573,8 @@ vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind
     
 	chrono::high_resolution_clock::time_point end_wall_time=chrono::high_resolution_clock::now();
 	T_wall= chrono::duration_cast<chrono::microseconds>(end_wall_time-start_wall_time).count();
-	printf("T_wall is %f us\n",T_wall);
-	printf("T_calc is %f us\n",T_calc);
+	//printf("T_wall is %f us\n",T_wall);
+	//printf("T_calc is %f us\n",T_calc);
 	
 	/*for (int i=0; i<mSeed.size();i++){
      if (i == 55 ) mShow=1;
