@@ -483,7 +483,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		}
 		
 		//Loop again for better fit
-		for(Int_t i_layer=4;i_layer<=0;i_layer--){
+		for(Int_t i_layer=4;i_layer>=0;i_layer--){
 			mDist	=	mTRD_layer_radii[i_layer][0]-mTRD_layer_radii[i_layer+1][0];
 			prediction(mDist);
 			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
@@ -502,18 +502,24 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		Double_t lam=TMath::ATan( mMu[3]);
 		Double_t pxy=charge/mMu[4] ;
 		
-		TVector3 x; //current position...
-		TVector3 p; //current monmentum...
-		//...in local coordinate system
-		x[0]	=	mTRD_layer_radii[0][0];  
-		x[1]	=	mMu[0];
-		x[2]	=	mMu[1];
-		p[0]	=	TMath::Cos(TMath::ASin(mMu[2]))*pxy;
-		p[1]	=	mMu[2]*pxy;
-		p[2]	=	mMu[3]*pxy;
-		//... in global coordiante system
-		x.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
-		p.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
+		TVector3 x_vek;
+		TVector3 p_vek;
+		x_vek[0]	=	mTRD_layer_radii[1][0];
+		x_vek[1]	=	mMu[0];
+		x_vek[2]	=	mMu[1];
+		p_vek[0]	=	TMath::Cos(TMath::ASin(mMu[2]))*pxy;
+		p_vek[1]	=	mMu[2]*pxy;
+		p_vek[2]	=	mMu[3]*pxy;
+		x_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
+		p_vek.RotateZ((Double_t)(2*(Int_t)(mCurrent_Det/30)+1)*TMath::Pi()/18);
+		Double_t x[3];
+		Double_t p[3];
+		x[0]		=	x_vek[0];
+		x[1]		=	x_vek[1];
+		x[2]		=	x_vek[2]; 
+		p[0]		=	p_vek[0];
+		p[1]		=	p_vek[1];
+		p[2]		=	p_vek[2];
 		
 		//calculation of Helixparameter taken from http://alidoc.cern.ch/AliRoot/v5-09-36/_ali_helix_8cxx_source.html 
 		//AliHelix::AliHelix(Double_t x[3], Double_t p[3], Double_t charge, Double_t conversion)
