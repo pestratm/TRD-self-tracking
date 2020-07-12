@@ -55,9 +55,9 @@ void drawhists()
     TRD_ST_Analyze ->Init_tree("List_data_ADC.txt");
     //Long64_t event = 10;
 
-    Int_t graphics = 0;
+    Int_t graphics = 1;
     TRD_Kalman_Trackfinder kalid;
-    for (Long64_t event = 1; event < 4000; event++)
+    for (Long64_t event = 1; event < 2; event++)
     {
 
         TRD_ST_Analyze ->Loop_event(event);
@@ -69,20 +69,26 @@ void drawhists()
         TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0,graphics); // last one is graphics  --> draws kalman TRD tracklets
         //TRD_ST_Analyze ->Do_TPC_TRD_matching_allEvents(3.0,10.0);
 
+
         vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
         if(graphics) TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
+
 
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks; // TPC track matched tracklets
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
 
         vector<vector<Double_t>> mHelices_kalman = kalid.get_Kalman_helix_params();
         //printf("size of mHelices_kalman: %d \n",(Int_t)mHelices_kalman.size());
+
         TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_kalman);
         TRD_ST_Analyze ->set_Kalman_TRD_tracklets(kalman_found_tracks);
-        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks();
-        if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed); // -1 -> all kalman tracks drawn
 
-        TRD_ST_Analyze ->Calculate_secondary_vertices(graphics); // 0 = no graphics
+
+        if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(90,kRed); // -1 -> all kalman tracks drawn
+
+        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks();
+
+        //TRD_ST_Analyze ->Calculate_secondary_vertices(graphics); // 0 = no graphics
 
         //vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
         //vector<Double_t> track_accuracy;
@@ -175,6 +181,7 @@ void drawhists()
 
     TRD_ST_Analyze ->Plot_AP();
     TRD_ST_Analyze ->Plot_pT_TPC_vs_Kalman();
+    TRD_ST_Analyze ->Write();
 
     TCanvas * c1= new TCanvas("c1", "fitted data",5,5,800,600);
 

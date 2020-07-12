@@ -110,6 +110,7 @@ public:
     Int_t fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
     void Plot_AP();
     void Plot_pT_TPC_vs_Kalman();
+    void Write();
 
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
@@ -274,7 +275,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 
 
     TH2D_AP_plot          = new TH2D("TH2D_AP_plot","TH2D_AP_plot",200,-2.0,2.0,400,-0.1,4.0);
-    TH2D_pT_TPC_vs_Kalman = new TH2D("TH2D_pT_TPC_vs_Kalman","TH2D_pT_TPC_vs_Kalman",200,-10.0,10.0,200,-10.0,10.0);
+    TH2D_pT_TPC_vs_Kalman = new TH2D("TH2D_pT_TPC_vs_Kalman","TH2D_pT_TPC_vs_Kalman",500,-10.0,10.0,500,-10.0,10.0);
 
 }
 //----------------------------------------------------------------------------------------
@@ -1182,6 +1183,8 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color)
     for(Int_t i_track = i_track_start; i_track < i_track_stop; i_track++)
     {
         set_single_helix_params(mHelices_kalman[i_track]);
+        Double_t pT_kalman   = mHelices_kalman[i_track][6]; // pT
+        //if(pT_kalman < 0.5) continue;
         Double_t track_pos[3];
 
         vec_TPL3D_helix_kalman.resize(i_track+1);
@@ -1192,13 +1195,14 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color)
         vec_TPL3D_helix_kalman_inner[i_track] = new TEveLine();
 
         Double_t radius_helix = 0.0;
-        for(Double_t track_path = 0.0; track_path > -350; track_path -= 1.0)
+        for(Double_t track_path = 75.0; track_path > -350; track_path -= 1.0)
         {
             Evaluate(track_path,track_pos);
             radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
-            //printf("i_track: %d, track_path: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, radius_helix: %4.3f \n",i_track,track_path,track_pos[0],track_pos[1],track_pos[2],radius_helix);
-            if(radius_helix > 370.0) break;
-            if(fabs(track_pos[2]) > 320.0) break;
+            printf("i_track: %d, track_path: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, radius_helix: %4.3f \n",i_track,track_path,track_pos[0],track_pos[1],track_pos[2],radius_helix);
+            if(isnan(radius_helix)) break;
+            if(radius_helix > 400.0) break;
+            if(fabs(track_pos[2]) > 420.0) break;
             //if(radius_helix > 80.0)
             {
                 vec_TPL3D_helix_kalman[i_track]        ->SetNextPoint(track_pos[0],track_pos[1],track_pos[2]);
@@ -2437,4 +2441,18 @@ void Ali_TRD_ST_Analyze::Draw_hist_TPC_tracklet_diffs()
 TH1I* Ali_TRD_ST_Analyze::get_h_good_bad_TRD_chambers(){
 	return h_good_bad_TRD_chambers;
 }
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Write()
+{
+    printf("Write data to file \n");
+    outputfile ->cd();
+    TH2D_AP_plot          ->Write();
+    TH2D_pT_TPC_vs_Kalman ->Write();
+
+    printf("All data written \n");
+}
+//----------------------------------------------------------------------------------------
+
 	

@@ -229,7 +229,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		for( int i=0;i<4;i++)
 			mMu[i]=mes[i];
 			
-		mMu[4]=0;
+                mMu[4]=0.0/1.0; // q/pT
 		
 		mEstimate.resize(0);
 		mEstimate.resize(6);
@@ -244,18 +244,18 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		mObs		=	ROOT::Math::SMatrixIdentity();
 		
 		
-		mSig[0][0]	=	0.2;
-		mSig[1][1]	=	4;
-		mSig[2][2]	=	TMath::Power(TMath::Sin(7*TMath::Pi()/180),2);
-		mSig[3][3]	=	TMath::Power(TMath::Tan(18*TMath::Pi()/180),2);
+		mSig[0][0]	=	0.2; // 0.2
+		mSig[1][1]	=	4.0; // 4.0
+		mSig[2][2]	=	TMath::Power(TMath::Sin(7.0*TMath::Pi()/180.0),2); // 7.0
+		mSig[3][3]	=	TMath::Power(TMath::Tan(18.0*TMath::Pi()/180.0),2); // 18.0
 
 		mCov		=	ROOT::Math::SMatrixIdentity();
-		mCov[0][0]	=	0.2;
-		mCov[1][1]	=	4;
-		mCov[2][2]	=	TMath::Power(TMath::Sin(7*TMath::Pi()/180),2);
-		mCov[3][3]	=	TMath::Power(TMath::Tan(20*TMath::Pi()/180),2);
-		//mCov[4][4]	=	0.09; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
-                mCov[4][4]	=	1.0*1.0; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
+		mCov[0][0]	=	0.2; // 0.2
+		mCov[1][1]	=	4.0; // 4.0
+		mCov[2][2]	=	TMath::Power(TMath::Sin(7.0*TMath::Pi()/180.0),2);   // 7.0
+		mCov[3][3]	=	TMath::Power(TMath::Tan(20.0*TMath::Pi()/180.0),2); // 20.0
+		mCov[4][4]	=	0.09; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
+                //mCov[4][4]	=	10.0*10.0; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
 	        
 		mChi_2		=	0;	
 		
