@@ -18,8 +18,8 @@ ROOT::Math::SVector<double,4> TRD_Kalman_Trackfinder::measure(Ali_TRD_ST_Trackle
 	Double_t hypo=1./(TMath::Sqrt(dir[1]*dir[1] +dir[0]*dir[0]));
 	measurement[0]=offset[1];
    	measurement[1]=offset[2];
-	measurement[2]=-dir[1]*hypo;
-	measurement[3]=-dir[2]*hypo;
+	measurement[2]=dir[1]*hypo;
+	measurement[3]=dir[2]*hypo;
 	return measurement;
 }
 
@@ -35,12 +35,12 @@ Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Trackl
 	TVector3 b_angle 	= 	(TVector3){dir_b[0], dir_b[1], 0};
 	/*
 	if ((a->get_TRD_index()==1400)&&(b->get_TRD_index()==389)){ 
-		cout<<"a ";
+		*/cout<<"a ";
 		dir_a.Print();
 		cout<<" b ";
 		dir_b.Print();
 		cout<<abs(a_angle.Angle(b_angle)*TMath::RadToDeg())<<" "<<abs(dir_a.Angle(dir_b)*TMath::RadToDeg() )<<endl;
-	}
+	/*}
 	*/
 	if (abs(a_angle.Angle(b_angle)*TMath::RadToDeg() )>15)
 		return 0;
@@ -280,6 +280,16 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			temp_vec.RotateZ((Double_t)(2*(Int_t)(det/30)+1)*TMath::Pi()/18);
 			mTrack[lay]			->	set_TV3_dir(temp_vec);
 			mTrack[lay]			->	set_TRD_index(start[ind]->get_TRD_index());
+			
+			if(mShow && ind==0)
+			{
+				cout<<"NEW TRACK"<<endl;
+				cout<<"Layer:"<< lay<<endl;
+				cout<<"cov:"<< mCov<<endl;
+				cout<<"Mu:"<< mMu<<endl;
+				cout<<"mes:"<<mMeasurements[lay]<<endl;
+				//cout<<"unc"<<mUnc<<endl;			
+			}
 		}
 		
 		
@@ -306,7 +316,9 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			cout<<"Layer:"<< i_layer<<endl;
 			cout<<"cov:"<< mCov<<endl;
 			cout<<"Mu:"<< mMu<<endl;
-			cout<<"unc"<<mUnc<<endl;			
+			cout<<"unc"<<mUnc<<endl;	
+			cout<<"mes:"<<mMeasurements[i_layer]<<endl;
+				
 		}
 		correction(mMeasurements[i_layer]);
 		cov_per_layer[i_layer]=mCov;
@@ -465,8 +477,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		mEstimates.push_back(mEstimate);
 		
 		//used to look at specific track
-		if(mFound_tracks.size()==-35)mShow=1;
-		if(mFound_tracks.size()==36)mShow=0;
+		if(mFound_tracks.size()==36)mShow=1;
+		if(mFound_tracks.size()==37)mShow=0;
 		
 		//Loop again for better fit
 		for(Int_t i_layer=1;i_layer<6;i_layer++){
