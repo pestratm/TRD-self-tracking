@@ -18,8 +18,8 @@ ROOT::Math::SVector<double,4> TRD_Kalman_Trackfinder::measure(Ali_TRD_ST_Trackle
 	Double_t hypo=1./(TMath::Sqrt(dir[1]*dir[1] +dir[0]*dir[0]));
 	measurement[0]=offset[1];
    	measurement[1]=offset[2];
-	measurement[2]=dir[1]*hypo;
-	measurement[3]=dir[2]*hypo;
+	measurement[2]=-dir[1]*hypo;
+	measurement[3]=-dir[2]*hypo;
 	return measurement;
 }
 
@@ -237,7 +237,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		mTrack.resize(6);
 	
 		mCurrent_Det=start[0]->get_TRD_det();
-		mDist=mTRD_layer_radii[5][0]-mTRD_layer_radii[mCurrent_Det%6][0];
+		mDist=mTRD_layer_radii[5][1]-mTRD_layer_radii[mCurrent_Det%6][1];
 		mEstimate[mCurrent_Det%6]=mMu;
 
 		
@@ -293,7 +293,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 	
 	for(Int_t i_start=1;i_start<start.size();i_start++){
 		Int_t i_layer=start[i_start]->get_TRD_det() %6;
-		mDist	=	mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
+		mDist	=	mTRD_layer_radii[i_layer-1][1]-mTRD_layer_radii[i_layer][1];
 		
 		prediction(mDist);
 		mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
@@ -316,7 +316,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		Int_t i_layer=start[0]->get_TRD_det() %6;
 		mMu=mEstimate[i_layer];
 		mCurrent_Det=mTrack[i_layer]->get_TRD_det();
-		mDist	=	mTRD_layer_radii[5][0]-mTRD_layer_radii[i_layer][0];
+		mDist	=	mTRD_layer_radii[5][1]-mTRD_layer_radii[i_layer][1];
 		mCov=cov_per_layer[i_layer];
 		
 		
@@ -329,7 +329,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		{
 			mMu				= mEstimate[i_layer];
 			mCurrent_Det	= mTrack[i_layer]->get_TRD_det();
-			mDist			= mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
+			mDist			= mTRD_layer_radii[i_layer-1][1]-mTRD_layer_radii[i_layer][1];
 			mCov			= cov_per_layer[i_layer];
 			continue;
 		}
@@ -345,7 +345,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		}
 		
 		mCurrent_Det	= mCurrent_Det-(mCurrent_Det%6) + i_layer;
-		mDist			= mTRD_layer_radii[i_layer-1][0]-mTRD_layer_radii[i_layer][0];
+		mDist			= mTRD_layer_radii[i_layer-1][1]-mTRD_layer_radii[i_layer][1];
 		
 		ROOT::Math::SMatrix<double,4,4> Cov_res		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
 		Cov_res.Invert();
@@ -470,7 +470,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		//Loop again for better fit
 		for(Int_t i_layer=1;i_layer<6;i_layer++){
-			mDist	=	mTRD_layer_radii[i_layer][0]-mTRD_layer_radii[i_layer-1][0];
+			mDist	=	mTRD_layer_radii[i_layer][1]-mTRD_layer_radii[i_layer-1][1];
 			prediction(mDist);
 			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
 			if (mMeasurements[i_layer]!=0){
@@ -484,7 +484,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		//Loop again for better fit
 		for(Int_t i_layer=4;i_layer>=0;i_layer--){
-			mDist	=	mTRD_layer_radii[i_layer][0]-mTRD_layer_radii[i_layer+1][0];
+			mDist	=	mTRD_layer_radii[i_layer][1]-mTRD_layer_radii[i_layer+1][1];
 			prediction(mDist);
 			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
 			if (mMeasurements[i_layer]!=0){
@@ -504,7 +504,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		TVector3 x_vek;
 		TVector3 p_vek;
-		x_vek[0]	=	mTRD_layer_radii[mCurrent_Det%6][0];
+		x_vek[0]	=	mTRD_layer_radii[mCurrent_Det%6][1];
 		x_vek[1]	=	mMu[0];
 		x_vek[2]	=	mMu[1];
 		p_vek[0]	=	TMath::Cos(TMath::ASin(mMu[2]))*pxy;
