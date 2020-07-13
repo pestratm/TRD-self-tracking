@@ -28,13 +28,13 @@ class TRD_Kalman_Trackfinder
 
   vector<vector<Double_t>> mHelices; // Kalman helix parameters, based on AliHelix
 
-  Double_t mTRD_layer_radii[6][2] = {
-    { 297.5, 306.5 },
-    { 310.0, 320.0 },
-    { 323.0, 333.0 },
-    { 336.0, 345.5 },
-    { 348.0, 357.0 },
-    { 361.0, 371.0 }
+  Double_t mTRD_layer_radii[6][3] = {
+    { 0,297.5, 306.5 },
+    { 0,310.0, 320.0 },
+    { 0,323.0, 333.0 },
+    { 0,336.0, 345.5 },
+    { 0,348.0, 357.0 },
+    { 0,361.0, 371.0 }
   };
 
   vector<vector<Ali_TRD_ST_Tracklets*>> mSeed;
