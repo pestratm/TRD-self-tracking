@@ -341,7 +341,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		Int_t i_layer=start[0]->get_TRD_det() %6;
 		mMu=mEstimate[i_layer];
 		mCurrent_Det=mTrack[i_layer]->get_TRD_det();
-		mDist	=	mTRD_layer_radii[5][1]-mTRD_layer_radii[i_layer][1];
+		mDist	=	mTRD_layer_radii_all[mCurrent_Det-i_layer+5]-mTRD_layer_radii_all[mCurrent_Det];
 		mCov=cov_per_layer[i_layer];
 		
 		
@@ -354,7 +354,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		{
 			mMu				= mEstimate[i_layer];
 			mCurrent_Det	= mTrack[i_layer]->get_TRD_det();
-			mDist			= mTRD_layer_radii[i_layer-1][1]-mTRD_layer_radii[i_layer][1];
+			mDist			= mTRD_layer_radii_all[mCurrent_Det-1]-mTRD_layer_radii_all[mCurrent_Det];
 			mCov			= cov_per_layer[i_layer];
 			continue;
 		}
@@ -370,8 +370,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		}
 		
 		mCurrent_Det	= mCurrent_Det-(mCurrent_Det%6) + i_layer;
-		mDist			= mTRD_layer_radii[i_layer-1][1]-mTRD_layer_radii[i_layer][1];
-		
+		mDist			= mTRD_layer_radii_all[mCurrent_Det-1]-mTRD_layer_radii_all[mCurrent_Det];
+			
 		ROOT::Math::SMatrix<double,4,4> Cov_res		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
 		Cov_res.Invert();
 				
@@ -495,7 +495,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		//Loop again for better fit
 		for(Int_t i_layer=1;i_layer<6;i_layer++){
-			mDist	=	mTRD_layer_radii[i_layer][1]-mTRD_layer_radii[i_layer-1][1];
+			mDist	=	mTRD_layer_radii_all[mCurrent_Det+1]-mTRD_layer_radii_all[mCurrent_Det];
 			prediction(mDist);
 			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
 			if (mMeasurements[i_layer]!=0){
@@ -509,7 +509,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		//Loop again for better fit
 		for(Int_t i_layer=4;i_layer>=0;i_layer--){
-			mDist	=	mTRD_layer_radii[i_layer][1]-mTRD_layer_radii[i_layer+1][1];
+			mDist	=	mTRD_layer_radii_all[mCurrent_Det-1]-mTRD_layer_radii_all[mCurrent_Det];
 			prediction(mDist);
 			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
 			if (mMeasurements[i_layer]!=0){
