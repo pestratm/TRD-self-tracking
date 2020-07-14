@@ -35,11 +35,14 @@ Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Trackl
 	TVector3 b_angle 	= 	(TVector3){dir_b[0], dir_b[1], 0};
 	/*
 	if ((a->get_TRD_index()==1400)&&(b->get_TRD_index()==389)){ 
-		*/cout<<"a ";
+        */
+        /*
+        cout<<"a ";
 		dir_a.Print();
 		cout<<" b ";
 		dir_b.Print();
-		cout<<abs(a_angle.Angle(b_angle)*TMath::RadToDeg())<<" "<<abs(dir_a.Angle(dir_b)*TMath::RadToDeg() )<<endl;
+                cout<<abs(a_angle.Angle(b_angle)*TMath::RadToDeg())<<" "<<abs(dir_a.Angle(dir_b)*TMath::RadToDeg() )<<endl;
+                */
 	/*}
 	*/
 	if (abs(a_angle.Angle(b_angle)*TMath::RadToDeg() )>15)
@@ -229,7 +232,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		for( int i=0;i<4;i++)
 			mMu[i]=mes[i];
 			
-                mMu[4]=0.0/1.0; // q/pT
+                mMu[4]=0.0/1.0; // q/pT  0.0/1.0
 		
 		mEstimate.resize(0);
 		mEstimate.resize(6);
@@ -237,25 +240,32 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		mTrack.resize(6);
 	
 		mCurrent_Det=start[0]->get_TRD_det();
-		mDist=mTRD_layer_radii[5][1]-mTRD_layer_radii[mCurrent_Det%6][1];
+		//mDist=mTRD_layer_radii[5][1]-mTRD_layer_radii[mCurrent_Det%6][1];
 		mEstimate[mCurrent_Det%6]=mMu;
 
 		
 		mObs		=	ROOT::Math::SMatrixIdentity();
-		
-		
-		mSig[0][0]	=	0.2; // 0.2
-		mSig[1][1]	=	4.0; // 4.0
-		mSig[2][2]	=	TMath::Power(TMath::Sin(7.0*TMath::Pi()/180.0),2); // 7.0
-		mSig[3][3]	=	TMath::Power(TMath::Tan(18.0*TMath::Pi()/180.0),2); // 18.0
+
+                // 0,0 = y, 1,1=z , 2,2=sin phi , 3,3=tan lambda
+
+                Double_t dy         = 0.4; // 0.2
+                Double_t dz         = 4.0; // 4.0
+                Double_t dsin_phi   = 10.0; // 7.0
+                Double_t dsin_theta = 25.0; // 18.0
+                Double_t dpT        = 10.0; // 10.0
+
+		mSig[0][0]	=	dy; // 0.2
+		mSig[1][1]	=	dz; // 4.0
+		mSig[2][2]	=	TMath::Power(TMath::Sin(dsin_phi*TMath::Pi()/180.0),2); // 7.0
+		mSig[3][3]	=	TMath::Power(TMath::Tan(dsin_theta*TMath::Pi()/180.0),2); // 18.0
 
 		mCov		=	ROOT::Math::SMatrixIdentity();
-		mCov[0][0]	=	0.2; // 0.2
-		mCov[1][1]	=	4.0; // 4.0
-		mCov[2][2]	=	TMath::Power(TMath::Sin(7.0*TMath::Pi()/180.0),2);   // 7.0
-		mCov[3][3]	=	TMath::Power(TMath::Tan(20.0*TMath::Pi()/180.0),2); // 20.0
-		mCov[4][4]	=	0.09; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
-                //mCov[4][4]	=	10.0*10.0; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
+		mCov[0][0]	=	dy; // 0.2
+		mCov[1][1]	=	dz; // 4.0
+		mCov[2][2]	=	TMath::Power(TMath::Sin(dsin_phi*TMath::Pi()/180.0),2);   // 7.0
+		mCov[3][3]	=	TMath::Power(TMath::Tan(dsin_theta*TMath::Pi()/180.0),2); // 20.0
+		//mCov[4][4]	=	0.09; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
+                mCov[4][4]	=	dpT*dpT; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
 	        
 		mChi_2		=	0;	
 		
@@ -301,9 +311,12 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 	cov_per_layer[mCurrent_Det%6]=mCov;
 	
 	
-	for(Int_t i_start=1;i_start<start.size();i_start++){
-		Int_t i_layer=start[i_start]->get_TRD_det() %6;
-		mDist	=	mTRD_layer_radii[i_layer-1][1]-mTRD_layer_radii[i_layer][1];
+        for(Int_t i_start=1;i_start<start.size();i_start++)
+        {
+		Int_t i_det   = start[i_start]->get_TRD_det();
+                Int_t i_layer = i_det%6;
+                //mDist	=	mTRD_layer_radii[i_layer-1][1]-mTRD_layer_radii[i_layer][1];
+		mDist	=	mTRD_layer_radii_all[i_det] - mTRD_layer_radii_all[mCurrent_Det];
 		
 		prediction(mDist);
 		mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
@@ -477,8 +490,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		mEstimates.push_back(mEstimate);
 		
 		//used to look at specific track
-		if(mFound_tracks.size()==36)mShow=1;
-		if(mFound_tracks.size()==37)mShow=0;
+		//if(mFound_tracks.size()==36)mShow=1;
+		//if(mFound_tracks.size()==37)mShow=0;
 		
 		//Loop again for better fit
 		for(Int_t i_layer=1;i_layer<6;i_layer++){

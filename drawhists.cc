@@ -53,14 +53,18 @@ void drawhists()
     printf("TRD_ST_Analyze_tracklets started \n");
     Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze();
     TRD_ST_Analyze ->Init_tree("List_data_ADC.txt");
+    TH1D* h_layer_radii = TRD_ST_Analyze ->get_layer_radii_hist();
     //Long64_t event = 10;
 
     Int_t graphics = 1;
     TRD_Kalman_Trackfinder kalid;
-    for (Long64_t event = 1; event < 2; event++)
+    kalid.set_layer_radii_hist(h_layer_radii);
+
+
+    for (Long64_t event = 2; event < 3; event++) // 2,3
     {
 
-        TRD_ST_Analyze ->Loop_event(event);
+        TRD_ST_Analyze ->Loop_event(event,graphics);
         //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
 
 
@@ -84,9 +88,9 @@ void drawhists()
         TRD_ST_Analyze ->set_Kalman_TRD_tracklets(kalman_found_tracks);
 
 
-        if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(90,kRed); // -1 -> all kalman tracks drawn
+        //if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed); // -1 -> all kalman tracks drawn
 
-        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks();
+        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics);
 
         //TRD_ST_Analyze ->Calculate_secondary_vertices(graphics); // 0 = no graphics
 
