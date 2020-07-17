@@ -60,6 +60,7 @@ private:
     vector< vector<TEveLine*> > vec_TEveLine_tracklets_match;
     vector< vector<TEveLine*> > vec_TEveLine_self_matched_tracklets;
     TEvePointSet* TEveP_offset_points;
+    TEvePointSet* TEveP_TPC_at_offset_points;
     Int_t N_tracklets_layers[6] = {0};
     Double_t scale_length_vec = -10.0;
     Int_t track_color    = kAzure-2;
@@ -86,6 +87,7 @@ private:
     Double_t aliHelix_params[6];
     vector<Ali_Helix*> vec_helices;
     TEvePointSet* TEveP_sec_vertices;
+    Ali_Helix* TPC_single_helix;
 
     TEvePointSet* TEveP_primary_vertex;
     TEvePointSet* TEveP_first_point_helix;
@@ -95,6 +97,12 @@ private:
 
     TFile* layer_radii_file;
     TH1D* h_layer_radii_det;
+
+    TFile* file_TRD_geometry;
+    TH2D* h2D_TRD_det_coordinates;
+
+    vector< vector<TH2D*> > vec_h2D_pT_vs_TPC_TRD_residuals;
+
 
 public:
     Ali_TRD_ST_Analyze();
@@ -143,8 +151,39 @@ public:
 //----------------------------------------------------------------------------------------
 Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 {
-    layer_radii_file = TFile::Open("./TRD_layer_radii.root");
-    h_layer_radii_det = (TH1D*)layer_radii_file ->Get("h_layer_radii_det");
+    //layer_radii_file = TFile::Open("./TRD_layer_radii.root");
+    //h_layer_radii_det = (TH1D*)layer_radii_file ->Get("h_layer_radii_det");
+
+    TPC_single_helix = new Ali_Helix();
+    vec_h2D_pT_vs_TPC_TRD_residuals.resize(540);
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        vec_h2D_pT_vs_TPC_TRD_residuals[i_det].resize(3); // x,y,z
+        for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+        {
+            HistName = "vec_h2D_pT_vs_TPC_TRD_residuals_det";
+            HistName += i_det;
+            HistName += "_xyz";
+            HistName += i_xyz;
+            vec_h2D_pT_vs_TPC_TRD_residuals[i_det][i_xyz] = new TH2D(HistName.Data(),HistName.Data(),200,-10.0,10.0,10,-5,5);
+        }
+    }
+
+    TFile* file_TRD_geometry = TFile::Open("./TRD_Geometry.root");
+    TList* list_geom = (TList*)file_TRD_geometry->Get("TRD_Digits_output");
+    h2D_TRD_det_coordinates = (TH2D*)list_geom ->FindObject("h2D_TRD_det_coordinates");
+    h_layer_radii_det = new TH1D("h_layer_radii_det","h_layer_radii_det",540,0,540);
+
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        Double_t x_val = h2D_TRD_det_coordinates ->GetBinContent(i_det+1,1);
+        Double_t y_val = h2D_TRD_det_coordinates ->GetBinContent(i_det+1,2);
+        Double_t z_val = h2D_TRD_det_coordinates ->GetBinContent(i_det+1,3);
+
+        Double_t radius_align = TMath::Sqrt(x_val*x_val + y_val*y_val);
+        h_layer_radii_det ->SetBinContent(i_det+1,radius_align);
+
+    }
 
     outputfile = new TFile("./TRD_Calib_matched.root","RECREATE");
     //------------------------------------------------
@@ -320,7 +359,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 void Ali_TRD_ST_Analyze::fHelixAtoPointdca(TVector3 space_vec, Ali_Helix* helixA, Float_t &pathA, Float_t &dcaAB)
 {
     // V1.1
-    Float_t pA[2] = {0.0,-100.0}; // the two start values for pathB, 0.0 is the origin of the helix at the first measured point
+    Float_t pA[2] = {100.0,-100.0}; // the two start values for pathB, 0.0 is the origin of the helix at the first measured point
     Float_t distarray[2];
     TVector3 testA;
     Double_t helix_point[3];
@@ -1623,6 +1662,7 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
     Int_t offset_point = 0;
+    Int_t TPC_at_offset_point = 0;
     matched_tracks.clear();
     vec_idx_matched_TPC_track.clear();
 
@@ -1656,7 +1696,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
 
     if(graphics)
     {
-        TEveP_offset_points = new TEvePointSet();
+        TEveP_offset_points        = new TEvePointSet();
+        TEveP_TPC_at_offset_points = new TEvePointSet();
     }
 
     for(Int_t i_tracklet = 0; i_tracklet < NumTracklets; i_tracklet++)
@@ -1703,6 +1744,8 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
         Float_t TPCdEdx         = TRD_ST_TPC_Track ->getTPCdEdx();
         Float_t TOFsignal       = TRD_ST_TPC_Track ->getTOFsignal(); // in ps (1E-12 s)
         Float_t Track_length    = TRD_ST_TPC_Track ->getTrack_length();
+        Float_t charge = 1.0;
+        if(dca < 0.0) charge = -1.0;
 
         Float_t momentum        = TLV_part.P();
         Float_t eta_track       = TLV_part.Eta();
@@ -1715,7 +1758,10 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
         vector<TVector3> vec_TV3_helix_points_at_TRD_layers;
         vec_TV3_helix_points_at_TRD_layers.resize(6);
         matched_tracks.resize(matched_tracks.size() + 1);
+        Int_t tracks_size = matched_tracks.size() - 1;  // index of current track
         vec_idx_matched_TPC_track.push_back(i_track);
+
+        //printf("tracks_size: %d, size_TPC_idx: %d \n",tracks_size,(Int_t)vec_idx_matched_TPC_track.size());
 
         for(Int_t i_layer = 0; i_layer < 6; i_layer++)
         {
@@ -1773,7 +1819,6 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
                 }
             }
 
-            Int_t tracks_size = matched_tracks.size() - 1;
             matched_tracks[tracks_size].push_back(NULL);
 
             if(det_best < 0 || tracklet_best < 0) continue;
@@ -1784,6 +1829,27 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
             temp_tracklet->set_TV3_dir(vec_TV3_dir_tracklets[det_best][tracklet_best]);
             temp_tracklet->set_TRD_index(TRD_index_tracklets[det_best][tracklet_best]);
             matched_tracks[tracks_size][matched_tracks[tracks_size].size() - 1] = temp_tracklet;
+
+
+            //------------------------------------------
+            // Calculate exact position of TPC helix at TRD tracklet offset position
+            TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
+            Float_t pathA_dca, dcaAB_dca;
+            fHelixAtoPointdca(vec_TV3_offset_tracklets[det_best][tracklet_best],TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
+            Double_t track_pos_at_tracklet[3];
+            TRD_ST_TPC_Track ->Evaluate(pathA_dca,track_pos_at_tracklet);
+            //printf("%s i_layer: %d %s, i_track: %d, dcaAB_dca: %4.3f, offset_point: {%4.3f, %4.3f, %4.3f}, TPC point: {%4.3f, %4.3f, %4.3f} \n",KMAG,i_layer,KNRM,i_track,dcaAB_dca,vec_TV3_offset_tracklets[det_best][tracklet_best][0],vec_TV3_offset_tracklets[det_best][tracklet_best][1],vec_TV3_offset_tracklets[det_best][tracklet_best][2],track_pos_at_tracklet[0],track_pos_at_tracklet[1],track_pos_at_tracklet[2]);
+            if(graphics) TEveP_TPC_at_offset_points  ->SetPoint(TPC_at_offset_point,track_pos_at_tracklet[0],track_pos_at_tracklet[1],track_pos_at_tracklet[2]);
+            TPC_at_offset_point++;
+
+            Double_t residuals_xyz;
+            for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+            {
+                residuals_xyz = track_pos_at_tracklet[i_xyz] - vec_TV3_offset_tracklets[det_best][tracklet_best][i_xyz];
+                vec_h2D_pT_vs_TPC_TRD_residuals[det_best][i_xyz] ->Fill(residuals_xyz,charge*pT_track);
+            }
+            //------------------------------------------
+
 
             Int_t size_tracklet = (Int_t)vec_TEveLine_tracklets_match[i_layer].size();
 
@@ -1811,14 +1877,37 @@ void Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_match
                 //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
                 {
                     gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
-                    gEve->AddElement(TEveP_offset_points);
                 }
             }
         }
-    }
+
+
+        //--------------------------------------------------
+        Int_t N_matched_tracklets = 0;
+        for(Int_t i_layer = 0; i_layer < (Int_t)matched_tracks[tracks_size].size(); i_layer++)
+        {
+            if(matched_tracks[tracks_size][i_layer] != NULL) N_matched_tracklets++;
+        }
+        //printf("%s TPC track: %d %s, N_matched_tracklets: %d \n",KYEL,vec_idx_matched_TPC_track[tracks_size],KNRM,N_matched_tracklets);
+        //if(N_matched_tracklets >= 4 && vec_idx_matched_TPC_track[tracks_size] == 25) Draw_TPC_track(vec_idx_matched_TPC_track[tracks_size],kAzure-2,2);
+        //printf(" \n");
+        //--------------------------------------------------
+
+
+    } // end of track loop
     //--------------------------------------------------
 
-    if(graphics) gEve->Redraw3D(kTRUE);
+
+    if(graphics)
+    {
+        gEve->AddElement(TEveP_offset_points);
+
+        TEveP_TPC_at_offset_points  ->SetMarkerSize(3);
+        TEveP_TPC_at_offset_points  ->SetMarkerStyle(20);
+        TEveP_TPC_at_offset_points  ->SetMarkerColor(kYellow);
+        //gEve->AddElement(TEveP_TPC_at_offset_points);
+        gEve->Redraw3D(kTRUE);
+    }
     printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching, N TPC Tracks: %d, matched_tracks: %d \n",NumTracks,(Int_t)matched_tracks.size());
 }
 //----------------------------------------------------------------------------------------
@@ -2536,6 +2625,17 @@ void Ali_TRD_ST_Analyze::Write()
     for(Int_t TRD_detector = 0; TRD_detector < 540; TRD_detector++)
     {
         vec_th1d_TRD_layer_radii_det[TRD_detector] ->Write();
+    }
+    outputfile ->cd();
+
+    outputfile ->mkdir("TPC_TRD_residuals");
+    outputfile ->cd("TPC_TRD_residuals");
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+        {
+            vec_h2D_pT_vs_TPC_TRD_residuals[i_det][i_xyz] ->Write();
+        }
     }
     outputfile ->cd();
 

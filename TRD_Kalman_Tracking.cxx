@@ -3,7 +3,15 @@
 
 double T_calc;                          //Variable for the calculation time
 double T_wall;
-	
+
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
 
 vector<vector<Double_t>> TRD_Kalman_Trackfinder::get_Kalman_helix_params()
 {
@@ -248,11 +256,11 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 
                 // 0,0 = y, 1,1=z , 2,2=sin phi , 3,3=tan lambda
 
-                Double_t dy         = 0.4; // 0.2
-                Double_t dz         = 4.0; // 4.0
-                Double_t dsin_phi   = 10.0; // 7.0
-                Double_t dsin_theta = 25.0; // 18.0
-                Double_t dpT        = 10.0; // 10.0
+                Double_t dy         = 0.4; // 0.2  0.4
+                Double_t dz         = 4.0; // 4.0  4.0
+                Double_t dsin_phi   = 10.0; // 7.0  10.0
+                Double_t dsin_theta = 25.0; // 18.0  25.0
+                Double_t dpT        = 10.0; // 10.0  10.0
 
 		mSig[0][0]	=	dy; // 0.2
 		mSig[1][1]	=	dz; // 4.0
@@ -496,7 +504,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		//Loop again for better fit
 		for(Int_t i_layer=1;i_layer<6;i_layer++){
 			mDist	=	mTRD_layer_radii_all[mCurrent_Det+1]-mTRD_layer_radii_all[mCurrent_Det];
-			prediction(mDist);
+                        printf("%s ---> i_layer: %d %s, mCurrent_Det+1: %d, mCurrent_Det: %d \n",KGRN,i_layer,KNRM,mCurrent_Det+1,mCurrent_Det);
+                        prediction(mDist);
 			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
 			if (mMeasurements[i_layer]!=0){
 				if ((Int_t)(mTrack[i_layer]->get_TRD_det() /30) !=(Int_t)(mCurrent_Det/30)){}
