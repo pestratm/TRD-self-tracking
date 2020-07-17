@@ -577,6 +577,12 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			correction(prim_vert_measurement);	
 			mDist	=	mTRD_layer_radii_all[mCurrent_Det];
 			prediction(mDist);
+			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+			mCov_Res_Inv.Invert();
+			correction(mMeasurements[0]);
+			
+			
+			
 				
 		}	
 		
