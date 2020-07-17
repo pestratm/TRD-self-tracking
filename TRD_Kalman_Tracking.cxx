@@ -167,6 +167,8 @@ void TRD_Kalman_Trackfinder::prediction(Double_t dist){
 	Double_t dy2dx 		=	(f1 +f2)/(r1 +r2);
 		
 	mMu[0]+=dist*dy2dx;
+	if (dist<-300)
+		printf("values: curv: %f f1: %f f2: %f r1 %f r2 %f dy2dx: %f y: %f\n",curvature,f1,f2,r1,r2,dy2dx,mMu[0]);
 	if (TMath::Abs(dist*curvature)<0.05)
 		mMu[1]+= dist*(r2 + f2*dy2dx)*mMu[3];
 	else{
@@ -497,6 +499,35 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		mFound_tracks.push_back(mTrack);
 		mEstimates.push_back(mEstimate);
 		
+		if(mPrimVertex==1)
+		{
+			mDist	=	-mTRD_layer_radii_all[mCurrent_Det];
+			cout<<"mDist after pred: "<<mDist<<endl;
+			cout<<"mMu before pred: "<<mMu<<endl;
+			
+			prediction(mDist);
+			cout<<"mMu after pred: "<<mMu<<endl;
+			ROOT::Math::SVector<double,4> prim_vert_measurement;
+			prim_vert_measurement[0]=0;
+			prim_vert_measurement[1]=0;
+			prim_vert_measurement[2]=mMu[2];
+			prim_vert_measurement[3]=mMu[3];
+			
+			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+			mCov_Res_Inv.Invert();
+			
+			correction(prim_vert_measurement);
+			cout<<"mMu after corr: "<<mMu<<endl;
+			
+			mDist	=	 mTRD_layer_radii_all[mCurrent_Det];
+			prediction(mDist);
+			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+			mCov_Res_Inv.Invert();
+			correction(mMeasurements[0]);
+			cout<<"mMu after corr2: "<<mMu<<endl;
+			
+				
+		}	
 		//used to look at specific track
 		//if(mFound_tracks.size()==36)mShow=1;
 		//if(mFound_tracks.size()==37)mShow=0;
@@ -504,7 +535,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		//Loop again for better fit
 		for(Int_t i_layer=1;i_layer<6;i_layer++){
 			mDist	=	mTRD_layer_radii_all[mCurrent_Det+1]-mTRD_layer_radii_all[mCurrent_Det];
-                        printf("%s ---> i_layer: %d %s, mCurrent_Det+1: %d, mCurrent_Det: %d \n",KGRN,i_layer,KNRM,mCurrent_Det+1,mCurrent_Det);
+                        //printf("%s ---> i_layer: %d %s, mCurrent_Det+1: %d, mCurrent_Det: %d \n",KGRN,i_layer,KNRM,mCurrent_Det+1,mCurrent_Det);
                         prediction(mDist);
 			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
 			if (mMeasurements[i_layer]!=0){
@@ -530,6 +561,26 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			}
 		}
 		
+		if(mPrimVertex==1)
+		{
+			mDist	=	-mTRD_layer_radii_all[mCurrent_Det];
+			prediction(mDist);
+			ROOT::Math::SVector<double,4> prim_vert_measurement;
+			prim_vert_measurement[0]=0;
+			prim_vert_measurement[1]=0;
+			prim_vert_measurement[2]=mMu[2];
+			prim_vert_measurement[3]=mMu[3];
+			
+			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+			mCov_Res_Inv.Invert();
+			
+			correction(prim_vert_measurement);	
+			mDist	=	mTRD_layer_radii_all[mCurrent_Det];
+			prediction(mDist);
+				
+		}	
+		
+		
 		//calculate Helix param
 		Double_t charge=1.;
 		if (mMu[4]<0) charge=-1.;
@@ -539,6 +590,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		TVector3 x_vek;
 		TVector3 p_vek;
 		x_vek[0]	=	mTRD_layer_radii[mCurrent_Det%6][1];
+		/*if(mPrimVertex==1)
+			x_vek[0]=0;*/
 		x_vek[1]	=	mMu[0];
 		x_vek[2]	=	mMu[1];
 		p_vek[0]	=	TMath::Cos(TMath::ASin(mMu[2]))*pxy;
@@ -610,12 +663,13 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			
 }
 
-vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets,Int_t Num_Tracklets)
+vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets,Int_t Num_Tracklets,Int_t prim_vertex)
 {
     mShow=0;
     mHelices.clear();
     mFound_tracks.clear();
     mEstimates.clear();
+	mPrimVertex=prim_vertex;
     //cout<<"TRD_Kalman_Trackfinder::Kalman_Trackfind"<<endl;
 	T_calc=0.;
 	chrono::high_resolution_clock::time_point start_wall_time=chrono::high_resolution_clock::now();

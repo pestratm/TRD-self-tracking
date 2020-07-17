@@ -20,6 +20,7 @@ class TRD_Kalman_Trackfinder
   Double_t mChi_2;
   Double_t mDist;
   Int_t mCurrent_Det;
+  Int_t mPrimVertex;
   ROOT::Math::SVector<double, 4> mUnc;
   ROOT::Math::SVector<double, 4> mMu_red;
   ROOT::Math::SVector<double, 4> mRes;
@@ -60,7 +61,7 @@ class TRD_Kalman_Trackfinder
   void Kalman(vector<Ali_TRD_ST_Tracklets*> start);
 
  public:
-  vector<vector<Ali_TRD_ST_Tracklets*>> Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets, Int_t Num_Tracklets);
+  vector<vector<Ali_TRD_ST_Tracklets*>> Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets, Int_t Num_Tracklets, Int_t prim_vertex);
   vector<vector<Double_t>> get_Kalman_helix_params();
   void set_layer_radii_hist(TH1D* h_layer_radii_in)
   {
@@ -68,6 +69,7 @@ class TRD_Kalman_Trackfinder
       for(Int_t i_det = 0; i_det < 540; i_det++)
       {
           mTRD_layer_radii_all[i_det] = h_layer_radii ->GetBinContent(i_det+1);
+		  cout<<"Det:"<<i_det<<"Det_lay: "<<i_det%6<<" radii: "<<mTRD_layer_radii_all[i_det]<<endl;
       }
   }
 

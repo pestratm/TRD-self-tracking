@@ -75,7 +75,7 @@ void drawhists()
 
 
 #if 1
-        vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
+        vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,1);
         if(graphics) TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
 
 
