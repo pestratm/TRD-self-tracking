@@ -502,6 +502,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		if(mPrimVertex==1)
 		{
 			mDist	=	-mTRD_layer_radii_all[mCurrent_Det];
+			cout<<"\nTrack NBR: "<< mFound_tracks.size()-1<<endl;
 			cout<<"mDist after pred: "<<mDist<<endl;
 			cout<<"mMu before pred: "<<mMu<<endl;
 			
@@ -512,18 +513,27 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			prim_vert_measurement[1]=0;
 			prim_vert_measurement[2]=mMu[2];
 			prim_vert_measurement[3]=mMu[3];
-			
 			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
 			mCov_Res_Inv.Invert();
 			
 			correction(prim_vert_measurement);
 			cout<<"mMu after corr: "<<mMu<<endl;
-			
+			/*
 			mDist	=	 mTRD_layer_radii_all[mCurrent_Det];
 			prediction(mDist);
 			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
 			mCov_Res_Inv.Invert();
-			correction(mMeasurements[0]);
+			if (mMeasurements[0]!=0){
+				if ((Int_t)(mTrack[0]->get_TRD_det() /30) !=(Int_t)(mCurrent_Det/30)){}
+				mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+				mCov_Res_Inv.Invert();
+		
+				correction(mMeasurements[0]);
+				*/
+			Double_t tempqpt=mMu[4];
+			mMu=mEstimate[0];
+			mMu[4]=tempqpt;
+			
 			cout<<"mMu after corr2: "<<mMu<<endl;
 			
 				
@@ -542,11 +552,15 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 				if ((Int_t)(mTrack[i_layer]->get_TRD_det() /30) !=(Int_t)(mCurrent_Det/30)){}
 				mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
 				mCov_Res_Inv.Invert();
-		
+				cout<<"mMu bef corri: "<<mMu<<endl;
+			
 				correction(mMeasurements[i_layer]);
+				cout<<"mMu after corri: "<<mMu<<endl;
+			
 			}
 		}
-		
+		cout<<"mMu after first loop: "<<mMu<<endl;
+			
 		//Loop again for better fit
 		for(Int_t i_layer=4;i_layer>=0;i_layer--){
 			mDist	=	mTRD_layer_radii_all[mCurrent_Det-1]-mTRD_layer_radii_all[mCurrent_Det];
@@ -561,31 +575,56 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			}
 		}
 		
-		if(mPrimVertex==1)
+		if(mPrimVertex==-1)
 		{
 			mDist	=	-mTRD_layer_radii_all[mCurrent_Det];
+			cout<<"mDist after pred: "<<mDist<<endl;
+			cout<<"mMu before pred: "<<mMu<<endl;
+			
 			prediction(mDist);
+			cout<<"mMu after pred: "<<mMu<<endl;
 			ROOT::Math::SVector<double,4> prim_vert_measurement;
 			prim_vert_measurement[0]=0;
 			prim_vert_measurement[1]=0;
-			prim_vert_measurement[2]=mMu[2];
+			prim_vert_measurement[2]=0;
 			prim_vert_measurement[3]=mMu[3];
 			
 			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
 			mCov_Res_Inv.Invert();
 			
 			correction(prim_vert_measurement);	
+			cout<<"mMu after corr: "<<mMu<<endl;
+			
 			mDist	=	mTRD_layer_radii_all[mCurrent_Det];
 			prediction(mDist);
 			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
 			mCov_Res_Inv.Invert();
-			correction(mMeasurements[0]);
-			
+			if (mMeasurements[0]!=0){
+				if ((Int_t)(mTrack[0]->get_TRD_det() /30) !=(Int_t)(mCurrent_Det/30)){}
+				mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+				mCov_Res_Inv.Invert();
+		
+				correction(mMeasurements[0]);
+			}
 			
 			
 				
 		}	
 		
+		//Loop again for better fit
+		for(Int_t i_layer=1;i_layer<6;i_layer++){
+			mDist	=	mTRD_layer_radii_all[mCurrent_Det+1]-mTRD_layer_radii_all[mCurrent_Det];
+                        //printf("%s ---> i_layer: %d %s, mCurrent_Det+1: %d, mCurrent_Det: %d \n",KGRN,i_layer,KNRM,mCurrent_Det+1,mCurrent_Det);
+                        prediction(mDist);
+			mCurrent_Det=mCurrent_Det-(mCurrent_Det%6) + i_layer;
+			if (mMeasurements[i_layer]!=0){
+				if ((Int_t)(mTrack[i_layer]->get_TRD_det() /30) !=(Int_t)(mCurrent_Det/30)){}
+				mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+				mCov_Res_Inv.Invert();
+		
+				correction(mMeasurements[i_layer]);
+			}
+		}
 		
 		//calculate Helix param
 		Double_t charge=1.;
