@@ -120,13 +120,13 @@ void TRD_Kalman_Trackfinder::get_seed( Ali_TRD_ST_Tracklets** Tracklets, Int_t N
 			for(int i_stck=0;i_stck<nbr_stack;i_stck++)
 				for(int i_lay=nbr_layers-1;i_lay>1;i_lay--){
 					Int_t i_det=i_sec*nbr_stack*nbr_layers+i_stck*nbr_layers+i_lay;
-					for(int i_tracklet=0;i_tracklet<mBins[i_det].size();i_tracklet++)
+					for(int i_tracklet=0;i_tracklet<(Int_t)mBins[i_det].size();i_tracklet++)
 						if (!(mVisited[i_det][i_tracklet])){
 							mVisited[i_det][i_tracklet]=1;
 							for(int j_lay=i_lay-1; j_lay>i_lay-3;j_lay--){
 								done=0;
 								Int_t j_det=i_det+j_lay -i_lay;
-								for(int j_tracklet=0;j_tracklet<mBins[j_det].size();j_tracklet++)
+								for(int j_tracklet=0;j_tracklet<(Int_t)mBins[j_det].size();j_tracklet++)
 									if(fitting(mBins[i_det][i_tracklet],mBins[j_det][j_tracklet])){
 										mVisited[j_det][j_tracklet]=1;
 										vector<Ali_TRD_ST_Tracklets*> temp_seed;
@@ -137,7 +137,7 @@ void TRD_Kalman_Trackfinder::get_seed( Ali_TRD_ST_Tracklets** Tracklets, Int_t N
 										done=1;
 										chrono::high_resolution_clock::time_point start_calc_time=chrono::high_resolution_clock::now();
 
-										Kalman(mSeed[mSeed.size()-1]);
+										Kalman(mSeed[(Int_t)mSeed.size()-1]);
 										chrono::high_resolution_clock::time_point end_calc_time=chrono::high_resolution_clock::now();
 										T_calc += chrono::duration_cast<chrono::microseconds>(end_calc_time-start_calc_time).count();
 	
@@ -167,20 +167,29 @@ void TRD_Kalman_Trackfinder::prediction(Double_t dist){
 	Double_t dy2dx 		=	(f1 +f2)/(r1 +r2);
 		
 	mMu[0]+=dist*dy2dx;
-	if (dist<-300)
-		printf("values: curv: %f f1: %f f2: %f r1 %f r2 %f dy2dx: %f y: %f\n",curvature,f1,f2,r1,r2,dy2dx,mMu[0]);
-	if (TMath::Abs(dist*curvature)<0.05)
-		mMu[1]+= dist*(r2 + f2*dy2dx)*mMu[3];
-	else{
-		Double_t rot=TMath::ASin(r1*f2 -r2*f1);
-		if(f1*f1+f2*f2>1 && f1*f2<0) {          // special cases of large rotations or large abs angles
-    		if (f2>0) rot =  TMath::Pi() - rot;    
-    		else      rot = -TMath::Pi() - rot;
-    	}
-    	mMu[1]	+=mMu[3]/curvature*rot ;
-	}	
-	mMu[2]	= f2;
-		
+        //if (dist<-300) printf("values: curv: %f f1: %f f2: %f r1 %f r2 %f dy2dx: %f y: %f\n",curvature,f1,f2,r1,r2,dy2dx,mMu[0]);
+        if(TMath::Abs(dist*curvature)<0.05)
+        {
+            mMu[1]+= dist*(r2 + f2*dy2dx)*mMu[3];
+        }
+        else
+        {
+            Double_t rot=TMath::ASin(r1*f2 -r2*f1);
+            if(f1*f1+f2*f2>1 && f1*f2<0)
+            {          // special cases of large rotations or large abs angles
+                if(f2>0)
+                {
+                    rot =  TMath::Pi() - rot;
+                }
+                else
+                {
+                    rot = -TMath::Pi() - rot;
+                }
+            }
+            mMu[1]	+=mMu[3]/curvature*rot ;
+        }
+        mMu[2]	= f2;
+
 		
 	//Build transport matrix	
 	ROOT::Math::SMatrix<double,5,5> A; //Transport Matrix
@@ -282,7 +291,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		mMeasurements =new ROOT::Math::SVector<double,4>[6];
 		
-		for(Int_t ind=0; ind<start.size();ind++)
+		for(Int_t ind=0; ind<(Int_t)start.size();ind++)
 		{
 			
 			Int_t lay			=	start[ind]->get_TRD_det() %6;
@@ -313,7 +322,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		}
 		
 		
-		mNbr_tracklets		=	start.size();
+		mNbr_tracklets		=	(Int_t)start.size();
 					
 	}
 	vector<ROOT::Math::SMatrix<double, 5, 5>> cov_per_layer;
@@ -321,7 +330,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 	cov_per_layer[mCurrent_Det%6]=mCov;
 	
 	
-        for(Int_t i_start=1;i_start<start.size();i_start++)
+        for(Int_t i_start=1;i_start<(Int_t)start.size();i_start++)
         {
 		Int_t i_det   = start[i_start]->get_TRD_det();
                 Int_t i_layer = i_det%6;
@@ -400,7 +409,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			else //in border
 				Dets.push_back(mCurrent_Det-(mCurrent_Det%6) + i_layer);
 			
-			for(Int_t i_list_det=0;i_list_det<Dets.size();i_list_det++)
+			for(Int_t i_list_det=0;i_list_det<(Int_t)Dets.size();i_list_det++)
 			{
 
 				Int_t i_det		=	Dets[i_list_det];
@@ -418,7 +427,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 				//vector<ROOT::Math::SVector<double,4>> 	meas_list;
 					
 				
-				for(Int_t i_tracklet=0; i_tracklet<mBins[i_det].size();i_tracklet++){
+				for(Int_t i_tracklet=0; i_tracklet<(Int_t)mBins[i_det].size();i_tracklet++){
 					ROOT::Math::SVector<double,4> 	measurement	= measure(mBins[i_det][i_tracklet]);
 					ROOT::Math::SVector<double,4> 	abs			= ROOT::Math::fabs(mMu_red -measurement);
 					ROOT::Math::SVector<double,4> 	res			= measurement- mMu_red;
@@ -443,7 +452,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 				
 				Int_t 		min_ind	=-1;
 				Double_t 	min_chi	=chi_2_pen;
-				for(Int_t i=0 ;i<found_tracklets.size();i++)
+				for(Int_t i=0 ;i<(Int_t)found_tracklets.size();i++)
 					if (min_chi>chis[i])
 					{
 						min_ind=i;
@@ -502,22 +511,22 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		if(mPrimVertex==1)
 		{
 			mDist	=	-mTRD_layer_radii_all[mCurrent_Det];
-			cout<<"\nTrack NBR: "<< mFound_tracks.size()-1<<endl;
-			cout<<"mDist after pred: "<<mDist<<endl;
-			cout<<"mMu before pred: "<<mMu<<endl;
+			//cout<<"\nTrack NBR: "<< mFound_tracks.size()-1<<endl;
+			//cout<<"mDist after pred: "<<mDist<<endl;
+			//cout<<"mMu before pred: "<<mMu<<endl;
 			
 			prediction(mDist);
-			cout<<"mMu after pred: "<<mMu<<endl;
+			//cout<<"mMu after pred: "<<mMu<<endl;
 			ROOT::Math::SVector<double,4> prim_vert_measurement;
 			prim_vert_measurement[0]=0;
 			prim_vert_measurement[1]=0;
 			prim_vert_measurement[2]=mMu[2];
 			prim_vert_measurement[3]=mMu[3];
-			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) + 1.0*mSig;		//Measure uncertainty Matrix
 			mCov_Res_Inv.Invert();
 			
 			correction(prim_vert_measurement);
-			cout<<"mMu after corr: "<<mMu<<endl;
+			//cout<<"mMu after corr: "<<mMu<<endl;
 			/*
 			mDist	=	 mTRD_layer_radii_all[mCurrent_Det];
 			prediction(mDist);
@@ -534,7 +543,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			mMu=mEstimate[0];
 			mMu[4]=tempqpt;
 			
-			cout<<"mMu after corr2: "<<mMu<<endl;
+			//cout<<"mMu after corr2: "<<mMu<<endl;
 			
 				
 		}	
@@ -552,14 +561,14 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 				if ((Int_t)(mTrack[i_layer]->get_TRD_det() /30) !=(Int_t)(mCurrent_Det/30)){}
 				mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
 				mCov_Res_Inv.Invert();
-				cout<<"mMu bef corri: "<<mMu<<endl;
+				//cout<<"mMu bef corri: "<<mMu<<endl;
 			
 				correction(mMeasurements[i_layer]);
-				cout<<"mMu after corri: "<<mMu<<endl;
+				//cout<<"mMu after corri: "<<mMu<<endl;
 			
 			}
 		}
-		cout<<"mMu after first loop: "<<mMu<<endl;
+		//cout<<"mMu after first loop: "<<mMu<<endl;
 			
 		//Loop again for better fit
 		for(Int_t i_layer=4;i_layer>=0;i_layer--){
@@ -579,22 +588,22 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		{
 			ROOT::Math::SVector<double, 5> mutemp=mMu;
 			mDist	=	-mTRD_layer_radii_all[mCurrent_Det];
-			cout<<"mDist after pred: "<<mDist<<endl;
-			cout<<"mMu before pred: "<<mMu<<endl;
+			//cout<<"mDist after pred: "<<mDist<<endl;
+			//cout<<"mMu before pred: "<<mMu<<endl;
 			
 			prediction(mDist);
-			cout<<"mMu after pred: "<<mMu<<endl;
+			//cout<<"mMu after pred: "<<mMu<<endl;
 			ROOT::Math::SVector<double,4> prim_vert_measurement;
 			prim_vert_measurement[0]=0;
 			prim_vert_measurement[1]=0;
 			prim_vert_measurement[2]=0;
 			prim_vert_measurement[3]=mMu[3];
 			
-			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) +mSig;		//Measure uncertainty Matrix
+			mCov_Res_Inv		=	mObs*mCov*ROOT::Math::Transpose(mObs) + 1.0*mSig;		//Measure uncertainty Matrix
 			mCov_Res_Inv.Invert();
 			
 			correction(prim_vert_measurement);	
-			cout<<"mMu after corr: "<<mMu<<endl;
+			//cout<<"mMu after corr: "<<mMu<<endl;
 			/*
 			mDist	=	mTRD_layer_radii_all[mCurrent_Det];
 			prediction(mDist);

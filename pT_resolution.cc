@@ -124,6 +124,16 @@ void pT_resolution(Int_t input_file = 0)
         TFile* input_file = TFile::Open("TRD_Calib_matched_cov10_0_qpT0_sig2_7_sig3_18_18kevents.root");
         TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
     }
+    if(input_file == 10) // 
+    {
+        TFile* input_file = TFile::Open("TRD_Calib_matched.root");
+        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
+    }
+    if(input_file == 11) //
+    {
+        TFile* input_file = TFile::Open("TRD_Calib_matched_TPC_match.root");
+        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
+    }
 
 
 
@@ -225,14 +235,15 @@ void pT_resolution(Int_t input_file = 0)
 
         Double_t amplitude = vec_h_proj_x[i_vec]->GetBinContent(vec_h_proj_x[i_vec]->GetMaximumBin());
         Double_t mean      = vec_h_proj_x[i_vec]->GetBinCenter(vec_h_proj_x[i_vec]->GetMaximumBin());
-        Double_t sigma     = vec_h_proj_x[i_vec]->GetRMS()*0.3;
+        Double_t sigma     = vec_h_proj_x[i_vec]->GetRMS()*1.0;
+        //Double_t sigma     = 0.02;
         func_Gauss_fit ->SetParameter(0,amplitude);
-        func_Gauss_fit ->SetParameter(1,mean);
-        func_Gauss_fit ->SetParameter(2,sigma);
+        func_Gauss_fit ->FixParameter(1,mean);
+        func_Gauss_fit ->FixParameter(2,sigma);
 
 
         //Fit
-        vec_h_proj_x[i_vec]->Fit("func_Gauss_fit","QMN","",mean-4.0*sigma,mean+4.0*sigma);
+        vec_h_proj_x[i_vec]->Fit("func_Gauss_fit","QMN","",mean-2.0*sigma,mean+2.0*sigma);
 
         amplitude = func_Gauss_fit ->GetParameter(0);
         mean      = func_Gauss_fit ->GetParameter(1);
@@ -286,7 +297,7 @@ void pT_resolution(Int_t input_file = 0)
     tge_pT_resolution_Gauss->SetMarkerStyle(20);
     tge_pT_resolution_Gauss->SetMarkerSize(1.1);
     tge_pT_resolution_Gauss->SetMarkerColor(kBlack);
-    tge_pT_resolution_Gauss->GetXaxis()->SetRangeUser(-1.9,1.9);
+    tge_pT_resolution_Gauss->GetXaxis()->SetRangeUser(-2.52,2.52);
     tge_pT_resolution_Gauss->GetYaxis()->SetRangeUser(0.0,35.0);
     tge_pT_resolution_Gauss->Draw("AP");
 
@@ -295,10 +306,10 @@ void pT_resolution(Int_t input_file = 0)
     tge_pT_resolution_Gauss->SetMarkerColor(kRed);
     tge_pT_resolution_Gauss->Draw("same P");
 
-    TCanvas* can_proj = new TCanvas("can_proj","can_proj",10,10,1200,1200);
-    can_proj->Divide(2,2);
-    Int_t arr_proj_sel[4] = {67,74,82,63};
-    for(Int_t i_proj_plot = 0; i_proj_plot < 4; i_proj_plot++)
+    TCanvas* can_proj = new TCanvas("can_proj","can_proj",10,10,1200,1000);
+    can_proj->Divide(3,2);
+    Int_t arr_proj_sel[6] = {67,74,82,63,109,119};
+    for(Int_t i_proj_plot = 0; i_proj_plot < 6; i_proj_plot++)
     {
         Int_t i_proj_sel = arr_proj_sel[i_proj_plot];
 
@@ -340,11 +351,12 @@ void pT_resolution(Int_t input_file = 0)
 
         Double_t amplitude = vec_h_proj_x[i_proj_sel]->GetBinContent(vec_h_proj_x[i_proj_sel]->GetMaximumBin());
         Double_t mean      = vec_h_proj_x[i_proj_sel]->GetBinCenter(vec_h_proj_x[i_proj_sel]->GetMaximumBin());
-        Double_t sigma     = vec_h_proj_x[i_proj_sel]->GetRMS()*0.3;
+        Double_t sigma     = vec_h_proj_x[i_proj_sel]->GetRMS()*1.0;
         func_Gauss_fit ->SetParameter(0,amplitude);
         func_Gauss_fit ->SetParameter(1,mean);
         func_Gauss_fit ->SetParameter(2,sigma);
 
+        printf("mean: %4.3f, sigma: %4.3f, amplitude: %4.3f \n",mean,sigma,amplitude);
 
         //Fit
         vec_h_proj_x[i_proj_sel]->Fit("func_Gauss_fit","QMN","",mean-4.0*sigma,mean+4.0*sigma);

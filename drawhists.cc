@@ -1,6 +1,10 @@
-#include "TRD_ST_Analyze_tracklets.h"
-#include "TRD_Kalman_Tracking.h"
-#include "TRD_Kalman_Tracking.cxx"
+//#include "TRD_ST_Analyze_tracklets.h"
+//#include "TRD_Kalman_Tracking.h"
+//#include "TRD_Kalman_Tracking.cxx"
+
+R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
+R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
+
 Bool_t fitting_track(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
     //direction is not ok
 
@@ -44,6 +48,9 @@ void drawhists()
     gStyle->SetCanvasBorderMode(0);
 
 
+    gSystem ->Load("TRD_Kalman_Tracking_cxx.so");
+    gSystem ->Load("TRD_ST_Analyze_tracklets_cxx.so");
+
 
     TH1F *histo = new TH1F("histogram","efficiency Kalman Trackfinder",20,0,1.2);
 
@@ -56,12 +63,12 @@ void drawhists()
     TH1D* h_layer_radii = TRD_ST_Analyze ->get_layer_radii_hist();
     //Long64_t event = 10;
 
-    Int_t graphics = 1;
+    Int_t graphics = 0;
     TRD_Kalman_Trackfinder kalid;
     kalid.set_layer_radii_hist(h_layer_radii);
 
 
-    for (Long64_t event = 2; event < 3; event++) // 2,3
+    for (Long64_t event = 1; event < 10000; event++) // 2,3
     {
 
         TRD_ST_Analyze ->Loop_event(event,graphics);
@@ -75,7 +82,7 @@ void drawhists()
 
 
 #if 1
-        vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,1);
+        vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,1); // 0 = no primary vertex, 1 = primary vertex used
         if(graphics) TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
 
 
