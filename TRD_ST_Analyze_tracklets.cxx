@@ -44,7 +44,6 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name)
     HistName += "/";
     HistName += out_file_name;
     outputfile = new TFile(HistName.Data(),"RECREATE");
-    outputfile = new TFile("./TRD_Calib_matched.root","RECREATE");
     //------------------------------------------------
     outputfile ->cd();
     // TRD self tracking output data containers
@@ -901,7 +900,7 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         if(CA < CB) AP_alpha *= -1.0;
 
 
-                        printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
+                        //printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
 
                         if(graphics)
                         {
@@ -922,7 +921,7 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             //printf("CA: %4.3f, CB: %4.3f \n",CA,CB);
 
 
-                            printf("   ----> AP_alpha: %4.3f, AP_pT: %4.3f, AP_pTB: %4.3f, projA: %4.3f, projB: %4.3f \n",AP_alpha,AP_pT,AP_pTB,projA,projB);
+                            //printf("   ----> AP_alpha: %4.3f, AP_pT: %4.3f, AP_pTB: %4.3f, projA: %4.3f, projB: %4.3f \n",AP_alpha,AP_pT,AP_pTB,projA,projB);
                             TH2D_AP_plot ->Fill(AP_alpha,AP_pT);
                         }
                         i_vertex_acc++;
@@ -937,7 +936,7 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         }
     }
 
-    printf("Number of secondary vertices found: %d \n",i_vertex);
+    //printf("Number of secondary vertices found: %d \n",i_vertex);
 
     if(graphics)
     {
@@ -1273,7 +1272,7 @@ Int_t Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event, Int_t graphics)
     }
     //--------------------------------------------------
 
-    printf("Event: %lld, TPC tracks: %d, TRD tracklets: %d \n",i_event,NumTracks,NumTracklets);
+    //printf("Event: %lld, TPC tracks: %d, TRD tracklets: %d \n",i_event,NumTracks,NumTracklets);
 
     //--------------------------------------------------
     // TPC track loop

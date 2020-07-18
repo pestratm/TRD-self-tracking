@@ -73,7 +73,7 @@ Bool_t TRD_Kalman_Trackfinder::fitting(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Trackl
 	
 	if (abs((z -off_b)[1])>7.)
 		return 0;
-	if ((a->get_TRD_index()==1648) && (b->get_TRD_index()==1643)) cout<<"a"<<endl;
+	//if ((a->get_TRD_index()==1648) && (b->get_TRD_index()==1643)) cout<<"a"<<endl;
 	
 	if (abs((z - off_b)[2])>20)
 		return 0;

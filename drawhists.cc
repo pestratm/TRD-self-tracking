@@ -78,8 +78,16 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     kalid.set_layer_radii_hist(h_layer_radii);
 
     //for (Long64_t event = 0; event < N_Events; event++) // 2,3
-    for (Long64_t event = 0; event < 2; event++) // 2,3
+    for (Long64_t event = 0; event < 1000; event++) // 2,3
     {
+
+        if (event != 0  &&  event % 50 == 0)
+            cout << "." << flush;
+        if (event != 0  &&  event % 500 == 0)
+        {
+            printf("event: %lld out of %lld, %4.2f%% total done \n",event,N_Events,((Double_t)event/(Double_t)N_Events)*100.0);
+        }
+
 
         TRD_ST_Analyze ->Loop_event(event,graphics);
         //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
@@ -117,88 +125,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
         //vector<Double_t> track_accuracy;
 
         //Ali_TRD_ST_Tracklets* last_tracklet;
-        /*
-         for(Int_t i_track=0;i_track< matched_tracks.size();i_track++){
-         Bool_t beautiful=0;
-         last_tracklet=NULL;
 
-         for(Int_t i_layer=0;i_layer< matched_tracks[i_track].size();i_layer++){
-         if 	(matched_tracks[i_track][i_layer]==NULL)
-         continue;
-         if (last_tracklet==NULL) last_tracklet=matched_tracks[i_track][i_layer];
-         else{
-         beautiful=fitting_track(last_tracklet,matched_tracks[i_track][i_layer]);
-         if(!(beautiful))break;
-         last_tracklet=matched_tracks[i_track][i_layer];
-         }
-         }
-         if(beautiful) matched_beautiful_tracks.push_back(matched_tracks[i_track]);
-         }
-         cout<<"len_beatutiful:"<<matched_beautiful_tracks.size()<<endl;
-         //TRD_ST_Analyze ->Draw_Kalman_Tracks(matched_tracks);
-         */
-
-        /*
-        matched_beautiful_tracks=matched_tracks;
-        TH1I* h_good_bad_TRD_chambers=TRD_ST_Analyze ->get_h_good_bad_TRD_chambers();;
-
-
-        for(Int_t i_track=0;i_track< kalman_found_tracks.size();i_track++){
-
-            Int_t number_to_find_real=0;
-            Int_t number_found_max=0;
-            Int_t number_of_noise_real=0;
-            Int_t len_found_track_real=0;
-            for(Int_t i_track_match=0;i_track_match< matched_beautiful_tracks.size();i_track_match++){
-
-                Int_t number_to_find=0;
-                Int_t number_found=0;
-                Int_t number_of_noise=0;
-                Int_t len_found_track=kalman_found_tracks[i_track].size();
-
-                for (Int_t i_layer=0;i_layer< len_found_track;i_layer++){
-                    if(kalman_found_tracks[i_track][i_layer]!=NULL)
-                        number_of_noise++;
-                    if (matched_beautiful_tracks[i_track_match][i_layer]==NULL) continue;
-                    Int_t TRD_detector=matched_beautiful_tracks[i_track_match][i_layer]->get_TRD_det();
-                    if (h_good_bad_TRD_chambers ->GetBinContent(TRD_detector+1)){
-                        if(kalman_found_tracks[i_track][i_layer]!=NULL)
-                            if(kalman_found_tracks[i_track][i_layer]->get_TRD_index()==matched_beautiful_tracks[i_track_match][i_layer]->get_TRD_index()){
-                                number_to_find++;
-                                number_found++;
-                                number_of_noise--;
-                            }
-                        continue;
-                    }
-                    //cout<<"det:"<<(h_good_bad_TRD_chambers ->GetBinContent(TRD_detector+1))<<endl;
-                    number_to_find++;
-                    if(kalman_found_tracks[i_track][i_layer]==NULL) continue;
-
-                    if(kalman_found_tracks[i_track][i_layer]->get_TRD_index()!=matched_beautiful_tracks[i_track_match][i_layer]->get_TRD_index())
-                        continue;
-                    //Double_t rel_off_diff=(kalman_found_tracks[i_track][i_layer]->get_TV3_offset()-matched_beautiful_tracks[i_track_match][i_layer]->get_TV3_offset()).Mag() /kalman_found_tracks[i_track][i_layer]->get_TV3_offset().Mag();
-                    //if(rel_off_diff >0.001) continue;
-                    //Double_t rel_dir_diff=(kalman_found_tracks[i_track][i_layer]->get_TV3_dir()-matched_beautiful_tracks[i_track_match][i_layer]->get_TV3_dir()).Mag() /kalman_found_tracks[i_track][i_layer]->get_TV3_dir().Mag();
-                    //if(rel_dir_diff >0.001) continue;
-                    number_found++;
-                    number_of_noise--;
-
-                }
-                if(number_found >number_found_max){
-                    number_found_max=number_found;
-                    number_to_find_real=number_to_find;
-                    number_of_noise_real=number_of_noise;
-                    len_found_track_real=len_found_track;
-                }
-            }
-            if(number_to_find_real>0) {
-                histo->Fill((Double_t)number_found_max/number_to_find_real);
-                histo2->Fill((1. -(Double_t)number_of_noise_real/len_found_track_real));
-                cout<<(Double_t)number_found_max/number_to_find_real<<" "<<number_to_find_real<<" "<<i_track<<endl;}
-            else
-                cout<<"found_new_track"<<endl;
-        }
-        */
     }
     //gRandom->Rndm();
 
