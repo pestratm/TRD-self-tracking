@@ -149,7 +149,7 @@ private:
 
 
 public:
-    Ali_TRD_ST_Analyze();
+    Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name);
     //~Ali_TRD_ST_Analyze();
 
     void Init_tree(TString SEList);
@@ -184,6 +184,8 @@ public:
     void Plot_pT_TPC_vs_Kalman();
     void Draw_TPC_track(Int_t i_track, Int_t color, Double_t line_width);
     TH1D* get_layer_radii_hist() {return h_layer_radii_det;}
+    Long64_t get_N_Events() {return N_Events;}
+    void create_output_file(TString out_dir, TString out_file_name);
     void Write();
 
 

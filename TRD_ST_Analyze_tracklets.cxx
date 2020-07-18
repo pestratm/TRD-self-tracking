@@ -3,7 +3,7 @@
 
 
 //----------------------------------------------------------------------------------------
-Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
+Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name)
 {
     //layer_radii_file = TFile::Open("./TRD_layer_radii.root");
     //h_layer_radii_det = (TH1D*)layer_radii_file ->Get("h_layer_radii_det");
@@ -39,6 +39,11 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
 
     }
 
+
+    HistName = out_dir;
+    HistName += "/";
+    HistName += out_file_name;
+    outputfile = new TFile(HistName.Data(),"RECREATE");
     outputfile = new TFile("./TRD_Calib_matched.root","RECREATE");
     //------------------------------------------------
     outputfile ->cd();
@@ -52,6 +57,8 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
     Tree_TRD_ST_Event_out  ->Branch("Tree_TRD_ST_Event_branch_out"  , "TRD_ST_Event_out", TRD_ST_Event_out );
     Tree_TRD_ST_Event_out  ->SetAutoSave( 5000000 );
     //------------------------------------------------
+
+
     // constructor
     TEveManager::Create();
 
@@ -204,6 +211,30 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze()
     TH2D_AP_plot          = new TH2D("TH2D_AP_plot","TH2D_AP_plot",200,-2.0,2.0,400,-0.1,4.0);
     TH2D_pT_TPC_vs_Kalman = new TH2D("TH2D_pT_TPC_vs_Kalman","TH2D_pT_TPC_vs_Kalman",2000,-10.0,10.0,2000,-10.0,10.0);
 
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::create_output_file(TString out_dir, TString out_file_name)
+{
+    HistName = out_dir;
+    HistName += "/";
+    HistName += out_file_name;
+    outputfile = new TFile(HistName.Data(),"RECREATE");
+    //------------------------------------------------
+    outputfile ->cd();
+    // TRD self tracking output data containers
+    TRD_ST_Tracklet_out   = new Ali_TRD_ST_Tracklets();
+    TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
+    TRD_ST_Event_out      = new Ali_TRD_ST_Event();
+
+    Tree_TRD_ST_Event_out  = NULL;
+    Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
+    Tree_TRD_ST_Event_out  ->Branch("Tree_TRD_ST_Event_branch_out"  , "TRD_ST_Event_out", TRD_ST_Event_out );
+    Tree_TRD_ST_Event_out  ->SetAutoSave( 5000000 );
+    //------------------------------------------------
 }
 //----------------------------------------------------------------------------------------
 

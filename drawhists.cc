@@ -34,7 +34,7 @@ Bool_t fitting_track(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
 
     return 1;
 }
-void drawhists()
+void drawhists(TString input_list = "List_data_ADC.txt")
 {
 
     gROOT->SetStyle("Plain");
@@ -51,6 +51,12 @@ void drawhists()
     gSystem ->Load("TRD_Kalman_Tracking_cxx.so");
     gSystem ->Load("TRD_ST_Analyze_tracklets_cxx.so");
 
+    //------------------------------------
+    // Define output file name and directory
+    TString out_file_name = input_list;
+    out_file_name += "_out.root";
+    TString out_dir = "./";
+    //------------------------------------
 
     TH1F *histo = new TH1F("histogram","efficiency Kalman Trackfinder",20,0,1.2);
 
@@ -58,8 +64,12 @@ void drawhists()
 
 
     printf("TRD_ST_Analyze_tracklets started \n");
-    Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze();
-    TRD_ST_Analyze ->Init_tree("List_data_ADC.txt");
+    Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(out_dir,out_file_name);
+    TRD_ST_Analyze ->Init_tree(input_list.Data());
+
+    //TRD_ST_Analyze ->create_output_file(out_dir,out_file_name);
+
+    Long64_t N_Events = TRD_ST_Analyze ->get_N_Events();
     TH1D* h_layer_radii = TRD_ST_Analyze ->get_layer_radii_hist();
     //Long64_t event = 10;
 
@@ -67,8 +77,8 @@ void drawhists()
     TRD_Kalman_Trackfinder kalid;
     kalid.set_layer_radii_hist(h_layer_radii);
 
-
-    for (Long64_t event = 1; event < 10000; event++) // 2,3
+    //for (Long64_t event = 0; event < N_Events; event++) // 2,3
+    for (Long64_t event = 0; event < 2; event++) // 2,3
     {
 
         TRD_ST_Analyze ->Loop_event(event,graphics);
