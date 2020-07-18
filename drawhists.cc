@@ -1,41 +1,12 @@
-//#include "TRD_ST_Analyze_tracklets.h"
-//#include "TRD_Kalman_Tracking.h"
-//#include "TRD_Kalman_Tracking.cxx"
 
 R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
-Bool_t fitting_track(Ali_TRD_ST_Tracklets* a,Ali_TRD_ST_Tracklets* b){
-    //direction is not ok
-
-    TVector3 a_angle = (TVector3){a->get_TV3_dir()[0], a->get_TV3_dir()[1], 0};
-    TVector3 b_angle = (TVector3){b->get_TV3_dir()[0], b->get_TV3_dir()[1], 0};
-
-    if (abs(a_angle.Angle(b_angle)*TMath::RadToDeg() )>7)
-        return 0;
-    if (abs(a->get_TV3_dir().Angle(b->get_TV3_dir())*TMath::RadToDeg() )>30)
-        return 0;
-    //position is not ok
-    Double_t cylind_rad_dist=sqrt(b->get_TV3_offset()[0]*b->get_TV3_offset()[0] +b->get_TV3_offset()[1]*b->get_TV3_offset()[1]) -sqrt(a->get_TV3_offset()[0]*a->get_TV3_offset()[0] +a->get_TV3_offset()[1]*a->get_TV3_offset()[1]);
-    Double_t cylind_rad_len=sqrt(a->get_TV3_dir()[0]*a->get_TV3_dir()[0] +a->get_TV3_dir()[1]*a->get_TV3_dir()[1]);
-    TVector3 z=a->get_TV3_offset()+a->get_TV3_dir()*(cylind_rad_dist/cylind_rad_len );
-    /*if (abs((a->get_TV3_offset()+a->get_TV3_dir()*((b->get_TV3_offset()[0]- a->get_TV3_offset()[0])/a->get_TV3_dir()[0] ) -b->get_TV3_offset())[1])>1)
-     return 0;
-     if (abs((a->get_TV3_offset()+a->get_TV3_dir()*((b->get_TV3_offset()[0]- a->get_TV3_offset()[0])/a->get_TV3_dir()[0] ) -b->get_TV3_offset())[2])>4)
-     return 0;*/
-
-    if ((z-b->get_TV3_offset())[0]>2.)
-        return 0;
-
-    if ((z-b->get_TV3_offset())[1]>2.)
-        return 0;
-    if ((z-b->get_TV3_offset())[2]>10.)
-        return 0;
-
-    return 1;
-}
 void drawhists(TString input_list = "List_data_ADC.txt")
 {
+
+    // .L TRD_ST_Analyze_tracklets.cxx++
+    // .L TRD_Kalman_Tracking.cxx++
 
     gROOT->SetStyle("Plain");
     gStyle->SetOptFit(11);
@@ -55,16 +26,20 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     // Define output file name and directory
     TString out_file_name = input_list;
     out_file_name += "_out.root";
-    TString out_dir = "./";
+    TString input_dir  = "./Data/";
+    TString output_dir = "./";
+    input_dir  = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/";
+    output_dir = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/ST_out/";
+    Int_t graphics = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t use_prim_vertex = 0; // 0 = no primary vertex, 1 = primary vertex used
     //------------------------------------
 
     TH1F *histo = new TH1F("histogram","efficiency Kalman Trackfinder",20,0,1.2);
-
     TH1F *histo2 = new TH1F("histogram","purity Kalman Trackfinder",20,0,1.2);
 
-
     printf("TRD_ST_Analyze_tracklets started \n");
-    Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(out_dir,out_file_name);
+    Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,out_file_name,graphics);
+    TRD_ST_Analyze ->set_input_dir(input_dir);
     TRD_ST_Analyze ->Init_tree(input_list.Data());
 
     //TRD_ST_Analyze ->create_output_file(out_dir,out_file_name);
@@ -73,12 +48,11 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     TH1D* h_layer_radii = TRD_ST_Analyze ->get_layer_radii_hist();
     //Long64_t event = 10;
 
-    Int_t graphics = 0;
     TRD_Kalman_Trackfinder kalid;
     kalid.set_layer_radii_hist(h_layer_radii);
 
-    //for (Long64_t event = 0; event < N_Events; event++) // 2,3
-    for (Long64_t event = 0; event < 1000; event++) // 2,3
+    for (Long64_t event = 0; event < N_Events; event++) // 2,3
+    //for (Long64_t event = 0; event < 1000; event++) // 2,3
     {
 
         if (event != 0  &&  event % 50 == 0)
@@ -100,7 +74,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
 
 
 #if 1
-        vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,1); // 0 = no primary vertex, 1 = primary vertex used
+        vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,use_prim_vertex); // 0 = no primary vertex, 1 = primary vertex used
         if(graphics) TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
 
 
@@ -119,7 +93,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
         TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics);
 
 #endif
-        //TRD_ST_Analyze ->Calculate_secondary_vertices(graphics); // 0 = no graphics
+        TRD_ST_Analyze ->Calculate_secondary_vertices(graphics); // 0 = no graphics
 
         //vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
         //vector<Double_t> track_accuracy;

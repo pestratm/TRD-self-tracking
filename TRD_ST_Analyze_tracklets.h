@@ -1,4 +1,6 @@
 
+//#define USEEVE
+
 using namespace std;
 #include <cmath>
 #include <iostream>
@@ -32,10 +34,13 @@ using namespace std;
 #include "Math/MatrixRepresentationsStatic.h"
 #include "Math/SMatrix.h"
 #include "Math/MatrixFunctions.h"
+
+#if defined(USEEVE)
 #include "TEveBox.h"
 #include <TEveManager.h>
 #include "TEveLine.h"
 #include "TEvePointSet.h"
+#endif
 
 #include "Ali_TRD_ST.h"
 #include "Ali_TRD_ST_LinkDef.h"
@@ -90,6 +95,7 @@ private:
     Double_t EventVertexZ = -999.0;
     TVector3 TV3_EventVertex;
 
+#if defined(USEEVE)
     TEveLine* TEveLine_beam_axis = NULL;
     TEveLine* TPL3D_helix = NULL;
     vector<TEveLine*> vec_TPL3D_helix;
@@ -105,6 +111,14 @@ private:
     vector< vector<TEveLine*> > vec_TEveLine_self_matched_tracklets;
     TEvePointSet* TEveP_offset_points;
     TEvePointSet* TEveP_TPC_at_offset_points;
+    vector<TEveBox*> vec_eve_TRD_detector_box;
+    TEvePointSet* TEveP_sec_vertices;
+    TEvePointSet* TEveP_primary_vertex;
+    TEvePointSet* TEveP_first_point_helix;
+    TEvePointSet* TEveP_second_point_helix;
+    vector<TEveLine*> TEveLine_mother;
+#endif
+
     Int_t N_tracklets_layers[6] = {0};
     Double_t scale_length_vec = -10.0;
     Int_t track_color    = kAzure-2;
@@ -125,18 +139,11 @@ private:
 
     // TRD 3D graphics
     vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
-    vector<TEveBox*> vec_eve_TRD_detector_box;
 
     vector<vector<Double_t>> mHelices_kalman; // Kalman helix parameters, based on AliHelix
     Double_t aliHelix_params[6];
     vector<Ali_Helix*> vec_helices;
-    TEvePointSet* TEveP_sec_vertices;
     Ali_Helix* TPC_single_helix;
-
-    TEvePointSet* TEveP_primary_vertex;
-    TEvePointSet* TEveP_first_point_helix;
-    TEvePointSet* TEveP_second_point_helix;
-    vector<TEveLine*> TEveLine_mother;
     vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets;
 
     TFile* layer_radii_file;
@@ -146,18 +153,17 @@ private:
     TH2D* h2D_TRD_det_coordinates;
 
     vector< vector<TH2D*> > vec_h2D_pT_vs_TPC_TRD_residuals;
+    TString input_dir;
 
 
 public:
-    Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name);
+    Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, Int_t graphics);
     //~Ali_TRD_ST_Analyze();
 
     void Init_tree(TString SEList);
     Int_t Loop_event(Long64_t i_event, Int_t graphics);
     Int_t Draw_event(Long64_t i_event);
     Int_t Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window, Int_t graphics);
-    Int_t Do_TPC_TRD_matching_allEvents(Double_t xy_matching_window, Double_t z_matching_window);
-    Int_t Do_TRD_self_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window);
     void Draw_hist_TPC_tracklet_diffs();
     TH1I* get_h_good_bad_TRD_chambers();
 
@@ -186,6 +192,7 @@ public:
     TH1D* get_layer_radii_hist() {return h_layer_radii_det;}
     Long64_t get_N_Events() {return N_Events;}
     void create_output_file(TString out_dir, TString out_file_name);
+    void set_input_dir(TString input_dir_in) {input_dir = input_dir_in;}
     void Write();
 
 
