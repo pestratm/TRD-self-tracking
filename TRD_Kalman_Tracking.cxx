@@ -503,7 +503,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			
 	}
 	//if Track
-	if(mNbr_tracklets>2){ 
+	if(mNbr_tracklets>3){ // Changed from 2, Alex 20.07.2020
 		//save Track
 		mFound_tracks.push_back(mTrack);
 		mEstimates.push_back(mEstimate);

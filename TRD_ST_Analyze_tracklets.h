@@ -1,5 +1,5 @@
 
-//#define USEEVE
+#define USEEVE
 
 using namespace std;
 #include <cmath>
@@ -79,6 +79,9 @@ private:
     TTree* Tree_TRD_ST_Event_out;
 
     TH2D* TH2D_AP_plot;
+    const Int_t N_AP_radii = 20;
+    const Double_t Delta_AP_radius = 18.0;
+    vector<TH2D*> vec_TH2D_AP_plot_radius;
     TH2D* TH2D_pT_TPC_vs_Kalman;
 
     TFile* outputfile;

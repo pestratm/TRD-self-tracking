@@ -222,6 +222,13 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
 
     TH2D_AP_plot          = new TH2D("TH2D_AP_plot","TH2D_AP_plot",200,-2.0,2.0,400,-0.1,4.0);
     TH2D_pT_TPC_vs_Kalman = new TH2D("TH2D_pT_TPC_vs_Kalman","TH2D_pT_TPC_vs_Kalman",2000,-10.0,10.0,2000,-10.0,10.0);
+    vec_TH2D_AP_plot_radius.resize(N_AP_radii); // secondary vertex radius
+    for(Int_t i_radius = 0; i_radius < N_AP_radii; i_radius++)
+    {
+        HistName = "vec_TH2D_AP_plot_radius_";
+        HistName += i_radius;
+        vec_TH2D_AP_plot_radius[i_radius] = new TH2D(HistName.Data(),HistName.Data(),200,-2.0,2.0,400,-0.1,4.0);
+    }
 
 }
 //----------------------------------------------------------------------------------------
@@ -874,13 +881,8 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         vertex_point[i_xyz] = (helix_pointA[i_xyz] + helix_pointB[i_xyz])/2.0;
                     }
 
-                    if(graphics)
-                    {
-                        //Draw_Kalman_Helix_Tracks(i_track_A,kGreen);
-                        //Draw_Kalman_Helix_Tracks(i_track_B,kRed);
-                    }
-
                     Double_t radius_vertex = TMath::Sqrt(vertex_point[0]*vertex_point[0] + vertex_point[1]*vertex_point[1]);
+                    Int_t i_radius = (Int_t)(radius_vertex/Delta_AP_radius);
                     //if(radius_vertex > 240.0 && radius_vertex < 360.0)
 #if defined(USEEVE)
                     if(graphics) TEveP_sec_vertices ->SetPoint(i_vertex,vertex_point[0],vertex_point[1],vertex_point[2]);
@@ -889,7 +891,7 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 #if 1
                     //-------------------------------------------------
                     // Armenteros-Podolanski
-                    if(radius_vertex < 250.0)
+                    if(radius_vertex > 250.0)
                     {
                         Double_t pTA = mHelices_kalman[i_track_A][6]; // pT
                         Double_t pzA = mHelices_kalman[i_track_A][7]; // pz
@@ -917,6 +919,12 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         if(CA < CB) AP_alpha *= -1.0;
 
 
+                        if(graphics && AP_pT < 0.05)
+                        {
+                            Draw_Kalman_Helix_Tracks(i_track_A,kGreen);
+                            Draw_Kalman_Helix_Tracks(i_track_B,kRed);
+                        }
+
                         //printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
 
 #if defined(USEEVE)
@@ -942,6 +950,7 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
                             //printf("   ----> AP_alpha: %4.3f, AP_pT: %4.3f, AP_pTB: %4.3f, projA: %4.3f, projB: %4.3f \n",AP_alpha,AP_pT,AP_pTB,projA,projB);
                             TH2D_AP_plot ->Fill(AP_alpha,AP_pT);
+                            if(i_radius < N_AP_radii) vec_TH2D_AP_plot_radius[i_radius] ->Fill(AP_alpha,AP_pT);
                         }
                         i_vertex_acc++;
                     }
@@ -1963,6 +1972,13 @@ void Ali_TRD_ST_Analyze::Write()
     printf("Write data to file \n");
     outputfile ->cd();
     TH2D_AP_plot          ->Write();
+    outputfile ->mkdir("AP_radii");
+    outputfile ->cd("AP_radii");
+    for(Int_t i_radius = 0; i_radius < N_AP_radii; i_radius++)
+    {
+        vec_TH2D_AP_plot_radius[i_radius] ->Write();
+    }
+    outputfile ->cd();
     TH2D_pT_TPC_vs_Kalman ->Write();
     outputfile ->mkdir("layer_radii");
     outputfile ->cd("layer_radii");

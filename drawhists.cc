@@ -2,6 +2,9 @@
 R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
+//#define ENV_PI
+#define ENV_ALEX
+
 void drawhists(TString input_list = "List_data_ADC.txt")
 {
 
@@ -28,9 +31,16 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     out_file_name += "_out.root";
     TString input_dir  = "./Data/";
     TString output_dir = "./";
+#if defined(ENV_PI)
     input_dir  = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/";
     output_dir = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/ST_out/";
-    Int_t graphics = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+#endif
+
+#if defined(ENV_ALEX)
+    input_dir  = "./Data/";
+    output_dir = "./ST_out/";
+#endif
+    Int_t graphics = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t use_prim_vertex = 0; // 0 = no primary vertex, 1 = primary vertex used
     //------------------------------------
 
@@ -51,8 +61,8 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     TRD_Kalman_Trackfinder kalid;
     kalid.set_layer_radii_hist(h_layer_radii);
 
-    for (Long64_t event = 0; event < N_Events; event++) // 2,3
-    //for (Long64_t event = 0; event < 1000; event++) // 2,3
+    //for (Long64_t event = 0; event < N_Events; event++) // 2,3
+    for (Long64_t event = 2; event < 3; event++) // 2,3
     {
 
         if (event != 0  &&  event % 50 == 0)
@@ -90,7 +100,8 @@ void drawhists(TString input_list = "List_data_ADC.txt")
 
         //if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed); // -1 -> all kalman tracks drawn
 
-        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics);
+        //TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics);
+        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(0);
 
 #endif
         TRD_ST_Analyze ->Calculate_secondary_vertices(graphics); // 0 = no graphics
