@@ -107,7 +107,7 @@ class TRD_Kalman_Trackfinder
       for(Int_t i_det = 0; i_det < 540; i_det++)
       {
           mTRD_layer_radii_all[i_det] = h_layer_radii ->GetBinContent(i_det+1);
-		  cout<<"Det:"<<i_det<<"Det_lay: "<<i_det%6<<" radii: "<<mTRD_layer_radii_all[i_det]<<endl;
+		  //cout<<"Det:"<<i_det<<"Det_lay: "<<i_det%6<<" radii: "<<mTRD_layer_radii_all[i_det]<<endl;
       }
   }
 

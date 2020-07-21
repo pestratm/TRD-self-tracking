@@ -267,7 +267,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 
                 // 0,0 = y, 1,1=z , 2,2=sin phi , 3,3=tan lambda
 
-                Double_t dy         = 0.4; // 0.2  0.4
+                Double_t dy         = 0.2; // 0.2  0.4
                 Double_t dz         = 4.0; // 4.0  4.0
                 Double_t dsin_phi   = 10.0; // 7.0  10.0
                 Double_t dsin_theta = 25.0; // 18.0  25.0

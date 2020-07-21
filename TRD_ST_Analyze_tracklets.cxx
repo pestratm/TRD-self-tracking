@@ -809,8 +809,10 @@ void Ali_TRD_ST_Analyze::fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float
 
 
 //----------------------------------------------------------------------------------------
-void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
+Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 {
+    Int_t flag_found_good_AP_vertex = 0;
+
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
     Double_t helix_pointAs[3];
@@ -825,6 +827,11 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     TLorentzVector TLV_A;
     TLorentzVector TLV_B;
     TLorentzVector TLV_AB;
+
+    TVector3 TV3_prim_vertex(EventVertexX,EventVertexY,EventVertexZ);
+    TVector3 TV3_sec_vertex;
+    TVector3 TV3_dir_prim_sec_vertex;
+
 
 #if defined(USEEVE)
     if(graphics)
@@ -881,17 +888,22 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         vertex_point[i_xyz] = (helix_pointA[i_xyz] + helix_pointB[i_xyz])/2.0;
                     }
 
+                    TV3_sec_vertex.SetXYZ(vertex_point[0],vertex_point[1],vertex_point[2]);
+                    TV3_dir_prim_sec_vertex = TV3_sec_vertex - TV3_prim_vertex;
+                    if(TV3_dir_prim_sec_vertex.Mag() <= 0.0) continue;
+                    TV3_dir_prim_sec_vertex *= 1.0/TV3_dir_prim_sec_vertex.Mag();
+
                     Double_t radius_vertex = TMath::Sqrt(vertex_point[0]*vertex_point[0] + vertex_point[1]*vertex_point[1]);
                     Int_t i_radius = (Int_t)(radius_vertex/Delta_AP_radius);
                     //if(radius_vertex > 240.0 && radius_vertex < 360.0)
 #if defined(USEEVE)
-                    if(graphics) TEveP_sec_vertices ->SetPoint(i_vertex,vertex_point[0],vertex_point[1],vertex_point[2]);
+                    //if(graphics) TEveP_sec_vertices ->SetPoint(i_vertex,vertex_point[0],vertex_point[1],vertex_point[2]);
 #endif
 
-#if 1
                     //-------------------------------------------------
                     // Armenteros-Podolanski
-                    if(radius_vertex > 250.0)
+                    //if(radius_vertex > 250.0 && radius_vertex < 306.0)
+                    if(radius_vertex > 100.0 && radius_vertex < 200.0)
                     {
                         Double_t pTA = mHelices_kalman[i_track_A][6]; // pT
                         Double_t pzA = mHelices_kalman[i_track_A][7]; // pz
@@ -918,28 +930,36 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         Double_t AP_alpha = (projA - projB)/(projA + projB);
                         if(CA < CB) AP_alpha *= -1.0;
 
+                        Double_t dot_product_dir_vertex = TV3_dirAB.Dot(TV3_dir_prim_sec_vertex);
 
-                        if(graphics && AP_pT < 0.05)
-                        {
-                            Draw_Kalman_Helix_Tracks(i_track_A,kGreen);
-                            Draw_Kalman_Helix_Tracks(i_track_B,kRed);
-                        }
-
-                        //printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
 
 #if defined(USEEVE)
-                        if(graphics)
+                        if(AP_pT > 0.05 && AP_pT < 0.25 && CA*CB < 0.0 && pTA > 0.2 && pTB > 0.2 && dot_product_dir_vertex > 0.95)
                         {
-                            TEveP_first_point_helix  ->SetPoint(i_vertex_acc,helix_pointA[0],helix_pointA[1],helix_pointA[2]);
-                            TEveP_second_point_helix ->SetPoint(i_vertex_acc,helix_pointAs[0],helix_pointAs[1],helix_pointAs[2]);
-                            TEveP_first_point_helix  ->SetPoint(i_vertex_acc+2,helix_pointB[0],helix_pointB[1],helix_pointB[2]);
-                            TEveP_second_point_helix ->SetPoint(i_vertex_acc+2,helix_pointBs[0],helix_pointBs[1],helix_pointBs[2]);
+                            //printf("-----> Found vertex for AP \n");
+                            flag_found_good_AP_vertex = 1;
+                            if(graphics)
+                            {
+                                Draw_Kalman_Helix_Tracks(i_track_A,kGreen);
+                                Draw_Kalman_Helix_Tracks(i_track_B,kRed);
 
-                            TEveLine_mother.resize(i_vertex_acc+1);
-                            TEveLine_mother[i_vertex_acc] = new TEveLine();
+                                TEveP_sec_vertices ->SetPoint(i_vertex_acc,vertex_point[0],vertex_point[1],vertex_point[2]);
+                                //printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
 
-                            TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0],vertex_point[1],vertex_point[2]);
-                            TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0] + 30.0*TV3_dirAB[0],vertex_point[1] + 30.0*TV3_dirAB[1],vertex_point[2] + 30.0*TV3_dirAB[2]);
+
+                                TEveP_first_point_helix  ->SetPoint(i_vertex_acc,helix_pointA[0],helix_pointA[1],helix_pointA[2]);
+                                TEveP_second_point_helix ->SetPoint(i_vertex_acc,helix_pointAs[0],helix_pointAs[1],helix_pointAs[2]);
+                                TEveP_first_point_helix  ->SetPoint(i_vertex_acc+2,helix_pointB[0],helix_pointB[1],helix_pointB[2]);
+                                TEveP_second_point_helix ->SetPoint(i_vertex_acc+2,helix_pointBs[0],helix_pointBs[1],helix_pointBs[2]);
+
+                                TEveLine_mother.resize(i_vertex_acc+1);
+                                TEveLine_mother[i_vertex_acc] = new TEveLine();
+
+                                TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0],vertex_point[1],vertex_point[2]);
+                                TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0] + 30.0*TV3_dirAB[0],vertex_point[1] + 30.0*TV3_dirAB[1],vertex_point[2] + 30.0*TV3_dirAB[2]);
+
+                                i_vertex_acc++;
+                            }
                         }
 #endif
 
@@ -952,10 +972,8 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             TH2D_AP_plot ->Fill(AP_alpha,AP_pT);
                             if(i_radius < N_AP_radii) vec_TH2D_AP_plot_radius[i_radius] ->Fill(AP_alpha,AP_pT);
                         }
-                        i_vertex_acc++;
                     }
                     //-------------------------------------------------
-#endif
 
                     i_vertex++;
                 }
@@ -990,12 +1008,14 @@ void Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             TEveLine_mother[i_mother]    ->SetLineWidth(3);
             TEveLine_mother[i_mother]    ->SetMainColor(kMagenta);
             TEveLine_mother[i_mother]    ->SetMainAlpha(1.0);
-            //gEve->AddElement(TEveLine_mother[i_mother]);
+            gEve->AddElement(TEveLine_mother[i_mother]);
         }
 
         gEve->Redraw3D(kTRUE);
     }
 #endif
+
+    return flag_found_good_AP_vertex;
 }
 //----------------------------------------------------------------------------------------
 

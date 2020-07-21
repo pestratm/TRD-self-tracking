@@ -62,7 +62,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     kalid.set_layer_radii_hist(h_layer_radii);
 
     //for (Long64_t event = 0; event < N_Events; event++) // 2,3
-    for (Long64_t event = 2; event < 3; event++) // 2,3
+    for (Long64_t event = 88; event < 89; event++) // 2,3   192
     {
 
         if (event != 0  &&  event % 50 == 0)
@@ -101,10 +101,11 @@ void drawhists(TString input_list = "List_data_ADC.txt")
         //if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed); // -1 -> all kalman tracks drawn
 
         //TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics);
-        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(0);
+        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(1);
 
 #endif
-        TRD_ST_Analyze ->Calculate_secondary_vertices(graphics); // 0 = no graphics
+        Int_t found_good_AP_vertex = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics); // 0 = no graphics
+        if(found_good_AP_vertex) printf(" ----> Good AP vertex found in event: %lld \n",event);
 
         //vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
         //vector<Double_t> track_accuracy;
