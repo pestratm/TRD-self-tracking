@@ -436,7 +436,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 					if(mShow){
 						cout<<"meas"<<measurement<<", "<<mBins[i_det][i_tracklet]->get_TV3_offset()[0]<<", "<<mBins[i_det][i_tracklet]->get_TRD_index()<<endl;
 						cout<<"chi:"<<chi_2<<endl;}
-					
+					cout<<"dist to rad new:"<<mTRD_layer_radii_all[mCurrent_Det]-mBins[i_det][i_tracklet]->get_TV3_offset()[0]<<" dtor old:"<<mTRD_layer_radii[mCurrent_Det%6][1]-mBins[i_det][i_tracklet]->get_TV3_offset()[0]<<endl;
 					//Bool_t fitting= ((abs[0]<2*mUnc[0]) && (abs[1]<3*mUnc[1]) && (abs[2]<2*mUnc[2]));
 					if (1)// (fitting)
 					{
@@ -634,7 +634,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 		TVector3 x_vek;
 		TVector3 p_vek;
-		x_vek[0]	=	mTRD_layer_radii[mCurrent_Det%6][1];
+		x_vek[0]	=	mTRD_layer_radii_all[mCurrent_Det];
 		/*if(mPrimVertex==1)
 			x_vek[0]=0;*/
 		x_vek[1]	=	mMu[0];
