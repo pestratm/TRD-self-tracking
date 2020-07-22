@@ -935,17 +935,19 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         Inv_mass_AB = TLV_AB.M();
                         Energy_AB   = TLV_AB.Energy();
                         Momentum_AB = TLV_AB.P();
+                        // Transverse momentum of AB -> TLV_AP.Pt();
 
 
                         Double_t dot_product_dir_vertex = TV3_dirAB.Dot(TV3_dir_prim_sec_vertex);
 
 
-                        if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.4 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+                        if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                         {
                             Arr_seconary_params[0] = (Float_t)vertex_point[0];
                             Arr_seconary_params[1] = (Float_t)vertex_point[1];
                             Arr_seconary_params[2] = (Float_t)vertex_point[2];
                             Arr_seconary_params[3] = (Float_t)2.0;
+                            // pT AB
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
                             NT_secondary_vertices ->Fill(Arr_seconary_params);
                         }
