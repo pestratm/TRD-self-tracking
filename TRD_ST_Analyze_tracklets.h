@@ -96,7 +96,12 @@ private:
     Double_t EventVertexX = -999.0;
     Double_t EventVertexY = -999.0;
     Double_t EventVertexZ = -999.0;
+    Long64_t Global_Event = -999;
     TVector3 TV3_EventVertex;
+
+    vector<TVector3> vec_TV3_secondary_vertices;
+    TNtuple* NT_secondary_vertices;
+
 
 #if defined(USEEVE)
     TEveLine* TEveLine_beam_axis = NULL;
@@ -112,6 +117,7 @@ private:
     vector< vector<TEveLine*> > vec_TEveLine_tracklets;
     vector< vector<TEveLine*> > vec_TEveLine_tracklets_match;
     vector< vector<TEveLine*> > vec_TEveLine_self_matched_tracklets;
+    TEvePointSet* TEveP_TRD_det_origin;
     TEvePointSet* TEveP_offset_points;
     TEvePointSet* TEveP_TPC_at_offset_points;
     vector<TEveBox*> vec_eve_TRD_detector_box;
@@ -194,7 +200,6 @@ public:
     void Draw_TPC_track(Int_t i_track, Int_t color, Double_t line_width);
     TH1D* get_layer_radii_hist() {return h_layer_radii_det;}
     Long64_t get_N_Events() {return N_Events;}
-    void create_output_file(TString out_dir, TString out_file_name);
     void set_input_dir(TString input_dir_in) {input_dir = input_dir_in;}
     void Write();
 

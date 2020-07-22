@@ -28,6 +28,11 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     h2D_TRD_det_coordinates = (TH2D*)list_geom ->FindObject("h2D_TRD_det_coordinates");
     h_layer_radii_det = new TH1D("h_layer_radii_det","h_layer_radii_det",540,0,540);
 
+#if defined(USEEVE)
+    TEveP_TRD_det_origin = new TEvePointSet();
+#endif
+
+
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
         Double_t x_val = h2D_TRD_det_coordinates ->GetBinContent(i_det+1,1);
@@ -37,6 +42,9 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
         Double_t radius_align = TMath::Sqrt(x_val*x_val + y_val*y_val);
         h_layer_radii_det ->SetBinContent(i_det+1,radius_align);
 
+#if defined(USEEVE)
+        TEveP_TRD_det_origin ->SetPoint(i_det,x_val,y_val,z_val);
+#endif
     }
 
 
@@ -50,6 +58,9 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_Tracklet_out   = new Ali_TRD_ST_Tracklets();
     TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
+
+    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks");
+    NT_secondary_vertices ->SetAutoSave( 5000000 );
 
     Tree_TRD_ST_Event_out  = NULL;
     Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
@@ -78,6 +89,11 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
 
         vec_TEveLine_tracklets.resize(6); // layers
         vec_TEveLine_tracklets_match.resize(6); // layers
+
+        TEveP_TRD_det_origin ->SetMarkerSize(2);
+        TEveP_TRD_det_origin ->SetMarkerStyle(20);
+        TEveP_TRD_det_origin ->SetMainColor(kMagenta+1);
+        //gEve->AddElement(TEveP_TRD_det_origin);
     }
 #endif
 
@@ -230,30 +246,6 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
         vec_TH2D_AP_plot_radius[i_radius] = new TH2D(HistName.Data(),HistName.Data(),200,-2.0,2.0,400,-0.1,4.0);
     }
 
-}
-//----------------------------------------------------------------------------------------
-
-
-
-//----------------------------------------------------------------------------------------
-void Ali_TRD_ST_Analyze::create_output_file(TString out_dir, TString out_file_name)
-{
-    HistName = out_dir;
-    HistName += "/";
-    HistName += out_file_name;
-    outputfile = new TFile(HistName.Data(),"RECREATE");
-    //------------------------------------------------
-    outputfile ->cd();
-    // TRD self tracking output data containers
-    TRD_ST_Tracklet_out   = new Ali_TRD_ST_Tracklets();
-    TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
-    TRD_ST_Event_out      = new Ali_TRD_ST_Event();
-
-    Tree_TRD_ST_Event_out  = NULL;
-    Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
-    Tree_TRD_ST_Event_out  ->Branch("Tree_TRD_ST_Event_branch_out"  , "TRD_ST_Event_out", TRD_ST_Event_out );
-    Tree_TRD_ST_Event_out  ->SetAutoSave( 5000000 );
-    //------------------------------------------------
 }
 //----------------------------------------------------------------------------------------
 
@@ -813,6 +805,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 {
     Int_t flag_found_good_AP_vertex = 0;
 
+    Float_t Arr_seconary_params[4];
+
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
     Double_t helix_pointAs[3];
@@ -827,11 +821,14 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     TLorentzVector TLV_A;
     TLorentzVector TLV_B;
     TLorentzVector TLV_AB;
+    Double_t EnergyA, EnergyB, Energy_AB;
+    Double_t Inv_mass_AB, Momentum_AB;
 
     TVector3 TV3_prim_vertex(EventVertexX,EventVertexY,EventVertexZ);
     TVector3 TV3_sec_vertex;
     TVector3 TV3_dir_prim_sec_vertex;
 
+    vec_TV3_secondary_vertices.clear();
 
 #if defined(USEEVE)
     if(graphics)
@@ -889,6 +886,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                     }
 
                     TV3_sec_vertex.SetXYZ(vertex_point[0],vertex_point[1],vertex_point[2]);
+                    vec_TV3_secondary_vertices.push_back(TV3_sec_vertex);
+
                     TV3_dir_prim_sec_vertex = TV3_sec_vertex - TV3_prim_vertex;
                     if(TV3_dir_prim_sec_vertex.Mag() <= 0.0) continue;
                     TV3_dir_prim_sec_vertex *= 1.0/TV3_dir_prim_sec_vertex.Mag();
@@ -902,8 +901,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
                     //-------------------------------------------------
                     // Armenteros-Podolanski
-                    //if(radius_vertex > 250.0 && radius_vertex < 306.0)
-                    if(radius_vertex > 100.0 && radius_vertex < 200.0)
+                    if(radius_vertex > 250.0 && radius_vertex < 356.0) // TRD acceptance in R-direction
+                    //if(radius_vertex > 100.0 && radius_vertex < 240.0)
                     {
                         Double_t pTA = mHelices_kalman[i_track_A][6]; // pT
                         Double_t pzA = mHelices_kalman[i_track_A][7]; // pz
@@ -930,13 +929,34 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         Double_t AP_alpha = (projA - projB)/(projA + projB);
                         if(CA < CB) AP_alpha *= -1.0;
 
+                        TLV_A.SetXYZM(TV3_dirA.X(),TV3_dirA.Y(),TV3_dirA.Z(),0.000511);
+                        TLV_B.SetXYZM(TV3_dirB.X(),TV3_dirB.Y(),TV3_dirB.Z(),0.000511);
+                        TLV_AB = TLV_A + TLV_B;
+                        Inv_mass_AB = TLV_AB.M();
+                        Energy_AB   = TLV_AB.Energy();
+                        Momentum_AB = TLV_AB.P();
+
+
                         Double_t dot_product_dir_vertex = TV3_dirAB.Dot(TV3_dir_prim_sec_vertex);
 
 
-#if defined(USEEVE)
-                        if(AP_pT > 0.05 && AP_pT < 0.25 && CA*CB < 0.0 && pTA > 0.2 && pTB > 0.2 && dot_product_dir_vertex > 0.95)
+                        if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.4 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                         {
-                            //printf("-----> Found vertex for AP \n");
+                            Arr_seconary_params[0] = (Float_t)vertex_point[0];
+                            Arr_seconary_params[1] = (Float_t)vertex_point[1];
+                            Arr_seconary_params[2] = (Float_t)vertex_point[2];
+                            Arr_seconary_params[3] = (Float_t)2.0;
+                            //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
+                            NT_secondary_vertices ->Fill(Arr_seconary_params);
+                        }
+
+
+#if defined(USEEVE)
+                        //if(AP_pT > 0.05 && AP_pT < 0.25 && CA*CB < 0.0 && pTA > 0.2 && pTB > 0.2 && dot_product_dir_vertex > 0.95)
+                        if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.2 && pTB < 0.2 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+                        //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.3 && pTB > 0.3 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TPC photon conversion
+                        {
+                            //printf("-----> Found vertex for AP in event: %lld at radius: %4.3f, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
                             flag_found_good_AP_vertex = 1;
                             if(graphics)
                             {
@@ -984,6 +1004,33 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
     //printf("Number of secondary vertices found: %d \n",i_vertex);
 
+
+
+    //------------------------
+    Int_t N_sec_vertices = (Int_t)vec_TV3_secondary_vertices.size();
+    Double_t radius_sec_vertex;
+    TVector3 TV3_diff_sec_vertices;
+    for(Int_t i_sec_vtx_A = 0; i_sec_vtx_A < (N_sec_vertices - 1); i_sec_vtx_A++)
+    {
+        radius_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A].Perp();
+        if(radius_sec_vertex < 280.0 || radius_sec_vertex > 340.0) continue;
+
+        Int_t N_close_vertex = 0;
+        for(Int_t i_sec_vtx_B = (i_sec_vtx_A + 1); i_sec_vtx_B < N_sec_vertices; i_sec_vtx_B++)
+        {
+            TV3_diff_sec_vertices = vec_TV3_secondary_vertices[i_sec_vtx_A] - vec_TV3_secondary_vertices[i_sec_vtx_B];
+            if(TV3_diff_sec_vertices.Mag() < 5.0)
+            {
+                N_close_vertex++;
+            }
+        }
+
+        //if(N_close_vertex > 3) printf("%s ----> N_close_vertex: %d %s, event: %lld \n",KRED,N_close_vertex,KNRM,Global_Event);
+    }
+    //------------------------
+
+
+   
 #if defined(USEEVE)
     if(graphics)
     {
@@ -1109,7 +1156,8 @@ void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics)
                 Double_t matches_percent = 100.0*(Double_t)vec_N_layers_matched[index_TPC_track_matched[index_TPC_track]]/(Double_t)N_good_kalman_tracklets;
                 //printf("  --> TPC_track: %d, N_good_kalman_tracklets: %d N_matches: %d, %4.1f%% matches \n",index_TPC_track_matched[index_TPC_track],N_good_kalman_tracklets,vec_N_layers_matched[index_TPC_track_matched[index_TPC_track]],matches_percent);
 
-                if(matches_percent >= 90.0 && vec_N_layers_matched[index_TPC_track_matched[index_TPC_track]] >= 5)
+                //if(matches_percent >= 90.0 && vec_N_layers_matched[index_TPC_track_matched[index_TPC_track]] >= 5)
+                if(matches_percent >= 74.0 && vec_N_layers_matched[index_TPC_track_matched[index_TPC_track]] >= 4)
                 {
                     Int_t idx_matched_TPC_track = vec_idx_matched_TPC_track[index_TPC_track_matched[index_TPC_track]];
 
@@ -1317,6 +1365,7 @@ Int_t Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event, Int_t graphics)
     EventVertexX         = TRD_ST_Event ->getx();
     EventVertexY         = TRD_ST_Event ->gety();
     EventVertexZ         = TRD_ST_Event ->getz();
+    Global_Event         = i_event;
     TV3_EventVertex.SetXYZ(EventVertexX,EventVertexY,EventVertexZ);
     Float_t  V0MEq                = TRD_ST_Event ->getcent_class_V0MEq();
 
@@ -1537,7 +1586,8 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
         Float_t theta_track     = TLV_part.Theta();
         Float_t phi_track       = TLV_part.Phi();
 
-        if(momentum < 0.3 || dca > 2.0) continue;
+        //if(momentum < 0.3 || dca > 2.0) continue;
+        if(momentum < 0.3) continue;
 
 
         Draw_TPC_track(i_track,track_color,3);
@@ -1834,6 +1884,7 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
                 TEveP_offset_points  ->SetMarkerColor(kCyan+1);
                 offset_point++;
                 //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
+
                 {
                     gEve->AddElement(vec_TEveLine_tracklets_match[i_layer][size_tracklet]);
                 }
@@ -1991,6 +2042,7 @@ void Ali_TRD_ST_Analyze::Write()
 {
     printf("Write data to file \n");
     outputfile ->cd();
+    NT_secondary_vertices   ->AutoSave("SaveSelf");
     TH2D_AP_plot          ->Write();
     outputfile ->mkdir("AP_radii");
     outputfile ->cd("AP_radii");

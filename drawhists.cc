@@ -40,7 +40,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     input_dir  = "./Data/";
     output_dir = "./ST_out/";
 #endif
-    Int_t graphics = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t use_prim_vertex = 0; // 0 = no primary vertex, 1 = primary vertex used
     //------------------------------------
 
@@ -52,8 +52,6 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     TRD_ST_Analyze ->set_input_dir(input_dir);
     TRD_ST_Analyze ->Init_tree(input_list.Data());
 
-    //TRD_ST_Analyze ->create_output_file(out_dir,out_file_name);
-
     Long64_t N_Events = TRD_ST_Analyze ->get_N_Events();
     TH1D* h_layer_radii = TRD_ST_Analyze ->get_layer_radii_hist();
     //Long64_t event = 10;
@@ -61,8 +59,11 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     TRD_Kalman_Trackfinder kalid;
     kalid.set_layer_radii_hist(h_layer_radii);
 
-    //for (Long64_t event = 0; event < N_Events; event++) // 2,3
-    for (Long64_t event = 88; event < 89; event++) // 2,3   192
+    // photon events: 88
+    // nuclear interaction event: 158
+
+    for (Long64_t event = 0; event < N_Events; event++) // 2,3
+    //for (Long64_t event = 0; event < 1000; event++) // 2,3   192
     {
 
         if (event != 0  &&  event % 50 == 0)
@@ -100,12 +101,12 @@ void drawhists(TString input_list = "List_data_ADC.txt")
 
         //if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed); // -1 -> all kalman tracks drawn
 
-        //TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics);
-        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(1);
+        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics);
+        //TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(1);
 
 #endif
         Int_t found_good_AP_vertex = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics); // 0 = no graphics
-        if(found_good_AP_vertex) printf(" ----> Good AP vertex found in event: %lld \n",event);
+        //if(found_good_AP_vertex) printf(" ----> Good AP vertex found in event: %lld \n",event);
 
         //vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks=kalid.found_tracks;
         //vector<Double_t> track_accuracy;
