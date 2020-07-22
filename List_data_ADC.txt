@@ -1,6 +1,25 @@
-<<<<<<< HEAD
+Split_ST_V7B_1-5.txt_out.root
+Split_ST_V7B_101-105.txt_out.root
+Split_ST_V7B_106-110.txt_out.root
+Split_ST_V7B_11-15.txt_out.root
+Split_ST_V7B_111-115.txt_out.root
+Split_ST_V7B_116-120.txt_out.root
+Split_ST_V7B_121-125.txt_out.root
+Split_ST_V7B_126-130.txt_out.root
+Split_ST_V7B_131-135.txt_out.root
+Split_ST_V7B_136-140.txt_out.root
+Split_ST_V7B_141-145.txt_out.root
+Split_ST_V7B_146-150.txt_out.root
+Split_ST_V7B_151-155.txt_out.root
+Split_ST_V7B_156-160.txt_out.root
+Split_ST_V7B_16-20.txt_out.root
+Split_ST_V7B_161-165.txt_out.root
+Split_ST_V7B_166-170.txt_out.root
+Split_ST_V7B_171-175.txt_out.root
+Split_ST_V7B_176-180.txt_out.root
+Split_ST_V7B_181-185.txt_out.root
+Split_ST_V7B_186-190.txt_out.root
+Split_ST_V7B_191-195.txt_out.root
+Split_ST_V7B_196-200.txt_out.root
+Split_ST_V7_191-195.txt_out.root
 Single.txt_out.root
-
-=======
-TRD_Calib_ADC_check.root
->>>>>>> ea2fbd66992f6ea7d5f13b33b6b4fcfaf5b22db8
