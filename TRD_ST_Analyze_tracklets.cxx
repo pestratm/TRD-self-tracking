@@ -59,7 +59,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
 
-    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks");
+    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 
     Tree_TRD_ST_Event_out  = NULL;
@@ -805,7 +805,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 {
     Int_t flag_found_good_AP_vertex = 0;
 
-    Float_t Arr_seconary_params[4];
+    Float_t Arr_seconary_params[9];
 
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
@@ -822,7 +822,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     TLorentzVector TLV_B;
     TLorentzVector TLV_AB;
     Double_t EnergyA, EnergyB, Energy_AB;
-    Double_t Inv_mass_AB, Momentum_AB;
+    Double_t Inv_mass_AB, Momentum_AB, PT_AB;
 
     TVector3 TV3_prim_vertex(EventVertexX,EventVertexY,EventVertexZ);
     TVector3 TV3_sec_vertex;
@@ -935,6 +935,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         Inv_mass_AB = TLV_AB.M();
                         Energy_AB   = TLV_AB.Energy();
                         Momentum_AB = TLV_AB.P();
+						pT_AB 		= TLV_AB.Pt();
                         // Transverse momentum of AB -> TLV_AP.Pt();
 
 
@@ -947,6 +948,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             Arr_seconary_params[1] = (Float_t)vertex_point[1];
                             Arr_seconary_params[2] = (Float_t)vertex_point[2];
                             Arr_seconary_params[3] = (Float_t)2.0;
+							Arr_seconary_params[4] = (Float_t)pT_AB;
+							Arr_seconary_params[5] = (Float_t)pTA*TMath::Sign(1,CA);
+							Arr_seconary_params[6] = (Float_t)pTB*TMath::Sign(1,CB);
+							Arr_seconary_params[7] = (Float_t)AP_pT;
+							Arr_seconary_params[8] = (Float_t)AP_alpha;
+							
                             // pT AB
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
                             NT_secondary_vertices ->Fill(Arr_seconary_params);
