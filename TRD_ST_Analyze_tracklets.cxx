@@ -61,7 +61,10 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
 
     NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
-
+	
+	NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices");
+	NT_secondary_vertices ->SetAutoSave( 5000000 );
+		
     Tree_TRD_ST_Event_out  = NULL;
     Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
     Tree_TRD_ST_Event_out  ->Branch("Tree_TRD_ST_Event_branch_out"  , "TRD_ST_Event_out", TRD_ST_Event_out );
@@ -822,7 +825,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     TLorentzVector TLV_B;
     TLorentzVector TLV_AB;
     Double_t EnergyA, EnergyB, Energy_AB;
-    Double_t Inv_mass_AB, Momentum_AB, PT_AB;
+    Double_t Inv_mass_AB, Momentum_AB, pT_AB;
 
     TVector3 TV3_prim_vertex(EventVertexX,EventVertexY,EventVertexZ);
     TVector3 TV3_sec_vertex;
@@ -874,7 +877,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             }
             fHelixABdca(vec_helices[i_track_A],vec_helices[i_track_B],pathA,pathB,dcaAB,pathA_est,pathB_est);
             //printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
-            if(dcaAB < 10.0)
+            if(dcaAB < 5.0)
             {
                 //if(i_comb == 38)
                 {
@@ -1019,21 +1022,38 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     Int_t N_sec_vertices = (Int_t)vec_TV3_secondary_vertices.size();
     Double_t radius_sec_vertex;
     TVector3 TV3_diff_sec_vertices;
+	TVector3 TV3_avg_sec_vertex;
+	Float_t Arr_cluster_params[4];
+
+	Bool_t visited[N_sec_vertices];
+	for(Int_t i_vis=0;i_vis<N_sec_vertices;i_vis++) visited[i_vis]=0;
+	
     for(Int_t i_sec_vtx_A = 0; i_sec_vtx_A < (N_sec_vertices - 1); i_sec_vtx_A++)
     {
         radius_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A].Perp();
-        if(radius_sec_vertex < 280.0 || radius_sec_vertex > 340.0) continue;
-
+        if(radius_sec_vertex < 240.0 || radius_sec_vertex > 370.0) continue;
+		if (visited[i_sec_vtx_A]) continue;
         Int_t N_close_vertex = 0;
+		TV3_avg_sec_vertex	 = vec_TV3_secondary_vertices[i_sec_vtx_A]*1;
         for(Int_t i_sec_vtx_B = (i_sec_vtx_A + 1); i_sec_vtx_B < N_sec_vertices; i_sec_vtx_B++)
         {
             TV3_diff_sec_vertices = vec_TV3_secondary_vertices[i_sec_vtx_A] - vec_TV3_secondary_vertices[i_sec_vtx_B];
-            if(TV3_diff_sec_vertices.Mag() < 5.0)
+            if(TV3_diff_sec_vertices.Mag() < 3.0)
             {
+				TV3_avg_sec_vertex+=vec_TV3_secondary_vertices[i_sec_vtx_B];
                 N_close_vertex++;
+				visited[i_sec_vtx_B]=1;
             }
         }
-
+		if(N_close_vertex > 3)
+		{
+			Arr_cluster_params[0]	= 	TV3_avg_sec_vertex[0]/	N_close_vertex;
+			Arr_cluster_params[1]	= 	TV3_avg_sec_vertex[1]/	N_close_vertex;
+			Arr_cluster_params[2]	= 	TV3_avg_sec_vertex[2]/	N_close_vertex;
+			Arr_cluster_params[3]	= 	N_close_vertex;
+			
+			NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
+		}	
         //if(N_close_vertex > 3) printf("%s ----> N_close_vertex: %d %s, event: %lld \n",KRED,N_close_vertex,KNRM,Global_Event);
     }
     //------------------------
