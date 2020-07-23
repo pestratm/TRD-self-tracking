@@ -3,8 +3,8 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 //#define ENV_PI
-#define ENV_ALEX
-
+//#define ENV_ALEX
+#define ENV_PI_SVEN
 void drawhists(TString input_list = "List_data_ADC.txt")
 {
 
@@ -34,6 +34,11 @@ void drawhists(TString input_list = "List_data_ADC.txt")
 #if defined(ENV_PI)
     input_dir  = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/";
     output_dir = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/ST_out/";
+#endif
+
+#if defined(ENV_PI_SVEN)
+    input_dir  = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/";
+    output_dir = "/misc/alidata120/alice_u/hoppner/TRD_self_tracking/ST_out/";
 #endif
 
 #if defined(ENV_ALEX)
