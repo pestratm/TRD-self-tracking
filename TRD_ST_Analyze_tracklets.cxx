@@ -63,7 +63,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 	
 	NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices");
-	NT_secondary_vertices ->SetAutoSave( 5000000 );
+	NT_secondary_vertex_cluster ->SetAutoSave( 5000000 );
 		
     Tree_TRD_ST_Event_out  = NULL;
     Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
@@ -1047,10 +1047,10 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         }
 		if(N_close_vertex > 3)
 		{
-			Arr_cluster_params[0]	= 	TV3_avg_sec_vertex[0]/	N_close_vertex;
-			Arr_cluster_params[1]	= 	TV3_avg_sec_vertex[1]/	N_close_vertex;
-			Arr_cluster_params[2]	= 	TV3_avg_sec_vertex[2]/	N_close_vertex;
-			Arr_cluster_params[3]	= 	N_close_vertex;
+			Arr_cluster_params[0]	= (Float_t)	(TV3_avg_sec_vertex[0]/	(Float_t)N_close_vertex);
+			Arr_cluster_params[1]	= (Float_t)	(TV3_avg_sec_vertex[1]/	(Float_t)N_close_vertex);
+			Arr_cluster_params[2]	= (Float_t)	(TV3_avg_sec_vertex[2]/	(Float_t)N_close_vertex);
+			Arr_cluster_params[3]	= (Float_t)	N_close_vertex;
 			
 			NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
 		}	
