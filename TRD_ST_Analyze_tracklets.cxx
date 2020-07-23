@@ -2072,6 +2072,7 @@ void Ali_TRD_ST_Analyze::Write()
     printf("Write data to file \n");
     outputfile ->cd();
     NT_secondary_vertices   ->AutoSave("SaveSelf");
+    NT_secondary_vertex_cluster   ->AutoSave("SaveSelf");
     TH2D_AP_plot          ->Write();
     outputfile ->mkdir("AP_radii");
     outputfile ->cd("AP_radii");
