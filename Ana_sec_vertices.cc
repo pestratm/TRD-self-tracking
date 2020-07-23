@@ -172,20 +172,34 @@ void Ana_sec_vertices()
 
     //--------------------------
     // Open Ntuple
-    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_sec_ver_NT.root");
+    TFile* inputfile = TFile::Open("./ST_out/merge_hoppner.root");
     TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertices");
-    Float_t x_sec,y_sec,z_sec,ntracks_sec;
+    Float_t x_sec,y_sec,z_sec,ntracks_sec,pT_AB_sec;
     NT_sec_vertices ->SetBranchAddress("x",&x_sec);
     NT_sec_vertices ->SetBranchAddress("y",&y_sec);
     NT_sec_vertices ->SetBranchAddress("z",&z_sec);
     NT_sec_vertices ->SetBranchAddress("ntracks",&ntracks_sec);
+	NT_sec_vertices ->SetBranchAddress("pT_AB",&pT_AB_sec);
+	
+	TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertex_cluster");
+    Float_t x_clus,y_clus,z_clus,ntracks_clus;
+    NT_sec_vertices ->SetBranchAddress("x",&x_clus);
+    NT_sec_vertices ->SetBranchAddress("y",&y_clus);
+    NT_sec_vertices ->SetBranchAddress("z",&z_clus);
+    NT_sec_vertices ->SetBranchAddress("nvertices",&ntracks_clus);
+	
     //--------------------------
 
-
+	Int_t bin_nbr=100;
     TH2D* h2d_vertex_pos_xy = new TH2D("h2d_vertex_pos_xy","h2d_vertex_pos_xy",500,-400,400,500,-400,400);
+    TH1D* h1d_vertex_pos_r = new TH1D("h1d_vertex_pos_r","h1d_vertex_pos_r",bin_nbr,200,400);
+    TH1D* h1d_vertex_mom_pT = new TH1D("h1d_vertex_mom_pT","h1d_vertex_mom_pT",bin_nbr,0,1);
+    TH1D* h1d_vertex_mom_pT_exp = new TH1D("h1d_vertex_mom_pT_exp","h1d_vertex_mom_pT_exp",bin_nbr,0,1);
     TEvePointSet* TEveP_offset_points = new TEvePointSet();
 
-
+	TH2D* h2d_cluster_pos_xy = new TH2D("h2d_cluster_pos_xy","h2d_cluster_pos_xy",500,-400,400,500,-400,400);
+    TH1D* h1d_cluster_pos_r = new TH1D("h1d_cluster_pos_r","h1d_cluster_pos_r",bin_nbr,200,400);
+    
     //--------------------------
     // Loop over data
     Long64_t N_entries = NT_sec_vertices->GetEntries();
@@ -201,12 +215,24 @@ void Ana_sec_vertices()
 
         NT_sec_vertices ->GetEntry(i_entry);
         h2d_vertex_pos_xy ->Fill(x_sec,y_sec);
+		h1d_vertex_pos_r  ->Fill(TMath::Sqrt(x_sec*x_sec +y_sec*y_sec));
+		h1d_vertex_mom_pT ->Fill(pT_AB_sec); 
+		
+		h2d_cluster_pos_xy->Fill(x_clus,y_clus);
+		h1d_cluster_pos_r ->Fill(TMath::Sqrt(x_clus*x_clus +y_clus*y_clus));
+		//cout<<"filled:"<<TMath::Sqrt(x_sec*x_sec +y_sec*y_sec)<<endl;
         TEveP_offset_points  ->SetPoint(i_entry,x_sec,y_sec,z_sec);
 
         //printf("i_entry: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_entry,x_sec,y_sec,z_sec);
     }
     //--------------------------
-
+	for(Int_t i_bin=0; i_bin<bin_nbr; i_bin++)
+	{
+		Double_t binContent = h1d_vertex_mom_pT->GetBinContent(i_bin);
+		Double_t binCenter = h1d_vertex_mom_pT->GetBinCenter(i_bin);
+		h1d_vertex_mom_pT_exp->SetBinContent(i_bin,binContent/(binCenter));
+		
+	}
 
 
     //--------------------------
@@ -242,8 +268,74 @@ void Ana_sec_vertices()
         }
     }
     //--------------------------
+	
+	//--------------------------
+    // Plot y vs x for cluster
+    h2d_cluster_pos_xy ->GetXaxis()->SetTitle("x (cm)");
+    h2d_cluster_pos_xy ->GetYaxis()->SetTitle("y (cm)");
+    TCanvas* can_cluster_pos_xy = Draw_2D_histo_and_canvas(h2d_cluster_pos_xy,"can_cluster_pos_xy",1010,820,0.0,-1.0,"colz"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
+    can_cluster_pos_xy->cd()->SetRightMargin(0.20);
+    can_cluster_pos_xy->cd()->SetTopMargin(0.08);
+    can_cluster_pos_xy->cd()->SetLogz(0);
+    can_cluster_pos_xy->cd();
+
+    for(Int_t i_sector = 0; i_sector < 18; i_sector++)
+    {
+        vec_PL_TRD_det_2D[i_sector].resize(6); // layers
+        for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+        {
+            vec_PL_TRD_det_2D[i_sector][i_layer] ->SetLineColor(kBlack);
+            vec_PL_TRD_det_2D[i_sector][i_layer] ->SetLineWidth(1);
+            vec_PL_TRD_det_2D[i_sector][i_layer] ->SetLineStyle(1);
+            vec_PL_TRD_det_2D[i_sector][i_layer] ->Draw("l");
+        }
+    }
+    //--------------------------
 
 
-
+	
+    //--------------------------
+    // Plot r
+    h1d_cluster_pos_r ->GetXaxis()->SetTitle("r (cm)");
+    h1d_cluster_pos_r ->GetYaxis()->SetTitle("counts");
+    TCanvas* can_cluster_pos_r = Draw_1D_histo_and_canvas(h1d_cluster_pos_r,"can_cluster_pos_r",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
+    can_cluster_pos_r->cd()->SetRightMargin(0.20);
+    can_cluster_pos_r->cd()->SetTopMargin(0.08);
+    //can_vertex_pos_r->cd()->SetLogz(0);
+    can_cluster_pos_r->cd();
+	//----------------------------
+	
+	//--------------------------
+    // Plot r cluster
+    h1d_vertex_pos_r ->GetXaxis()->SetTitle("r (cm)");
+    h1d_vertex_pos_r ->GetYaxis()->SetTitle("counts");
+    TCanvas* can_vertex_pos_r = Draw_1D_histo_and_canvas(h1d_vertex_pos_r,"can_vertex_pos_r",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
+    can_vertex_pos_r->cd()->SetRightMargin(0.20);
+    can_vertex_pos_r->cd()->SetTopMargin(0.08);
+    //can_vertex_pos_r->cd()->SetLogz(0);
+    can_vertex_pos_r->cd();
+	//----------------------------
+	
+	//-------------------------------	
+    // Plot pT
+    h1d_vertex_mom_pT ->GetXaxis()->SetTitle("pT (GeV/c)");
+    h1d_vertex_mom_pT ->GetYaxis()->SetTitle("counts");
+    TCanvas* can_vertex_mom_pT = Draw_1D_histo_and_canvas(h1d_vertex_mom_pT,"can_vertex_mom_pT",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
+    can_vertex_mom_pT->cd()->SetRightMargin(0.20);
+    can_vertex_mom_pT->cd()->SetTopMargin(0.08);
+    //can_vertex_pos_r->cd()->SetLogz(0);
+    can_vertex_mom_pT->cd();
+	//-------------------
+	
+	//-----------------------------
+	// Plot pT_exp
+    h1d_vertex_mom_pT_exp ->GetXaxis()->SetTitle("pT (GeV/c)");
+    h1d_vertex_mom_pT_exp ->GetYaxis()->SetTitle("counts");
+    TCanvas* can_vertex_mom_pT_exp = Draw_1D_histo_and_canvas(h1d_vertex_mom_pT_exp,"can_vertex_mom_pT_exp",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
+    can_vertex_mom_pT_exp->cd()->SetRightMargin(0.20);
+    can_vertex_mom_pT_exp->cd()->SetTopMargin(0.08);
+    //can_vertex_pos_r->cd()->SetLogz(0);
+    can_vertex_mom_pT_exp->cd();
+	//-----------------------------------
 
 }

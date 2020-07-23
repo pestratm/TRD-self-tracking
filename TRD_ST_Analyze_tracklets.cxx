@@ -1033,7 +1033,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         radius_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A].Perp();
         if(radius_sec_vertex < 240.0 || radius_sec_vertex > 370.0) continue;
 		if (visited[i_sec_vtx_A]) continue;
-        Int_t N_close_vertex = 0;
+        Int_t N_close_vertex = 1;
 		TV3_avg_sec_vertex	 = vec_TV3_secondary_vertices[i_sec_vtx_A]*1;
         for(Int_t i_sec_vtx_B = (i_sec_vtx_A + 1); i_sec_vtx_B < N_sec_vertices; i_sec_vtx_B++)
         {
