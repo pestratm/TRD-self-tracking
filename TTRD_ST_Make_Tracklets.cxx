@@ -1112,7 +1112,8 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             TVector3 vec_AB[2];
             vec_AB[0] = TV3_base_fit_t0;
             vec_AB[1] = TV3_base_fit_t0 + TV3_dir_fit;
-            if(vec_AB[1].Mag() < vec_AB[0].Mag())
+            //if(vec_AB[1].Mag() > vec_AB[0].Mag())  // changed sign -> correct physical direction, pointing inwards
+            if(vec_AB[1].Mag() < vec_AB[0].Mag())  // changed sign -> "uncorrect" direction, pointing outwards
             {
                 TV3_dir_fit *= -1.0;
                 vec_AB[1] = TV3_base_fit_t0 + TV3_dir_fit;
