@@ -897,6 +897,17 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
                     Double_t radius_vertex = TMath::Sqrt(vertex_point[0]*vertex_point[0] + vertex_point[1]*vertex_point[1]);
                     Int_t i_radius = (Int_t)(radius_vertex/Delta_AP_radius);
+
+
+                    Double_t pTA = mHelices_kalman[i_track_A][6]; // pT
+                    Double_t pzA = mHelices_kalman[i_track_A][7]; // pz
+                    Double_t pA  = TMath::Sqrt(pTA*pTA + pzA*pzA); // p
+                    Double_t pTB = mHelices_kalman[i_track_B][6]; // pT
+                    Double_t pzB = mHelices_kalman[i_track_B][7]; // pz
+                    Double_t pB  = TMath::Sqrt(pTB*pTB + pzB*pzB); // p
+                    Double_t CA  = mHelices_kalman[i_track_A][4]; // curvature
+                    Double_t CB  = mHelices_kalman[i_track_B][4]; // curvature
+
                     //if(radius_vertex > 240.0 && radius_vertex < 360.0)
 #if defined(USEEVE)
                     //if(graphics) TEveP_sec_vertices ->SetPoint(i_vertex,vertex_point[0],vertex_point[1],vertex_point[2]);
@@ -907,15 +918,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                     if(radius_vertex > 250.0 && radius_vertex < 356.0) // TRD acceptance in R-direction
                     //if(radius_vertex > 100.0 && radius_vertex < 240.0)
                     {
-                        Double_t pTA = mHelices_kalman[i_track_A][6]; // pT
-                        Double_t pzA = mHelices_kalman[i_track_A][7]; // pz
-                        Double_t pA  = TMath::Sqrt(pTA*pTA + pzA*pzA); // p
-                        Double_t pTB = mHelices_kalman[i_track_B][6]; // pT
-                        Double_t pzB = mHelices_kalman[i_track_B][7]; // pz
-                        Double_t pB  = TMath::Sqrt(pTB*pTB + pzB*pzB); // p
-                        Double_t CA  = mHelices_kalman[i_track_A][4]; // curvature
-                        Double_t CB  = mHelices_kalman[i_track_B][4]; // curvature
-
                         vec_helices[i_track_A] ->Evaluate(pathA+0.1,helix_pointAs);
                         vec_helices[i_track_B] ->Evaluate(pathB+0.1,helix_pointBs);
                         TV3_dirA.SetXYZ(helix_pointAs[0] - helix_pointA[0],helix_pointAs[1] - helix_pointA[1],helix_pointAs[2] - helix_pointA[2]);
@@ -1022,44 +1024,44 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     Int_t N_sec_vertices = (Int_t)vec_TV3_secondary_vertices.size();
     Double_t radius_sec_vertex;
     TVector3 TV3_diff_sec_vertices;
-	TVector3 TV3_avg_sec_vertex;
-	Float_t Arr_cluster_params[4];
+    TVector3 TV3_avg_sec_vertex;
+    Float_t Arr_cluster_params[4];
 
-	Bool_t visited[N_sec_vertices];
-	for(Int_t i_vis=0;i_vis<N_sec_vertices;i_vis++) visited[i_vis]=0;
-	
+    Bool_t visited[N_sec_vertices];
+    for(Int_t i_vis=0;i_vis<N_sec_vertices;i_vis++) visited[i_vis]=0;
+
     for(Int_t i_sec_vtx_A = 0; i_sec_vtx_A < (N_sec_vertices - 1); i_sec_vtx_A++)
     {
         radius_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A].Perp();
         if(radius_sec_vertex < 240.0 || radius_sec_vertex > 370.0) continue;
-		if (visited[i_sec_vtx_A]) continue;
+        if (visited[i_sec_vtx_A]) continue;
         Int_t N_close_vertex = 1;
-		TV3_avg_sec_vertex	 = vec_TV3_secondary_vertices[i_sec_vtx_A]*1;
+        TV3_avg_sec_vertex	 = vec_TV3_secondary_vertices[i_sec_vtx_A]*1;
         for(Int_t i_sec_vtx_B = (i_sec_vtx_A + 1); i_sec_vtx_B < N_sec_vertices; i_sec_vtx_B++)
         {
             TV3_diff_sec_vertices = vec_TV3_secondary_vertices[i_sec_vtx_A] - vec_TV3_secondary_vertices[i_sec_vtx_B];
             if(TV3_diff_sec_vertices.Mag() < 3.0)
             {
-				TV3_avg_sec_vertex+=vec_TV3_secondary_vertices[i_sec_vtx_B];
+                TV3_avg_sec_vertex+=vec_TV3_secondary_vertices[i_sec_vtx_B];
                 N_close_vertex++;
-				visited[i_sec_vtx_B]=1;
+                visited[i_sec_vtx_B]=1;
             }
         }
-		if(N_close_vertex > 3)
-		{
-			Arr_cluster_params[0]	= (Float_t)	(TV3_avg_sec_vertex[0]/	(Float_t)N_close_vertex);
-			Arr_cluster_params[1]	= (Float_t)	(TV3_avg_sec_vertex[1]/	(Float_t)N_close_vertex);
-			Arr_cluster_params[2]	= (Float_t)	(TV3_avg_sec_vertex[2]/	(Float_t)N_close_vertex);
-			Arr_cluster_params[3]	= (Float_t)	N_close_vertex;
-			
-			NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
-		}	
+        if(N_close_vertex > 3)
+        {
+            Arr_cluster_params[0]	= (Float_t)	(TV3_avg_sec_vertex[0]/	(Float_t)N_close_vertex);
+            Arr_cluster_params[1]	= (Float_t)	(TV3_avg_sec_vertex[1]/	(Float_t)N_close_vertex);
+            Arr_cluster_params[2]	= (Float_t)	(TV3_avg_sec_vertex[2]/	(Float_t)N_close_vertex);
+            Arr_cluster_params[3]	= (Float_t)	N_close_vertex;
+
+            NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
+        }
         //if(N_close_vertex > 3) printf("%s ----> N_close_vertex: %d %s, event: %lld \n",KRED,N_close_vertex,KNRM,Global_Event);
     }
     //------------------------
 
 
-   
+
 #if defined(USEEVE)
     if(graphics)
     {
@@ -2071,7 +2073,7 @@ void Ali_TRD_ST_Analyze::Write()
 {
     printf("Write data to file \n");
     outputfile ->cd();
-    NT_secondary_vertices   ->AutoSave("SaveSelf");
+    NT_secondary_vertices         ->AutoSave("SaveSelf");
     NT_secondary_vertex_cluster   ->AutoSave("SaveSelf");
     TH2D_AP_plot          ->Write();
     outputfile ->mkdir("AP_radii");

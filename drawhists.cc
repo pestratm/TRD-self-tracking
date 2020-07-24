@@ -2,9 +2,9 @@
 R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
-//#define ENV_PI
+#define ENV_PI
 //#define ENV_ALEX
-#define ENV_PI_SVEN
+//#define ENV_PI_SVEN
 void drawhists(TString input_list = "List_data_ADC.txt")
 {
 
