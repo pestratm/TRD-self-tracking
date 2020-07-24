@@ -186,7 +186,7 @@ void Ana_sec_vertices()
     //--------------------------
     // Open Ntuple
     //TFile* inputfile = TFile::Open("./ST_out/Merge_ST_hoppner_V2.root");
-    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABC_V3.root");
+    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABC_V4.root");
     TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertices");
     Float_t x_sec,y_sec,z_sec,ntracks_sec,pT_AB_sec;
     NT_sec_vertices ->SetBranchAddress("x",&x_sec);
@@ -196,11 +196,12 @@ void Ana_sec_vertices()
     NT_sec_vertices ->SetBranchAddress("pT_AB",&pT_AB_sec);
 
     TNtuple* NT_sec_cluster = (TNtuple*)inputfile->Get("NT_secondary_vertex_cluster");
-    Float_t x_clus,y_clus,z_clus,ntracks_clus;
+    Float_t x_clus,y_clus,z_clus,ntracks_clus,dcaTPC_clus;
     NT_sec_cluster ->SetBranchAddress("x",&x_clus);
     NT_sec_cluster ->SetBranchAddress("y",&y_clus);
     NT_sec_cluster ->SetBranchAddress("z",&z_clus);
     NT_sec_cluster ->SetBranchAddress("nvertices",&ntracks_clus);
+    NT_sec_cluster ->SetBranchAddress("dcaTPC",&dcaTPC_clus);
 
     //--------------------------
 
@@ -256,6 +257,7 @@ void Ana_sec_vertices()
     {
         NT_sec_cluster	 ->GetEntry(i_entry);
         //if(ntracks_clus < 7) continue;
+        if(dcaTPC_clus > 3.0) continue;
         h2d_cluster_pos_xy->Fill(x_clus,y_clus);
         h1d_cluster_pos_r ->Fill(TMath::Sqrt(x_clus*x_clus + y_clus*y_clus));
     }
