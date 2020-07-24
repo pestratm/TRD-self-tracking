@@ -62,7 +62,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 	
-    NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices");
+    NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC");
     NT_secondary_vertex_cluster ->SetAutoSave( 5000000 );
 		
     Tree_TRD_ST_Event_out  = NULL;
@@ -831,6 +831,9 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     TVector3 TV3_sec_vertex;
     TVector3 TV3_dir_prim_sec_vertex;
 
+    vector< vector<Int_t> > vec_idx_kalman_sec_vert;
+    vec_idx_kalman_sec_vert.clear();
+    vec_idx_kalman_sec_vert.resize(2);
     vec_TV3_secondary_vertices.clear();
 
 #if defined(USEEVE)
@@ -891,6 +894,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
                     TV3_sec_vertex.SetXYZ(vertex_point[0],vertex_point[1],vertex_point[2]);
                     vec_TV3_secondary_vertices.push_back(TV3_sec_vertex);
+                    vec_idx_kalman_sec_vert[0].push_back(i_track_A);
+                    vec_idx_kalman_sec_vert[1].push_back(i_track_B);
 
                     TV3_dir_prim_sec_vertex = TV3_sec_vertex - TV3_prim_vertex;
                     if(TV3_dir_prim_sec_vertex.Mag() <= 0.0) continue;
@@ -917,7 +922,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                     //-------------------------------------------------
                     // Armenteros-Podolanski
                     if(radius_vertex > 250.0 && radius_vertex < 356.0) // TRD acceptance in R-direction
-                    //if(radius_vertex > 100.0 && radius_vertex < 240.0)
+                        //if(radius_vertex > 100.0 && radius_vertex < 240.0)
                     {
                         vec_helices[i_track_A] ->Evaluate(pathA+0.1,helix_pointAs);
                         vec_helices[i_track_B] ->Evaluate(pathB+0.1,helix_pointBs);
@@ -941,7 +946,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         Inv_mass_AB = TLV_AB.M();
                         Energy_AB   = TLV_AB.Energy();
                         Momentum_AB = TLV_AB.P();
-						pT_AB 		= TLV_AB.Pt();
+                        pT_AB 	    = TLV_AB.Pt();
                         // Transverse momentum of AB -> TLV_AP.Pt();
 
 
@@ -954,12 +959,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             Arr_seconary_params[1] = (Float_t)vertex_point[1];
                             Arr_seconary_params[2] = (Float_t)vertex_point[2];
                             Arr_seconary_params[3] = (Float_t)2.0;
-							Arr_seconary_params[4] = (Float_t)pT_AB;
-							Arr_seconary_params[5] = (Float_t)pTA*TMath::Sign(1,CA);
-							Arr_seconary_params[6] = (Float_t)pTB*TMath::Sign(1,CB);
-							Arr_seconary_params[7] = (Float_t)AP_pT;
-							Arr_seconary_params[8] = (Float_t)AP_alpha;
-							
+                            Arr_seconary_params[4] = (Float_t)pT_AB;
+                            Arr_seconary_params[5] = (Float_t)pTA*TMath::Sign(1,CA);
+                            Arr_seconary_params[6] = (Float_t)pTB*TMath::Sign(1,CB);
+                            Arr_seconary_params[7] = (Float_t)AP_pT;
+                            Arr_seconary_params[8] = (Float_t)AP_alpha;
+
                             // pT AB
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
                             NT_secondary_vertices ->Fill(Arr_seconary_params);
@@ -969,7 +974,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 #if defined(USEEVE)
                         //if(AP_pT > 0.05 && AP_pT < 0.25 && CA*CB < 0.0 && pTA > 0.2 && pTB > 0.2 && dot_product_dir_vertex > 0.95)
                         if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.2 && pTB < 0.2 && dot_product_dir_vertex > 0.9) // TRD photon conversion
-                        //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.3 && pTB > 0.3 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TPC photon conversion
+                            //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.3 && pTB > 0.3 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TPC photon conversion
                         {
                             //printf("-----> Found vertex for AP in event: %lld at radius: %4.3f, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
                             flag_found_good_AP_vertex = 1;
@@ -1026,10 +1031,10 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     Double_t radius_sec_vertex;
     TVector3 TV3_diff_sec_vertices;
     TVector3 TV3_avg_sec_vertex;
-    Float_t Arr_cluster_params[4];
+    Float_t Arr_cluster_params[5];
 
     Bool_t visited[N_sec_vertices];
-    for(Int_t i_vis=0;i_vis<N_sec_vertices;i_vis++) visited[i_vis]=0;
+    for(Int_t i_vis = 0; i_vis < N_sec_vertices; i_vis++) visited[i_vis] = 0;
 
     Int_t i_vertex_nucl_int = 0;
     for(Int_t i_sec_vtx_A = 0; i_sec_vtx_A < (N_sec_vertices - 1); i_sec_vtx_A++)
@@ -1039,38 +1044,82 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         if (visited[i_sec_vtx_A]) continue;
         Int_t N_close_vertex = 1;
         TV3_avg_sec_vertex	 = vec_TV3_secondary_vertices[i_sec_vtx_A]*1;
+        vector<Int_t> idx_acc_vtx_B;
+        idx_acc_vtx_B.clear();
         for(Int_t i_sec_vtx_B = (i_sec_vtx_A + 1); i_sec_vtx_B < N_sec_vertices; i_sec_vtx_B++)
         {
             TV3_diff_sec_vertices = vec_TV3_secondary_vertices[i_sec_vtx_A] - vec_TV3_secondary_vertices[i_sec_vtx_B];
             if(TV3_diff_sec_vertices.Mag() < 3.0)
             {
-                TV3_avg_sec_vertex+=vec_TV3_secondary_vertices[i_sec_vtx_B];
+                TV3_avg_sec_vertex += vec_TV3_secondary_vertices[i_sec_vtx_B];
                 N_close_vertex++;
-                visited[i_sec_vtx_B]=1;
+                visited[i_sec_vtx_B] = 1;
+                idx_acc_vtx_B.push_back(i_sec_vtx_B);
             }
         }
 
-
         if(N_close_vertex > 2)
         {
+
+            // Determine TPC track(s) which are close to nuclear interaction vertex
+            Float_t pathA_dca = -1.0;
+            Float_t dcaAB_dca = -1.0;
+            Float_t dcaAB_min = 999.0;
+            UShort_t NumTracks = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
+            Int_t flag_close_TPC_track = 0;
+            Int_t idx_close_TPC_track = -1;
+            for(Int_t i_track = 0; i_track < NumTracks; i_track++)
+            {
+                TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
+                TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
+                fHelixAtoPointdca(TV3_avg_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
+                if(dcaAB_dca < dcaAB_min) dcaAB_min = dcaAB_dca;
+                if(dcaAB_dca < 3.0)
+                {
+                    idx_close_TPC_track = i_track;
+                    flag_close_TPC_track = 1;
+                }
+            }
+
             TV3_avg_sec_vertex *= 1.0/(Float_t)(N_close_vertex);
             Arr_cluster_params[0]	= (Float_t)TV3_avg_sec_vertex[0];
             Arr_cluster_params[1]	= (Float_t)TV3_avg_sec_vertex[1];
             Arr_cluster_params[2]	= (Float_t)TV3_avg_sec_vertex[2];
             Arr_cluster_params[3]	= (Float_t)N_close_vertex;
+            Arr_cluster_params[4]	= (Float_t)dcaAB_min;
 
             NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
 
+
+            if(TV3_avg_sec_vertex.Perp() > 364.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int);
+
+
 #if defined(USEEVE)
-            TEveP_nucl_int_vertices ->SetPoint(i_vertex_nucl_int,TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2]);
+            if(graphics)
+            {
+                TEveP_nucl_int_vertices ->SetPoint(i_vertex_nucl_int,TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2]);
+
+                // Draw kalman tracks which contributed to nuclear interaction vertex
+                Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][i_sec_vtx_A],kGreen+1);
+                Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][i_sec_vtx_A],kGreen+1);
+                for(Int_t idx_B = 0; idx_B < (Int_t)idx_acc_vtx_B.size(); idx_B++)
+                {
+                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]],kMagenta+1);
+                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]],kMagenta+1);
+                }
+                if(idx_close_TPC_track >= 0) Draw_TPC_track(idx_close_TPC_track,kAzure-2,3);
+
+                //Float_t pathA_dca, dcaAB_dca;
+                //fHelixAtoPointdca(TV3_EventVertex,vec_helices[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
+                //Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3);
+            }
 #endif
-            if(TV3_avg_sec_vertex.Perp() > 350.0) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event);
             i_vertex_nucl_int++;
         }
         //if(N_close_vertex > 3) printf("%s ----> N_close_vertex: %d %s, event: %lld \n",KRED,N_close_vertex,KNRM,Global_Event);
     }
     //------------------------
-
+    //cout << "End of nuclear interaction finder" << endl;
 
 
 #if defined(USEEVE)
@@ -1222,8 +1271,8 @@ void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics)
 
                     if(graphics)
                     {
-                        Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3);
-                        Draw_Kalman_Helix_Tracks(i_kalm_track,kGreen+1);
+                        //Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3);
+                        //Draw_Kalman_Helix_Tracks(i_kalm_track,kGreen+1);
                     }
                     //printf("      >>>>> %s idx (Kalman): %d %s, %s idx (TPC): %d %s, pT (TPC): %4.3f, pT (kalman): %4.3f \n",KRED,i_kalm_track,KNRM,KBLU,idx_matched_TPC_track,KNRM,pT_track,pT_kalman);
 

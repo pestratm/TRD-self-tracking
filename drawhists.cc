@@ -3,8 +3,8 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 // Environment variables
-#define ENV_PI
-//#define ENV_ALEX
+//#define ENV_PI
+#define ENV_ALEX
 //#define ENV_PI_SVEN
 
 void drawhists(TString input_list = "List_data_ADC.txt")
@@ -70,7 +70,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     // nuclear interaction event: 158
 
     for (Long64_t event = 0; event < N_Events; event++) // 2,3
-    //for (Long64_t event = 225; event < 226; event++) // 2,3   192
+    //for (Long64_t event = 6485; event < 6486; event++) // 2,3   192
     {
 
         if (event != 0  &&  event % 50 == 0)
@@ -95,7 +95,6 @@ void drawhists(TString input_list = "List_data_ADC.txt")
         vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,use_prim_vertex); // 0 = no primary vertex, 1 = primary vertex used
         if(graphics) TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
 
-
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks; // TPC track matched tracklets
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
 
@@ -106,7 +105,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
         TRD_ST_Analyze ->set_Kalman_TRD_tracklets(kalman_found_tracks);
 
 
-        if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed); // -1 -> all kalman tracks drawn
+        //if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed); // -1 -> all kalman tracks drawn
 
         TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics);
         //TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(1);
