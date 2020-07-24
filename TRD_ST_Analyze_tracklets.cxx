@@ -1051,7 +1051,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         }
 
 
-        if(N_close_vertex > 3)
+        if(N_close_vertex > 2)
         {
             TV3_avg_sec_vertex *= 1.0/(Float_t)(N_close_vertex);
             Arr_cluster_params[0]	= (Float_t)TV3_avg_sec_vertex[0];

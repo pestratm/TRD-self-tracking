@@ -4,6 +4,7 @@
 double T_calc;                          //Variable for the calculation time
 double T_wall;
 
+// Colors for printf statements
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
@@ -372,8 +373,9 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		
 	}
 	Double_t chi_2_pen	=	18.5;
-	for(Int_t i_layer=mCurrent_Det%6;i_layer>=0;i_layer--)
-	{
+        //for(Int_t i_layer = 5;i_layer>=0;i_layer--) // Alex: changes where the kalman tracker starts
+        for(Int_t i_layer=mCurrent_Det%6;i_layer>=0;i_layer--) // Alex: changes where the kalman tracker starts
+        {
 		
 		if (mEstimate[i_layer]!=0)
 		{
@@ -509,7 +511,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			
 	}
 	//if Track
-	if(mNbr_tracklets>3){ // Changed from 2, Alex 20.07.2020
+        if(mNbr_tracklets>2){ // Changed from 2, Alex: 20.07.2020
 		//save Track
 		mFound_tracks.push_back(mTrack);
 		mEstimates.push_back(mEstimate);
