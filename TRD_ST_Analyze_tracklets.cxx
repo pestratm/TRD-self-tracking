@@ -1061,6 +1061,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         if(N_close_vertex > 2)
         {
 
+            TV3_avg_sec_vertex *= 1.0/(Float_t)(N_close_vertex);
+
             // Determine TPC track(s) which are close to nuclear interaction vertex
             Float_t pathA_dca = -1.0;
             Float_t dcaAB_dca = -1.0;
@@ -1081,7 +1083,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                 }
             }
 
-            TV3_avg_sec_vertex *= 1.0/(Float_t)(N_close_vertex);
+            //printf("dcaAB_min: %4.3f \n",dcaAB_min);
+
             Arr_cluster_params[0]	= (Float_t)TV3_avg_sec_vertex[0];
             Arr_cluster_params[1]	= (Float_t)TV3_avg_sec_vertex[1];
             Arr_cluster_params[2]	= (Float_t)TV3_avg_sec_vertex[2];
