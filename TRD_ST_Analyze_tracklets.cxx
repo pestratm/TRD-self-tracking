@@ -62,8 +62,8 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 	
-	NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices");
-	NT_secondary_vertex_cluster ->SetAutoSave( 5000000 );
+    NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices");
+    NT_secondary_vertex_cluster ->SetAutoSave( 5000000 );
 		
     Tree_TRD_ST_Event_out  = NULL;
     Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
@@ -837,6 +837,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     if(graphics)
     {
         TEveP_sec_vertices        = new TEvePointSet();
+        TEveP_nucl_int_vertices   = new TEvePointSet();
         TEveP_first_point_helix   = new TEvePointSet();
         TEveP_second_point_helix  = new TEvePointSet();
     }
@@ -1030,6 +1031,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     Bool_t visited[N_sec_vertices];
     for(Int_t i_vis=0;i_vis<N_sec_vertices;i_vis++) visited[i_vis]=0;
 
+    Int_t i_vertex_nucl_int = 0;
     for(Int_t i_sec_vtx_A = 0; i_sec_vtx_A < (N_sec_vertices - 1); i_sec_vtx_A++)
     {
         radius_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A].Perp();
@@ -1047,14 +1049,21 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                 visited[i_sec_vtx_B]=1;
             }
         }
+
+
         if(N_close_vertex > 3)
         {
-            Arr_cluster_params[0]	= (Float_t)	(TV3_avg_sec_vertex[0]/	(Float_t)N_close_vertex);
-            Arr_cluster_params[1]	= (Float_t)	(TV3_avg_sec_vertex[1]/	(Float_t)N_close_vertex);
-            Arr_cluster_params[2]	= (Float_t)	(TV3_avg_sec_vertex[2]/	(Float_t)N_close_vertex);
-            Arr_cluster_params[3]	= (Float_t)	N_close_vertex;
+            TV3_avg_sec_vertex *= 1.0/(Float_t)(N_close_vertex);
+            Arr_cluster_params[0]	= (Float_t)TV3_avg_sec_vertex[0];
+            Arr_cluster_params[1]	= (Float_t)TV3_avg_sec_vertex[1];
+            Arr_cluster_params[2]	= (Float_t)TV3_avg_sec_vertex[2];
+            Arr_cluster_params[3]	= (Float_t)N_close_vertex;
 
             NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
+
+            TEveP_nucl_int_vertices ->SetPoint(i_vertex_nucl_int,TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2]);
+            if(TV3_avg_sec_vertex.Perp() > 350.0) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event);
+            i_vertex_nucl_int++;
         }
         //if(N_close_vertex > 3) printf("%s ----> N_close_vertex: %d %s, event: %lld \n",KRED,N_close_vertex,KNRM,Global_Event);
     }
@@ -1069,6 +1078,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         TEveP_sec_vertices  ->SetMarkerStyle(20);
         TEveP_sec_vertices  ->SetMarkerColor(kRed);
         gEve->AddElement(TEveP_sec_vertices);
+
+        TEveP_nucl_int_vertices  ->SetMarkerSize(5);
+        TEveP_nucl_int_vertices  ->SetMarkerStyle(20);
+        TEveP_nucl_int_vertices  ->SetMarkerColor(kBlue);
+        gEve->AddElement(TEveP_nucl_int_vertices);
+
 
         TEveP_first_point_helix  ->SetMarkerSize(3);
         TEveP_first_point_helix  ->SetMarkerStyle(20);
