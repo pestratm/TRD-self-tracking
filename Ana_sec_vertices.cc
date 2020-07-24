@@ -10,6 +10,19 @@
 #define KCYN  "\x1B[36m"
 #define KWHT  "\x1B[37m"
 
+Double_t ExpFitFunc(Double_t* x_val, Double_t* par)
+{
+    Double_t x, y, par0, par1;
+    par0  = fabs(par[0]);
+    par1  = par[1];
+    x = x_val[0];
+    y = par0*TMath::Exp(x*par1);
+    return y;
+}
+//----------------------------------------------------------------------------------------
+
+
+
 void Ana_sec_vertices()
 {
 
@@ -172,7 +185,7 @@ void Ana_sec_vertices()
 
     //--------------------------
     // Open Ntuple
-    TFile* inputfile = TFile::Open("./ST_out/merge_hoppner.root");
+	TFile* inputfile = TFile::Open("./ST_out/Merge_ST_hoppner_V2.root");
     TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertices");
     Float_t x_sec,y_sec,z_sec,ntracks_sec,pT_AB_sec;
     NT_sec_vertices ->SetBranchAddress("x",&x_sec);
@@ -181,12 +194,12 @@ void Ana_sec_vertices()
     NT_sec_vertices ->SetBranchAddress("ntracks",&ntracks_sec);
 	NT_sec_vertices ->SetBranchAddress("pT_AB",&pT_AB_sec);
 	
-	TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertex_cluster");
+	TNtuple* NT_sec_cluster = (TNtuple*)inputfile->Get("NT_secondary_vertex_cluster");
     Float_t x_clus,y_clus,z_clus,ntracks_clus;
-    NT_sec_vertices ->SetBranchAddress("x",&x_clus);
-    NT_sec_vertices ->SetBranchAddress("y",&y_clus);
-    NT_sec_vertices ->SetBranchAddress("z",&z_clus);
-    NT_sec_vertices ->SetBranchAddress("nvertices",&ntracks_clus);
+    NT_sec_cluster ->SetBranchAddress("x",&x_clus);
+    NT_sec_cluster ->SetBranchAddress("y",&y_clus);
+    NT_sec_cluster ->SetBranchAddress("z",&z_clus);
+    NT_sec_cluster ->SetBranchAddress("nvertices",&ntracks_clus);
 	
     //--------------------------
 
@@ -198,7 +211,7 @@ void Ana_sec_vertices()
     TEvePointSet* TEveP_offset_points = new TEvePointSet();
 
 	TH2D* h2d_cluster_pos_xy = new TH2D("h2d_cluster_pos_xy","h2d_cluster_pos_xy",500,-400,400,500,-400,400);
-    TH1D* h1d_cluster_pos_r = new TH1D("h1d_cluster_pos_r","h1d_cluster_pos_r",bin_nbr,200,400);
+    TH1D* h1d_cluster_pos_r = new TH1D("h1d_cluster_pos_r","h1d_cluster_pos_r",bin_nbr,270,370);
     
     //--------------------------
     // Loop over data
@@ -214,18 +227,27 @@ void Ana_sec_vertices()
         }
 
         NT_sec_vertices ->GetEntry(i_entry);
-        h2d_vertex_pos_xy ->Fill(x_sec,y_sec);
+		h2d_vertex_pos_xy ->Fill(x_sec,y_sec);
 		h1d_vertex_pos_r  ->Fill(TMath::Sqrt(x_sec*x_sec +y_sec*y_sec));
 		h1d_vertex_mom_pT ->Fill(pT_AB_sec); 
 		
-		h2d_cluster_pos_xy->Fill(x_clus,y_clus);
-		h1d_cluster_pos_r ->Fill(TMath::Sqrt(x_clus*x_clus +y_clus*y_clus));
-		//cout<<"filled:"<<TMath::Sqrt(x_sec*x_sec +y_sec*y_sec)<<endl;
-        TEveP_offset_points  ->SetPoint(i_entry,x_sec,y_sec,z_sec);
+		TEveP_offset_points  ->SetPoint(i_entry,x_sec,y_sec,z_sec);
 
         //printf("i_entry: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_entry,x_sec,y_sec,z_sec);
     }
     //--------------------------
+	
+	N_entries = NT_sec_cluster->GetEntries();
+    for(Long64_t i_entry = 0; i_entry < N_entries; i_entry++)
+        //for(Long64_t i_entry = 0; i_entry < 50; i_entry++)
+    {
+    	NT_sec_cluster	 ->GetEntry(i_entry);
+        h2d_cluster_pos_xy->Fill(x_clus,y_clus);
+		h1d_cluster_pos_r ->Fill(TMath::Sqrt(x_clus*x_clus +y_clus*y_clus));
+		
+	}
+	
+	
 	for(Int_t i_bin=0; i_bin<bin_nbr; i_bin++)
 	{
 		Double_t binContent = h1d_vertex_mom_pT->GetBinContent(i_bin);
@@ -295,7 +317,7 @@ void Ana_sec_vertices()
 
 	
     //--------------------------
-    // Plot r
+    // Plot r cluster
     h1d_cluster_pos_r ->GetXaxis()->SetTitle("r (cm)");
     h1d_cluster_pos_r ->GetYaxis()->SetTitle("counts");
     TCanvas* can_cluster_pos_r = Draw_1D_histo_and_canvas(h1d_cluster_pos_r,"can_cluster_pos_r",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
@@ -306,7 +328,7 @@ void Ana_sec_vertices()
 	//----------------------------
 	
 	//--------------------------
-    // Plot r cluster
+    // Plot r 
     h1d_vertex_pos_r ->GetXaxis()->SetTitle("r (cm)");
     h1d_vertex_pos_r ->GetYaxis()->SetTitle("counts");
     TCanvas* can_vertex_pos_r = Draw_1D_histo_and_canvas(h1d_vertex_pos_r,"can_vertex_pos_r",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
@@ -337,5 +359,22 @@ void Ana_sec_vertices()
     //can_vertex_pos_r->cd()->SetLogz(0);
     can_vertex_mom_pT_exp->cd();
 	//-----------------------------------
+	
+	//fit
+	
+	TF1* func_Exp_fit            = new TF1("func_Exp_fit",ExpFitFunc,0.,10000,3);
+    func_Exp_fit ->SetParameter(0,1);
+    func_Exp_fit ->SetParameter(1,-1);
+	
+	h1d_vertex_mom_pT_exp->Fit("func_Exp_fit","QMN","",0.3,0.8);
+	Double_t amplitude = func_Exp_fit ->GetParameter(0);
+    Double_t slope = func_Exp_fit ->GetParameter(1);
+        
+    cout<<"slope:"<<slope<<endl;    
+	 HistName = "#chi_{MC}^{2}/ndf = ";
+    sprintf(NoP,"%4.2f",slope);
+    HistName += NoP;
+     plotTopLegend((char*)HistName.Data(),0.18,0.86,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+	
 
 }

@@ -1,5 +1,5 @@
 
-//#define USEEVE
+#define USEEVE
 
 using namespace std;
 #include <cmath>
@@ -123,6 +123,7 @@ private:
     TEvePointSet* TEveP_TPC_at_offset_points;
     vector<TEveBox*> vec_eve_TRD_detector_box;
     TEvePointSet* TEveP_sec_vertices;
+    TEvePointSet* TEveP_nucl_int_vertices;
     TEvePointSet* TEveP_primary_vertex;
     TEvePointSet* TEveP_first_point_helix;
     TEvePointSet* TEveP_second_point_helix;
