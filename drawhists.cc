@@ -3,8 +3,8 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 // Environment variables
-//#define ENV_PI
-#define ENV_ALEX
+#define ENV_PI
+//#define ENV_ALEX
 //#define ENV_PI_SVEN
 
 void drawhists(TString input_list = "List_data_ADC.txt")
@@ -47,7 +47,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     input_dir  = "./Data/";
     output_dir = "./ST_out/";
 #endif
-    Int_t graphics = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t use_prim_vertex = 0; // 0 = no primary vertex, 1 = primary vertex used
     //------------------------------------
 
@@ -69,8 +69,8 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     // photon events: 88
     // nuclear interaction event: 158
 
-    //for (Long64_t event = 0; event < N_Events; event++) // 2,3
-    for (Long64_t event = 225; event < 226; event++) // 2,3   192
+    for (Long64_t event = 0; event < N_Events; event++) // 2,3
+    //for (Long64_t event = 225; event < 226; event++) // 2,3   192
     {
 
         if (event != 0  &&  event % 50 == 0)
