@@ -61,8 +61,8 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
 
     NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
-	
-    NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC");
+
+    NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom");
     NT_secondary_vertex_cluster ->SetAutoSave( 5000000 );
 		
     Tree_TRD_ST_Event_out  = NULL;
@@ -1031,7 +1031,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     Double_t radius_sec_vertex;
     TVector3 TV3_diff_sec_vertices;
     TVector3 TV3_avg_sec_vertex;
-    Float_t Arr_cluster_params[5];
+    Float_t Arr_cluster_params[11];
 
     Bool_t visited[N_sec_vertices];
     for(Int_t i_vis = 0; i_vis < N_sec_vertices; i_vis++) visited[i_vis] = 0;
@@ -1066,8 +1066,44 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             // Determine TPC track(s) which are close to nuclear interaction vertex
             Float_t pathA_dca = -1.0;
             Float_t dcaAB_dca = -1.0;
-            Float_t dcaAB_min = 999.0;
+            Float_t dcaAB_min        = 999.0;
+            Float_t TOFsignal_min    = 999.0;
+            Float_t Track_length_min = 999.0;
+            Float_t TPCdEdx_min      = 999.0;
+            Float_t dca_to_prim      = 999.0;
+            Float_t pT_min           = 999.0;
+            Float_t momentum_min     = 999.0;
+
+
+            //-------------------------------
+            // Get TPC track information
             UShort_t NumTracks = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
+            Double_t nsigma_TPC_e   = TRD_ST_TPC_Track ->getnsigma_e_TPC();
+            Double_t nsigma_TPC_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TPC();
+            Double_t nsigma_TPC_p   = TRD_ST_TPC_Track ->getnsigma_p_TPC();
+            Double_t nsigma_TOF_e   = TRD_ST_TPC_Track ->getnsigma_e_TOF();
+            Double_t nsigma_TOF_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TOF();
+            Double_t TRD_signal     = TRD_ST_TPC_Track ->getTRDSignal();
+            Double_t TRDsumADC      = TRD_ST_TPC_Track ->getTRDsumADC();
+            Double_t dca            = TRD_ST_TPC_Track ->getdca();  // charge * distance of closest approach to the primary vertex
+            TLorentzVector TLV_part = TRD_ST_TPC_Track ->get_TLV_part();
+            UShort_t NTPCcls        = TRD_ST_TPC_Track ->getNTPCcls();
+            UShort_t NTRDcls        = TRD_ST_TPC_Track ->getNTRDcls();
+            UShort_t NITScls        = TRD_ST_TPC_Track ->getNITScls();
+            Float_t TPCchi2         = TRD_ST_TPC_Track ->getTPCchi2();
+            Float_t TPCdEdx         = TRD_ST_TPC_Track ->getTPCdEdx();
+            Float_t TOFsignal       = TRD_ST_TPC_Track ->getTOFsignal(); // in ps (1E-12 s)
+            Float_t Track_length    = TRD_ST_TPC_Track ->getTrack_length();
+
+            Float_t momentum        = TLV_part.P();
+            Float_t eta_track       = TLV_part.Eta();
+            Float_t pT_track        = TLV_part.Pt();
+            Float_t theta_track     = TLV_part.Theta();
+            Float_t phi_track       = TLV_part.Phi();
+            //-------------------------------
+
+
+
             Int_t flag_close_TPC_track = 0;
             Int_t idx_close_TPC_track = -1;
             for(Int_t i_track = 0; i_track < NumTracks; i_track++)
@@ -1075,7 +1111,16 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                 TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
                 TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
                 fHelixAtoPointdca(TV3_avg_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
-                if(dcaAB_dca < dcaAB_min) dcaAB_min = dcaAB_dca;
+                if(dcaAB_dca < dcaAB_min)
+                {
+                    dcaAB_min        = dcaAB_dca;
+                    TOFsignal_min    = TOFsignal;
+                    Track_length_min = Track_length;
+                    TPCdEdx_min      = TPCdEdx;
+                    dca_to_prim      = dca;
+                    pT_min           = pT_track;
+                    momentum_min     = momentum;
+                }
                 if(dcaAB_dca < 3.0)
                 {
                     idx_close_TPC_track = i_track;
@@ -1090,6 +1135,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             Arr_cluster_params[2]	= (Float_t)TV3_avg_sec_vertex[2];
             Arr_cluster_params[3]	= (Float_t)N_close_vertex;
             Arr_cluster_params[4]	= (Float_t)dcaAB_min;
+            Arr_cluster_params[5]	= (Float_t)TOFsignal_min;
+            Arr_cluster_params[6]	= (Float_t)Track_length_min;
+            Arr_cluster_params[7]	= (Float_t)TPCdEdx_min;
+            Arr_cluster_params[8]	= (Float_t)dca_to_prim;
+            Arr_cluster_params[9]	= (Float_t)pT_min;
+            Arr_cluster_params[10]	= (Float_t)momentum_min;
 
             NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
 
