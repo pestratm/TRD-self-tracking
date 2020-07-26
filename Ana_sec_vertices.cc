@@ -126,6 +126,8 @@ void Ana_sec_vertices()
 
     }
 
+    TH2D* h2D_dEdx_vs_mom = new TH2D("h2D_dEdx_vs_mom","h2D_dEdx_vs_mom",200,0,5,200,0,150.0);
+
 
     vector<TEveBox*> vec_eve_TRD_detector_box;
     vec_eve_TRD_detector_box.resize(540);
@@ -180,9 +182,9 @@ void Ana_sec_vertices()
     }
     gEve->Redraw3D(kTRUE);
     //--------------------------
-	
-	//-------------------------
-	Double_t TRD_layer_radii[6][2] =
+
+    //-------------------------
+    Double_t TRD_layer_radii[6][2] =
     {
         {297.5,306.5},
         {310.0,320.0},
@@ -191,15 +193,16 @@ void Ana_sec_vertices()
         {348.0,357.0},
         {361.0,371.0}
     };
-	
-	Int_t color_layer_match[6] = {kRed,kGreen,kSpring-6,kYellow,kPink-3,kOrange+8};
-    
-	//--------------------------
-	
+
+    //Int_t color_layer_match[6] = {kRed,kGreen,kSpring-6,kYellow,kPink-3,kOrange+8};
+    Int_t color_layer_match[6] = {kGray+1,kAzure-2,kGreen+2,kCyan+2,kOrange+2,kRed};
+
+    //--------------------------
+
     //--------------------------
     // Open Ntuple
     //TFile* inputfile = TFile::Open("./ST_out/Merge_ST_hoppner_V2.root");
-    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABC_V4.root");
+    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABC_V5.root");
     TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertices");
     Float_t x_sec,y_sec,z_sec,ntracks_sec,pT_AB_sec;
     NT_sec_vertices ->SetBranchAddress("x",&x_sec);
@@ -209,12 +212,18 @@ void Ana_sec_vertices()
     NT_sec_vertices ->SetBranchAddress("pT_AB",&pT_AB_sec);
 
     TNtuple* NT_sec_cluster = (TNtuple*)inputfile->Get("NT_secondary_vertex_cluster");
-    Float_t x_clus,y_clus,z_clus,ntracks_clus,dcaTPC_clus;
+    Float_t x_clus,y_clus,z_clus,ntracks_clus,dcaTPC_clus,tof,trklength,dEdx,dcaprim,pT,mom;
     NT_sec_cluster ->SetBranchAddress("x",&x_clus);
     NT_sec_cluster ->SetBranchAddress("y",&y_clus);
     NT_sec_cluster ->SetBranchAddress("z",&z_clus);
     NT_sec_cluster ->SetBranchAddress("nvertices",&ntracks_clus);
     NT_sec_cluster ->SetBranchAddress("dcaTPC",&dcaTPC_clus);
+    NT_sec_cluster ->SetBranchAddress("tof",&tof);
+    NT_sec_cluster ->SetBranchAddress("trklength",&trklength);
+    NT_sec_cluster ->SetBranchAddress("dEdx",&dEdx);
+    NT_sec_cluster ->SetBranchAddress("dcaprim",&dcaprim);
+    NT_sec_cluster ->SetBranchAddress("pT",&pT);
+    NT_sec_cluster ->SetBranchAddress("mom",&mom);
 
     //--------------------------
 
@@ -228,13 +237,13 @@ void Ana_sec_vertices()
     TH2D* h2d_cluster_pos_xy = new TH2D("h2d_cluster_pos_xy","h2d_cluster_pos_xy",500,-400,400,500,-400,400);
     TH1D* h1d_cluster_pos_r = new TH1D("h1d_cluster_pos_r","h1d_cluster_pos_r",200,250,450);
     TH1D** h1d_cluster_pos_r_array = new TH1D*[5];
-	TString HistName;
+    TString HistName;
     for(Int_t i_clus_arr=0; i_clus_arr<5;i_clus_arr++)
-	{
-		HistName="h1d_cluster_pos_r_";
-		HistName+=i_clus_arr;
-		h1d_cluster_pos_r_array[i_clus_arr] = new TH1D(HistName,HistName,200,270,380);
-	}	
+    {
+        HistName="h1d_cluster_pos_r_";
+        HistName+=i_clus_arr;
+        h1d_cluster_pos_r_array[i_clus_arr] = new TH1D(HistName,HistName,200,270,380);
+    }
     //--------------------------
     // Loop over photon conversion data
     Long64_t N_entries = NT_sec_vertices->GetEntries();
@@ -263,7 +272,7 @@ void Ana_sec_vertices()
         Double_t binContent = h1d_vertex_mom_pT->GetBinContent(i_bin);
         Double_t binCenter = h1d_vertex_mom_pT->GetBinCenter(i_bin);
         h1d_vertex_mom_pT_exp->SetBinContent(i_bin,binContent/(binCenter));
-		
+
     }
     //--------------------------
 
@@ -279,15 +288,29 @@ void Ana_sec_vertices()
         //if(ntracks_clus < 7) continue;
         if(dcaTPC_clus > 3.0) continue;
         h2d_cluster_pos_xy->Fill(x_clus,y_clus);
-		Float_t clus_temp=TMath::Sqrt(x_clus*x_clus + y_clus*y_clus);
+        Float_t clus_temp=TMath::Sqrt(x_clus*x_clus + y_clus*y_clus);
         h1d_cluster_pos_r ->Fill(clus_temp);
-		for(Int_t i_clusnbr=0; i_clusnbr<5;i_clusnbr++){
-			//cout<<"ntracks_clus"<<ntracks_clus<<endl;
-			if(ntracks_clus < 4+i_clusnbr) continue;
-			h1d_cluster_pos_r_array[i_clusnbr]->Fill(clus_temp);
-			//cout<<"fil:"<<clus_temp<<" in"<<i_clusnbr<<endl;
-		}
+
+        h2D_dEdx_vs_mom ->Fill(mom,dEdx);
+
+        for(Int_t i_clusnbr = 0; i_clusnbr < 5;i_clusnbr++)
+        {
+            //cout<<"ntracks_clus"<<ntracks_clus<<endl;
+            if(ntracks_clus < 4+i_clusnbr) continue;
+            h1d_cluster_pos_r_array[i_clusnbr]->Fill(clus_temp);
+            //cout<<"fil:"<<clus_temp<<" in"<<i_clusnbr<<endl;
+        }
     }
+    //--------------------------
+
+
+
+    //--------------------------
+    TCanvas* can_dEdx_vs_mom = Draw_2D_histo_and_canvas(h2D_dEdx_vs_mom,"can_dEdx_vs_mom",1010,820,0.0,-1.0,"colz"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
+    can_dEdx_vs_mom->cd()->SetRightMargin(0.1);
+    can_dEdx_vs_mom->cd()->SetTopMargin(0.05);
+    can_dEdx_vs_mom->cd()->SetLogz(1);
+    can_dEdx_vs_mom->cd();
     //--------------------------
 
 
@@ -353,16 +376,16 @@ void Ana_sec_vertices()
 
     //--------------------------
     // Plot r cluster
-  /*  h1d_cluster_pos_r ->GetXaxis()->SetTitle("r (cm)");
-    h1d_cluster_pos_r ->GetYaxis()->SetTitle("counts");
-    TCanvas* can_cluster_pos_r = Draw_1D_histo_and_canvas(h1d_cluster_pos_r,"can_cluster_pos_r",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
-    can_cluster_pos_r->cd()->SetRightMargin(0.20);
-    can_cluster_pos_r->cd()->SetTopMargin(0.08);
-    can_cluster_pos_r->cd()->SetLogy(1);
-    can_cluster_pos_r->cd();
-    //----------------------------
-*/
-	h1d_cluster_pos_r_array[0] ->GetXaxis()->SetTitle("r (cm)");
+    /*  h1d_cluster_pos_r ->GetXaxis()->SetTitle("r (cm)");
+     h1d_cluster_pos_r ->GetYaxis()->SetTitle("counts");
+     TCanvas* can_cluster_pos_r = Draw_1D_histo_and_canvas(h1d_cluster_pos_r,"can_cluster_pos_r",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
+     can_cluster_pos_r->cd()->SetRightMargin(0.20);
+     can_cluster_pos_r->cd()->SetTopMargin(0.08);
+     can_cluster_pos_r->cd()->SetLogy(1);
+     can_cluster_pos_r->cd();
+     //----------------------------
+     */
+    h1d_cluster_pos_r_array[0] ->GetXaxis()->SetTitle("r (cm)");
     h1d_cluster_pos_r_array[0] ->GetYaxis()->SetTitle("counts");
     TCanvas* can_cluster_pos_r = Draw_1D_histo_and_canvas(h1d_cluster_pos_r_array[0],"can_cluster_pos_r",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
     can_cluster_pos_r->cd()->SetRightMargin(0.20);
@@ -380,43 +403,58 @@ void Ana_sec_vertices()
     can_vertex_pos_r->cd();
     //----------------------------
 
-	//------------------------------------
-	//Plot all r for different cuts
-	TCanvas* can_cluster_pos_r_comp = Draw_1D_histo_and_canvas(h1d_cluster_pos_r_array[0],"can_vertex_nucl_compare",1010,820,0.0,0.0,"h"); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
-    can_cluster_pos_r_comp->cd()->SetRightMargin(0.20);
-    can_cluster_pos_r_comp->cd()->SetTopMargin(0.08);
+    //------------------------------------
+    //Plot all r for different cuts
+    TCanvas* can_cluster_pos_r_comp = Draw_1D_histo_and_canvas(h1d_cluster_pos_r_array[0],"can_vertex_nucl_compare",1010,820,0.0,0.0,"h"); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
+    can_cluster_pos_r_comp->cd()->SetRightMargin(0.02);
+    can_cluster_pos_r_comp->cd()->SetTopMargin(0.02);
     //can_vertex_photons_and_nucl->cd()->SetLogz(0);
     can_cluster_pos_r_comp->cd();
-    for(Int_t i_clusnbr=0; i_clusnbr<5;i_clusnbr++){
-		h1d_cluster_pos_r_array[i_clusnbr] ->SetLineColor(color_layer_match[i_clusnbr]+2);
-    	//h1d_cluster_pos_r_array[i_clusnbr] ->SetLineColor(kRed);
-    	h1d_cluster_pos_r_array[i_clusnbr] ->SetLineWidth(2);
-    	h1d_cluster_pos_r_array[i_clusnbr] ->SetFillColor(color_layer_match[i_clusnbr]);
-    	//h1d_cluster_pos_r_array[i_clusnbr] ->SetFillColor(kRed);
-    	h1d_cluster_pos_r_array[i_clusnbr] ->SetFillStyle(3022);
-    	h1d_cluster_pos_r_array[i_clusnbr] ->DrawCopy("same h");
-	
-	}
-	for (Int_t i_line =0;i_line<6 ;i_line++)
-	{
-		Double_t temp_r=(TRD_layer_radii[i_line][0]+TRD_layer_radii[i_line][1])*0.5;
-		//Double_t temp_r=TRD_layer_radii[i_line][0];
-    	PlotLine(temp_r,temp_r,0.0,600,kBlue,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
-    	//PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
-    	//temp_r=TRD_layer_radii[i_line][1];
-    	//PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
-    	
-	}	
-	TLegend* legend = new TLegend(0.8,0.7,0.48,0.9);
-   	//legend->SetHeader("The Legend Title","C"); // option "C" allows to center the header
-   	for(Int_t i_clusnbr=0; i_clusnbr<5;i_clusnbr++){
-		HistName = "Cut n_track > ";
+    for(Int_t i_clusnbr = 0; i_clusnbr < 5; i_clusnbr++)
+    {
+        h1d_cluster_pos_r_array[i_clusnbr] ->SetLineColor(color_layer_match[i_clusnbr]+2);
+        //h1d_cluster_pos_r_array[i_clusnbr] ->SetLineColor(kRed);
+        h1d_cluster_pos_r_array[i_clusnbr] ->SetLineWidth(2);
+        h1d_cluster_pos_r_array[i_clusnbr] ->SetFillColor(color_layer_match[i_clusnbr]);
+        //h1d_cluster_pos_r_array[i_clusnbr] ->SetFillColor(kRed);
+        h1d_cluster_pos_r_array[i_clusnbr] ->SetFillStyle(3022);
+        h1d_cluster_pos_r_array[i_clusnbr] ->DrawCopy("same h");
+    }
+    for(Int_t i_line = 0;i_line < 6; i_line++)
+    {
+        Double_t temp_r=(TRD_layer_radii[i_line][0]+TRD_layer_radii[i_line][1])*0.5;
+        //Double_t temp_r=TRD_layer_radii[i_line][0];
+        //PlotLine(temp_r,temp_r,0.0,600,kBlue,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+        //PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+        //temp_r=TRD_layer_radii[i_line][1];
+        //PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+
+        PlotArrowHist(h1d_cluster_pos_r_array[0],temp_r-1.0,40.0,10.0,kBlack,3,1,45.0); //  hist,x_val,arrow_length,arrow_offset,Line_Col,LineWidth,LineStyle,angle
+
+        /*
+        TArrow *ar1 = new TArrow(x_val,hist_val+arrow_length+arrow_offset,x_val,hist_val+arrow_offset,0.01,"|>"); // x1,y1,x2,y2
+        ar1->SetAngle(30.0);
+        ar1->SetLineWidth(2);
+        ar1->SetLineColor(vec_circle_color[N_acc_ring]);
+        //ar1->SetFillStyle(3008);
+        ar1->SetFillColor(vec_circle_color[N_acc_ring]);
+        ar1->Draw();
+        */
+    }
+    TLegend* legend = new TLegend(0.75,0.7,0.9,0.92);
+    legend ->SetBorderSize(0);
+    legend ->SetFillColor(10);
+    legend ->SetTextSize(0.03);
+    //legend->SetHeader("The Legend Title","C"); // option "C" allows to center the header
+    for(Int_t i_clusnbr = 0; i_clusnbr < 5; i_clusnbr++)
+    {
+        HistName = "Cut n_track > ";
         HistName += i_clusnbr +3;
-		legend->AddEntry(h1d_cluster_pos_r_array[i_clusnbr],HistName,"f");
-	}	
-   	legend->Draw();
-	//--------------------------------------
-	
+        legend->AddEntry(h1d_cluster_pos_r_array[i_clusnbr],HistName,"f");
+    }
+    legend->Draw();
+    //--------------------------------------
+
     //--------------------------
     // Plot photons and nuclear interactions together
     TH1D* h1d_vertex_pos_r_norm = (TH1D*)h1d_vertex_pos_r ->Clone("h1d_vertex_pos_r_norm");
@@ -433,22 +471,22 @@ void Ana_sec_vertices()
     h1d_vertex_pos_r_norm ->SetFillColor(kBlue);
     h1d_vertex_pos_r_norm ->SetFillStyle(3022);
     h1d_vertex_pos_r_norm ->DrawCopy("same h");
-	h1d_cluster_pos_r_norm ->SetLineColor(kRed+2);
+    h1d_cluster_pos_r_norm ->SetLineColor(kRed+2);
     h1d_cluster_pos_r_norm ->SetLineWidth(2);
     h1d_cluster_pos_r_norm ->SetFillColor(kRed);
     h1d_cluster_pos_r_norm ->SetFillStyle(3022);
     h1d_cluster_pos_r_norm ->DrawCopy("same h");
-	for (Int_t i_line =0;i_line<6 ;i_line++)
-	{
-		//Double_t temp_r=(TRD_layer_radii[i_line][0]+TRD_layer_radii[i_line][1])*0.5;
-		Double_t temp_r=TRD_layer_radii[i_line][0];
-    	//PlotLine(temp_r,temp_r,0.0,0.9,kBlue,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
-    	PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
-    	temp_r=TRD_layer_radii[i_line][1];
-    	PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
-    	
-	}	
-	can_vertex_photons_and_nucl ->SaveAs("can_vertex_photons_and_nucl.png");
+    for (Int_t i_line =0;i_line<6 ;i_line++)
+    {
+        //Double_t temp_r=(TRD_layer_radii[i_line][0]+TRD_layer_radii[i_line][1])*0.5;
+        Double_t temp_r=TRD_layer_radii[i_line][0];
+        //PlotLine(temp_r,temp_r,0.0,0.9,kBlue,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+        PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+        temp_r=TRD_layer_radii[i_line][1];
+        PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+
+    }
+    can_vertex_photons_and_nucl ->SaveAs("can_vertex_photons_and_nucl.png");
     //----------------------------
 
 
@@ -471,7 +509,7 @@ void Ana_sec_vertices()
     TCanvas* can_vertex_mom_pT_exp = Draw_1D_histo_and_canvas(h1d_vertex_mom_pT_exp,"can_vertex_mom_pT_exp",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
     can_vertex_mom_pT_exp->cd()->SetRightMargin(0.20);
     can_vertex_mom_pT_exp->cd()->SetTopMargin(0.08);
-	can_vertex_mom_pT_exp->cd()->SetLogy();
+    can_vertex_mom_pT_exp->cd()->SetLogy();
     can_vertex_mom_pT_exp->cd();
     //-----------------------------------
 
@@ -503,7 +541,7 @@ void Ana_sec_vertices()
     HistName = "1/slope = ";
     sprintf(NoP,"%4.2f MeV",1000/slope);
     HistName += NoP;
-	//can_vertex_mom_pT_exp->cd()->SetLogy(0);
+    //can_vertex_mom_pT_exp->cd()->SetLogy(0);
 
     plotTopLegend((char*)HistName.Data(),0.45,0.83,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 

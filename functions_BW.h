@@ -1924,6 +1924,28 @@ TLine* PlotLine(Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_v
 
 
 //----------------------------------------------------------------------------------------
+TArrow* PlotArrowHist(TH1D* hist, Double_t x_val, Double_t arrow_length, Double_t arrow_offset, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle, Double_t angle)
+{
+
+    Int_t    bin      = hist->FindBin(x_val);
+    Double_t hist_val = hist->GetBinContent(bin);
+
+    TArrow *ar1 = new TArrow(x_val,hist_val+arrow_length+arrow_offset,x_val,hist_val+arrow_offset,0.01,"|>"); // x1,y1,x2,y2
+    ar1->SetAngle(angle); // e.g. 30.0
+    ar1->SetLineWidth(LineWidth);
+    ar1->SetLineColor(Line_Col);
+    //ar1->SetFillStyle(3008);
+    ar1->SetFillColor(Line_Col);
+    ar1-> SetLineStyle(LineStyle);
+    ar1->Draw();
+
+    return ar1;
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
 TCanvas* Draw_1D_histo_and_canvas(TH1D* hist, TString name, Int_t x_size, Int_t y_size,
                               Double_t min_val, Double_t max_val, TString option)
 {
