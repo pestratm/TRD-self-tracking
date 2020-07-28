@@ -850,9 +850,9 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     Int_t i_comb       = 0;
     Int_t i_vertex_acc = 0;
     //printf("N_helices: %d \n",(Int_t)vec_helices.size());
-    for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices.size() - 1); i_track_A++)
+    for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices.size() - 1); i_track_A++) // TRD Kalman track A
     {
-        for(Int_t i_track_B = (i_track_A+1); i_track_B < (Int_t)vec_helices.size(); i_track_B++)
+        for(Int_t i_track_B = (i_track_A+1); i_track_B < (Int_t)vec_helices.size(); i_track_B++) // TRD Kalman track B
         {
             Float_t pathA_est, pathB_est, dcaAB_est;
             //printf("i_track_A: %d, i_track_B: %d, i_comb: %d \n",i_track_A,i_track_B,i_comb);
@@ -883,6 +883,79 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             //printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
             if(dcaAB < 5.0)
             {
+
+                //------------------------------------------------------------
+                // Calculate number of shared and independent tracklets
+                Int_t N_independent_AB[2] = {0};
+                Int_t N_shared_AB         = 0;
+
+                // number |= 1 << bit_to_set; // set bit bit_to_set to 1
+                // Int_t bit_status = (TRD_ADC_time_layer[i_layer] >> bitcheck) & 1; // check bit bitcheck
+                // Int_t     HasITShit_on_layer(Int_t ilayer) { return ((NITScls >> ilayer) & 1);}  // ITShit -> LOL
+                Int_t bit_TRD_layer_shared = 0;
+
+                for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+                {
+                    TVector3 kalman_TV3_offset_A;
+                    Int_t flag_use_A = 0;
+                    if(vec_kalman_TRD_trackets[i_track_A][i_layer] != NULL)
+                    {
+                        kalman_TV3_offset_A = vec_kalman_TRD_trackets[i_track_A][i_layer] ->get_TV3_offset();
+                        flag_use_A = 1;
+                    }
+
+                    TVector3 kalman_TV3_offset_B;
+                    Int_t flag_use_B = 0;
+                    if(vec_kalman_TRD_trackets[i_track_B][i_layer] != NULL)
+                    {
+                        kalman_TV3_offset_B = vec_kalman_TRD_trackets[i_track_B][i_layer] ->get_TV3_offset();
+                        flag_use_B = 1;
+                    }
+
+                    Int_t flag_shared = 0;
+                    if(flag_use_A && flag_use_B)
+                    {
+                        TVector3 TV3_diff_AB = kalman_TV3_offset_A - kalman_TV3_offset_B;
+                        Double_t diff_AB = TV3_diff_AB.Mag();
+
+                        if(diff_AB < 0.1)
+                        {
+                            N_shared_AB++;
+                            flag_shared = 1;
+                            bit_TRD_layer_shared |= 1 << (i_layer + 12); // set bit i_layer to 1
+                            //printf("Shared layer: %d \n",i_layer);
+                        }
+                    }
+                    if(!flag_shared) // only one tracklet available per track or tracklets are not shared
+                    {
+                        if(flag_use_A)
+                        {
+                            N_independent_AB[0]++;
+                            bit_TRD_layer_shared |= 1 << i_layer; // set bit i_layer to 1
+                            //printf("Independent layer track A: %d \n",i_layer);
+                        }
+                        if(flag_use_B)
+                        {
+                            N_independent_AB[1]++;
+                            bit_TRD_layer_shared |= 1 << (i_layer + 6); // set bit i_layer to 1
+                            //printf("Independent layer track B: %d \n",i_layer);
+                        }
+                    }
+                }
+
+#if 0
+                // Test the bit map
+                Float_t test = (Float_t)bit_TRD_layer_shared;
+                for(Int_t i_bit = 0; i_bit < 18; i_bit++)
+                {
+                    cout << "i_bit: " << i_bit << ", value: " << (((Int_t)test >> i_bit) & 1) << endl;
+                }
+#endif
+                //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d} \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1]);
+                //------------------------------------------------------------
+
+
+
                 //if(i_comb == 38)
                 {
                     vec_helices[i_track_A] ->Evaluate(pathA,helix_pointA);
@@ -953,12 +1026,14 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         Double_t dot_product_dir_vertex = TV3_dirAB.Dot(TV3_dir_prim_sec_vertex);
 
 
+
+
                         if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                         {
                             Arr_seconary_params[0] = (Float_t)vertex_point[0];
                             Arr_seconary_params[1] = (Float_t)vertex_point[1];
                             Arr_seconary_params[2] = (Float_t)vertex_point[2];
-                            Arr_seconary_params[3] = (Float_t)2.0;
+                            Arr_seconary_params[3] = (Float_t)bit_TRD_layer_shared;
                             Arr_seconary_params[4] = (Float_t)pT_AB;
                             Arr_seconary_params[5] = (Float_t)pTA*TMath::Sign(1,CA);
                             Arr_seconary_params[6] = (Float_t)pTB*TMath::Sign(1,CB);
@@ -968,6 +1043,9 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             // pT AB
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
                             NT_secondary_vertices ->Fill(Arr_seconary_params);
+
+                            //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d} \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1]);
+                            //printf("      --> Found vertex for AP in event: %lld at radius: %4.3f, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
                         }
 
 
@@ -1073,6 +1151,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             Float_t dca_to_prim      = 999.0;
             Float_t pT_min           = 999.0;
             Float_t momentum_min     = 999.0;
+            Float_t path_min         = 999.0;
 
 
             //-------------------------------
@@ -1120,6 +1199,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                     dca_to_prim      = dca;
                     pT_min           = pT_track;
                     momentum_min     = momentum;
+                    path_min         = pathA_dca;
                 }
                 if(dcaAB_dca < 3.0)
                 {
@@ -1145,7 +1225,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
 
 
-            if(TV3_avg_sec_vertex.Perp() > 364.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int);
+            //if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min);
 
 
 #if defined(USEEVE)
