@@ -1031,6 +1031,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         {
                             Double_t dca_min  = 999.0;
                             Double_t path_min = -999.0;
+                            UShort_t NumTracks = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
                             for(Int_t i_track = 0; i_track < NumTracks; i_track++)
                             {
                                 Float_t pathA_dca = -1.0;
