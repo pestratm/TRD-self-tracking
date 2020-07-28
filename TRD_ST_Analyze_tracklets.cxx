@@ -59,7 +59,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
 
-    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha");
+    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 
     NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom");
@@ -808,7 +808,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 {
     Int_t flag_found_good_AP_vertex = 0;
 
-    Float_t Arr_seconary_params[9];
+    Float_t Arr_seconary_params[11];
 
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
@@ -883,7 +883,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             //printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
             if(dcaAB < 5.0)
             {
-
                 //------------------------------------------------------------
                 // Calculate number of shared and independent tracklets
                 Int_t N_independent_AB[2] = {0};
@@ -1030,15 +1029,35 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
                         if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                         {
-                            Arr_seconary_params[0] = (Float_t)vertex_point[0];
-                            Arr_seconary_params[1] = (Float_t)vertex_point[1];
-                            Arr_seconary_params[2] = (Float_t)vertex_point[2];
-                            Arr_seconary_params[3] = (Float_t)bit_TRD_layer_shared;
-                            Arr_seconary_params[4] = (Float_t)pT_AB;
-                            Arr_seconary_params[5] = (Float_t)pTA*TMath::Sign(1,CA);
-                            Arr_seconary_params[6] = (Float_t)pTB*TMath::Sign(1,CB);
-                            Arr_seconary_params[7] = (Float_t)AP_pT;
-                            Arr_seconary_params[8] = (Float_t)AP_alpha;
+                            Double_t dca_min  = 999.0;
+                            Double_t path_min = -999.0;
+                            for(Int_t i_track = 0; i_track < NumTracks; i_track++)
+                            {
+                                Float_t pathA_dca = -1.0;
+                                Float_t dcaAB_dca = -1.0;
+                                TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
+                                TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
+                                fHelixAtoPointdca(TV3_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
+
+                                if(dcaAB_dca < dca_min)
+                                {
+                                    dca_min  = dcaAB_dca;
+                                    path_min = pathA_dca;
+                                }
+                            }
+
+
+                            Arr_seconary_params[0]  = (Float_t)vertex_point[0];
+                            Arr_seconary_params[1]  = (Float_t)vertex_point[1];
+                            Arr_seconary_params[2]  = (Float_t)vertex_point[2];
+                            Arr_seconary_params[3]  = (Float_t)bit_TRD_layer_shared;
+                            Arr_seconary_params[4]  = (Float_t)pT_AB;
+                            Arr_seconary_params[5]  = (Float_t)pTA*TMath::Sign(1,CA);
+                            Arr_seconary_params[6]  = (Float_t)pTB*TMath::Sign(1,CB);
+                            Arr_seconary_params[7]  = (Float_t)AP_pT;
+                            Arr_seconary_params[8]  = (Float_t)AP_alpha;
+                            Arr_seconary_params[9]  = (Float_t)dca_min;
+                            Arr_seconary_params[10] = (Float_t)path_min;
 
                             // pT AB
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);

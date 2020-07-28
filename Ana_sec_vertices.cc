@@ -202,14 +202,19 @@ void Ana_sec_vertices()
     //--------------------------
     // Open Ntuple
     //TFile* inputfile = TFile::Open("./ST_out/Merge_ST_hoppner_V2.root");
-    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABC_V5.root");
+    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABC_V6.root");
     TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertices");
-    Float_t x_sec,y_sec,z_sec,ntracks_sec,pT_AB_sec;
+    Float_t x_sec,y_sec,z_sec,bitmap_sec,pT_AB_sec;
+    Float_t qpT_A_sec,qpT_B_sec,AP_pT_sec,AP_alpha_sec;
     NT_sec_vertices ->SetBranchAddress("x",&x_sec);
     NT_sec_vertices ->SetBranchAddress("y",&y_sec);
     NT_sec_vertices ->SetBranchAddress("z",&z_sec);
-    NT_sec_vertices ->SetBranchAddress("ntracks",&ntracks_sec);
+    NT_sec_vertices ->SetBranchAddress("ntracks",&bitmap_sec); // bitmap for shared clusters
     NT_sec_vertices ->SetBranchAddress("pT_AB",&pT_AB_sec);
+    NT_sec_vertices ->SetBranchAddress("qpT_A",&qpT_A_sec);
+    NT_sec_vertices ->SetBranchAddress("qpT_B",&qpT_B_sec);
+    NT_sec_vertices ->SetBranchAddress("AP_pT",&AP_pT_sec);
+    NT_sec_vertices ->SetBranchAddress("AP_alpha",&AP_alpha_sec);
 
     TNtuple* NT_sec_cluster = (TNtuple*)inputfile->Get("NT_secondary_vertex_cluster");
     Float_t x_clus,y_clus,z_clus,ntracks_clus,dcaTPC_clus,tof,trklength,dEdx,dcaprim,pT,mom;
@@ -227,7 +232,7 @@ void Ana_sec_vertices()
 
     //--------------------------
 
-    Int_t bin_nbr=100;
+    Int_t bin_nbr=200;
     TH2D* h2d_vertex_pos_xy = new TH2D("h2d_vertex_pos_xy","h2d_vertex_pos_xy",500,-400,400,500,-400,400);
     TH1D* h1d_vertex_pos_r = new TH1D("h1d_vertex_pos_r","h1d_vertex_pos_r",bin_nbr,200,400);
     TH1D* h1d_vertex_mom_pT = new TH1D("h1d_vertex_mom_pT","h1d_vertex_mom_pT",bin_nbr,0,1);
@@ -258,11 +263,48 @@ void Ana_sec_vertices()
         }
 
         NT_sec_vertices ->GetEntry(i_entry);
-        h2d_vertex_pos_xy ->Fill(x_sec,y_sec);
-        h1d_vertex_pos_r  ->Fill(TMath::Sqrt(x_sec*x_sec +y_sec*y_sec));
-        h1d_vertex_mom_pT ->Fill(pT_AB_sec);
 
-        TEveP_offset_points  ->SetPoint(i_entry,x_sec,y_sec,z_sec);
+        // Test the bit map
+        Int_t independent_layer_A[6] = {0};
+        Int_t independent_layer_B[6] = {0};
+        Int_t shared_layer[6]        = {0};
+        for(Int_t i_bit = 0; i_bit < 18; i_bit++)
+        {
+            if(((Int_t)bitmap_sec >> i_bit) & 1)
+            {
+                if(i_bit < 6)                independent_layer_A[i_bit]   = 1;
+                if(i_bit >= 6 && i_bit < 12) independent_layer_B[i_bit-6] = 1;
+                if(i_bit >= 12)              shared_layer[i_bit-12]       = 1;
+            }
+        }
+
+        if(
+           (
+            (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 1 &&
+            (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 1 &&
+            (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 1
+           )
+           ||
+           (
+            (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 2 &&
+            (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 0 &&
+            (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 0
+           )
+           ||
+           (
+            (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 0 &&
+            (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2]) > 2 &&
+            (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2]) > 2
+           )
+          )
+        {
+
+            h2d_vertex_pos_xy ->Fill(x_sec,y_sec);
+            h1d_vertex_pos_r  ->Fill(TMath::Sqrt(x_sec*x_sec +y_sec*y_sec));
+            h1d_vertex_mom_pT ->Fill(pT_AB_sec);
+
+            TEveP_offset_points  ->SetPoint(i_entry,x_sec,y_sec,z_sec);
+        }
 
         //printf("i_entry: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_entry,x_sec,y_sec,z_sec);
     }
