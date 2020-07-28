@@ -202,10 +202,10 @@ void Ana_sec_vertices()
     //--------------------------
     // Open Ntuple
     //TFile* inputfile = TFile::Open("./ST_out/Merge_ST_hoppner_V2.root");
-    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABC_V6.root");
+    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABC_V7.root");
     TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertices");
     Float_t x_sec,y_sec,z_sec,bitmap_sec,pT_AB_sec;
-    Float_t qpT_A_sec,qpT_B_sec,AP_pT_sec,AP_alpha_sec;
+    Float_t qpT_A_sec,qpT_B_sec,AP_pT_sec,AP_alpha_sec,dcaTPC_sec,pathTPC_sec;
     NT_sec_vertices ->SetBranchAddress("x",&x_sec);
     NT_sec_vertices ->SetBranchAddress("y",&y_sec);
     NT_sec_vertices ->SetBranchAddress("z",&z_sec);
@@ -215,6 +215,8 @@ void Ana_sec_vertices()
     NT_sec_vertices ->SetBranchAddress("qpT_B",&qpT_B_sec);
     NT_sec_vertices ->SetBranchAddress("AP_pT",&AP_pT_sec);
     NT_sec_vertices ->SetBranchAddress("AP_alpha",&AP_alpha_sec);
+    NT_sec_vertices ->SetBranchAddress("dcaTPC",&dcaTPC_sec);
+    NT_sec_vertices ->SetBranchAddress("pathTPC",&pathTPC_sec);
 
     TNtuple* NT_sec_cluster = (TNtuple*)inputfile->Get("NT_secondary_vertex_cluster");
     Float_t x_clus,y_clus,z_clus,ntracks_clus,dcaTPC_clus,tof,trklength,dEdx,dcaprim,pT,mom;
@@ -298,12 +300,14 @@ void Ana_sec_vertices()
            )
           )
         {
+            if(dcaTPC_sec > 10.0 || (dcaTPC_sec <= 10.0 && pathTPC_sec < 0.0)) // no close by TPC track
+            {
+                h2d_vertex_pos_xy ->Fill(x_sec,y_sec);
+                h1d_vertex_pos_r  ->Fill(TMath::Sqrt(x_sec*x_sec +y_sec*y_sec));
+                h1d_vertex_mom_pT ->Fill(pT_AB_sec);
 
-            h2d_vertex_pos_xy ->Fill(x_sec,y_sec);
-            h1d_vertex_pos_r  ->Fill(TMath::Sqrt(x_sec*x_sec +y_sec*y_sec));
-            h1d_vertex_mom_pT ->Fill(pT_AB_sec);
-
-            TEveP_offset_points  ->SetPoint(i_entry,x_sec,y_sec,z_sec);
+                TEveP_offset_points  ->SetPoint(i_entry,x_sec,y_sec,z_sec);
+            }
         }
 
         //printf("i_entry: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_entry,x_sec,y_sec,z_sec);
