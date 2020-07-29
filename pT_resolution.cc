@@ -70,69 +70,26 @@ Double_t GaussFitFunc(Double_t* x_val, Double_t* par)
 
 void pT_resolution(Int_t input_file = 0)
 {
+    const Int_t N_pT_resolution = 7;
+
     TF1* func_Gauss_fit            = new TF1("func_Gauss_fit",GaussFitFunc,0.,10000,3);
     TH2D* TH2D_pT_TPC_vs_Kalman;
+    vector<TH2D*> vec_TH2D_pT_TPC_vs_Kalman;
+    vec_TH2D_pT_TPC_vs_Kalman.resize(N_pT_resolution);
 
-    if(input_file == 0) // cov 1.5
+    if(input_file == 13) //
     {
-        TFile* input_file = TFile::Open("pT_TPC_vs_Kalman.root");
-        TCanvas* can_pT_TPC_vs_Kalman = (TCanvas*)input_file->Get("can_pT_TPC_vs_Kalman");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(can_pT_TPC_vs_Kalman->FindObject("TH2D_pT_TPC_vs_Kalman_copy"));
-    }
-    if(input_file == 1) // cov 1.2
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_cov1_2.root");
+        TFile* input_file = TFile::Open("./ST_out/Merge_ST_ABCDE_V9.root");
         TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 2) // cov 2.0
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_cov2_0.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 3) // cov 4.0
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_cov4_0.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 4) // cov 10.0   -> best
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_cov10_0.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 5) // cov 20.0
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_cov20_0.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 6) // cov 10.0, q/pT = 1.0/1.0
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_cov10_0_qpT1_0.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 7) // cov 10.0, q/pT = 0.0/1.0, sig2 = 3, sig3 = 9
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_cov10_0_qpT0_sig2_3_sig3_9.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 8) // cov 10.0, q/pT = 0.0/1.0, sig2 = 9, sig3 = 22
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_cov10_0_qpT0_sig2_9_sig3_22.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 9) // cov 10.0, q/pT = 0.0/1.0, sig2 = 7, sig3 = 18, 18k events
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_cov10_0_qpT0_sig2_7_sig3_18_18kevents.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 10) // 
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
-    }
-    if(input_file == 11) //
-    {
-        TFile* input_file = TFile::Open("TRD_Calib_matched_TPC_match.root");
-        TH2D_pT_TPC_vs_Kalman = (TH2D*)(input_file->Get("TH2D_pT_TPC_vs_Kalman"));
+
+        for(Int_t i_pt_res = 0; i_pt_res < N_pT_resolution; i_pt_res++)
+        {
+            HistName = "vec_TH2D_pT_TPC_vs_Kalman_";
+            HistName += i_pt_res;
+            vec_TH2D_pT_TPC_vs_Kalman[i_pt_res] = (TH2D*)(input_file->Get(HistName.Data()));
+        }
+
+        //TH2D_pT_TPC_vs_Kalman = vec_TH2D_pT_TPC_vs_Kalman[6]; // set number of tracklets for Kalman track, 4..6
     }
 
 
@@ -180,7 +137,7 @@ void pT_resolution(Int_t input_file = 0)
     for(Int_t biny = 1; biny <= TH2D_pT_TPC_vs_Kalman->GetNbinsY(); biny++)
     {
         Double_t pT_TPC = TH2D_pT_TPC_vs_Kalman->GetYaxis()->GetBinCenter(biny);
-        if(fabs(pT_TPC) > 3.0 || fabs(pT_TPC) < 0.35) continue;
+        if(fabs(pT_TPC) > 4.0 || fabs(pT_TPC) < 0.35) continue;
         printf("i_point: %d, pT_TPC: %4.3f \n",i_point,pT_TPC);
         TH1D* h_proj_x = TH2D_pT_TPC_vs_Kalman ->ProjectionX("blubb",biny,biny);
         vec_h_proj_x.push_back((TH1D*)h_proj_x->Clone());
@@ -214,7 +171,7 @@ void pT_resolution(Int_t input_file = 0)
     tge_pT_resolution_RMS->GetXaxis()->CenterTitle();
     tge_pT_resolution_RMS->GetYaxis()->CenterTitle();
     tge_pT_resolution_RMS->GetXaxis()->SetTitle("q*p_{T}^{TPC} (GeV/c)");
-    tge_pT_resolution_RMS->GetYaxis()->SetTitle("#sigma(p_{T})/p_{T} (%)");
+    tge_pT_resolution_RMS->GetYaxis()->SetTitle("#sigma(p_{T}^{Kalm})/p_{T}^{TPC} (%)");
     tge_pT_resolution_RMS->SetMarkerStyle(20);
     tge_pT_resolution_RMS->SetMarkerSize(1.1);
     tge_pT_resolution_RMS->SetMarkerColor(kBlack);
@@ -293,11 +250,11 @@ void pT_resolution(Int_t input_file = 0)
     tge_pT_resolution_Gauss->GetXaxis()->CenterTitle();
     tge_pT_resolution_Gauss->GetYaxis()->CenterTitle();
     tge_pT_resolution_Gauss->GetXaxis()->SetTitle("q*p_{T}^{TPC} (GeV/c)");
-    tge_pT_resolution_Gauss->GetYaxis()->SetTitle("TRD-Kalman #sigma(p_{T})/p_{T} (%)");
+    tge_pT_resolution_Gauss->GetYaxis()->SetTitle("#sigma^{Kalm-TRD}(p_{T})/p_{T}^{TPC} (%)");
     tge_pT_resolution_Gauss->SetMarkerStyle(20);
     tge_pT_resolution_Gauss->SetMarkerSize(1.1);
     tge_pT_resolution_Gauss->SetMarkerColor(kBlack);
-    tge_pT_resolution_Gauss->GetXaxis()->SetRangeUser(-2.52,2.52);
+    tge_pT_resolution_Gauss->GetXaxis()->SetRangeUser(-3.52,3.52);
     tge_pT_resolution_Gauss->GetYaxis()->SetRangeUser(0.0,35.0);
     tge_pT_resolution_Gauss->Draw("AP");
 
@@ -308,7 +265,8 @@ void pT_resolution(Int_t input_file = 0)
 
     TCanvas* can_proj = new TCanvas("can_proj","can_proj",10,10,1200,1000);
     can_proj->Divide(3,2);
-    Int_t arr_proj_sel[6] = {67,74,82,63,109,119};
+    //Int_t arr_proj_sel[6] = {67,74,82,63,109,119};
+    Int_t arr_proj_sel[6] = {370,74,82,63,109,119};
     for(Int_t i_proj_plot = 0; i_proj_plot < 6; i_proj_plot++)
     {
         Int_t i_proj_sel = arr_proj_sel[i_proj_plot];
