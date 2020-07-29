@@ -59,7 +59,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
 
-    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC");
+    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 
     NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom");
@@ -808,7 +808,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 {
     Int_t flag_found_good_AP_vertex = 0;
 
-    Float_t Arr_seconary_params[11];
+    Float_t Arr_seconary_params[12];
 
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
@@ -840,15 +840,17 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     if(graphics)
     {
         TEveP_sec_vertices        = new TEvePointSet();
+        TEveP_close_TPC_photon    = new TEvePointSet();
         TEveP_nucl_int_vertices   = new TEvePointSet();
         TEveP_first_point_helix   = new TEvePointSet();
         TEveP_second_point_helix  = new TEvePointSet();
     }
 #endif
 
-    Int_t i_vertex     = 0;
-    Int_t i_comb       = 0;
-    Int_t i_vertex_acc = 0;
+    Int_t i_vertex           = 0;
+    Int_t i_comb             = 0;
+    Int_t i_vertex_acc       = 0;
+    Int_t i_close_TPC_photon = 0;
     //printf("N_helices: %d \n",(Int_t)vec_helices.size());
     for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices.size() - 1); i_track_A++) // TRD Kalman track A
     {
@@ -1019,18 +1021,16 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         Energy_AB   = TLV_AB.Energy();
                         Momentum_AB = TLV_AB.P();
                         pT_AB 	    = TLV_AB.Pt();
-                        // Transverse momentum of AB -> TLV_AP.Pt();
-
 
                         Double_t dot_product_dir_vertex = TV3_dirAB.Dot(TV3_dir_prim_sec_vertex);
 
 
-
-
+                        TVector3 TV3_close_TPC_photon;
                         if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                         {
                             Double_t dca_min  = 999.0;
                             Double_t path_min = -999.0;
+                            Int_t    i_track_min = -1;
                             UShort_t NumTracks = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
                             for(Int_t i_track = 0; i_track < NumTracks; i_track++)
                             {
@@ -1040,14 +1040,67 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                                 TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
                                 fHelixAtoPointdca(TV3_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
 
+                                Double_t helix_point_TPC_photon[3];
+                                TPC_single_helix ->Evaluate(pathA_dca,helix_point_TPC_photon);  // 3D-vector of helixB point at path pB[r]
+                                TV3_close_TPC_photon.SetXYZ(helix_point_TPC_photon[0],helix_point_TPC_photon[1],helix_point_TPC_photon[2]);
+
                                 if(dcaAB_dca < dca_min)
                                 {
-                                    dca_min  = dcaAB_dca;
-                                    path_min = pathA_dca;
+                                    dca_min     = dcaAB_dca;
+                                    path_min    = pathA_dca;
+                                    i_track_min = i_track;
                                 }
                             }
 
 
+                            //-----------------------------------
+                            // Topology photon conversion cuts - for print out
+                            Int_t independent_layer_A[6] = {0};
+                            Int_t independent_layer_B[6] = {0};
+                            Int_t shared_layer[6]        = {0};
+                            for(Int_t i_bit = 0; i_bit < 18; i_bit++)
+                            {
+                                if(((Int_t)bit_TRD_layer_shared >> i_bit) & 1)
+                                {
+                                    if(i_bit < 6)                independent_layer_A[i_bit]   = 1;
+                                    if(i_bit >= 6 && i_bit < 12) independent_layer_B[i_bit-6] = 1;
+                                    if(i_bit >= 12)              shared_layer[i_bit-12]       = 1;
+                                }
+                            }
+
+                            if(
+                               (
+                                (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 1 &&
+                                (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 1 &&
+                                (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 1
+                               )
+                               ||
+                               (
+                                (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 2 &&
+                                (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 0 &&
+                                (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 0
+                               )
+                               ||
+                               (
+                                (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 0 &&
+                                (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2]) > 2 &&
+                                (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2]) > 2
+                               )
+                              )
+                            {
+                                if(dca_min > 10.0 || (dca_min <= 10.0 && path_min < 0.0)) // no close by TPC track
+                                {
+                                    TEveP_close_TPC_photon ->SetPoint(i_close_TPC_photon,TV3_close_TPC_photon[0],TV3_close_TPC_photon[1],TV3_close_TPC_photon[2]);
+                                    printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d}: dca_min: %4.3f, i_track_min: %d \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1],dca_min,i_track_min);
+                                    printf("      --> Found vertex for AP in event: %lld at radius: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,TV3_sec_vertex.X(),TV3_sec_vertex.Y(),TV3_sec_vertex.Z(),AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
+                                }
+                            }
+                            //-----------------------------------
+
+
+
+                            //-----------------------------------
+                            // Ntuple for photon candidates
                             Arr_seconary_params[0]  = (Float_t)vertex_point[0];
                             Arr_seconary_params[1]  = (Float_t)vertex_point[1];
                             Arr_seconary_params[2]  = (Float_t)vertex_point[2];
@@ -1059,19 +1112,18 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             Arr_seconary_params[8]  = (Float_t)AP_alpha;
                             Arr_seconary_params[9]  = (Float_t)dca_min;
                             Arr_seconary_params[10] = (Float_t)path_min;
+                            Arr_seconary_params[11] = (Float_t)Inv_mass_AB;
 
-                            // pT AB
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
                             NT_secondary_vertices ->Fill(Arr_seconary_params);
-
-                            //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d} \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1]);
-                            //printf("      --> Found vertex for AP in event: %lld at radius: %4.3f, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
+                            //-----------------------------------
                         }
 
 
 #if defined(USEEVE)
                         //if(AP_pT > 0.05 && AP_pT < 0.25 && CA*CB < 0.0 && pTA > 0.2 && pTB > 0.2 && dot_product_dir_vertex > 0.95)
-                        if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.2 && pTB < 0.2 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+                        if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+                        //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.2 && pTB < 0.2 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                             //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.3 && pTB > 0.3 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TPC photon conversion
                         {
                             //printf("-----> Found vertex for AP in event: %lld at radius: %4.3f, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
@@ -1230,6 +1282,9 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
             //printf("dcaAB_min: %4.3f \n",dcaAB_min);
 
+
+            //-----------------------------------
+            // Ntuple for nculear interaction event candidates
             Arr_cluster_params[0]	= (Float_t)TV3_avg_sec_vertex[0];
             Arr_cluster_params[1]	= (Float_t)TV3_avg_sec_vertex[1];
             Arr_cluster_params[2]	= (Float_t)TV3_avg_sec_vertex[2];
@@ -1243,6 +1298,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             Arr_cluster_params[10]	= (Float_t)momentum_min;
 
             NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
+            //-----------------------------------
 
 
             //if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min);
@@ -1289,6 +1345,10 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         TEveP_nucl_int_vertices  ->SetMarkerColor(kBlue);
         gEve->AddElement(TEveP_nucl_int_vertices);
 
+        TEveP_close_TPC_photon  ->SetMarkerSize(5);
+        TEveP_close_TPC_photon  ->SetMarkerStyle(20);
+        TEveP_close_TPC_photon  ->SetMarkerColor(kGreen);
+        gEve->AddElement(TEveP_close_TPC_photon);
 
         TEveP_first_point_helix  ->SetMarkerSize(3);
         TEveP_first_point_helix  ->SetMarkerStyle(20);
