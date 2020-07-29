@@ -883,6 +883,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             }
             fHelixABdca(vec_helices[i_track_A],vec_helices[i_track_B],pathA,pathB,dcaAB,pathA_est,pathB_est);
             //printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
+
             if(dcaAB < 5.0)
             {
                 //------------------------------------------------------------
@@ -1026,6 +1027,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
 
                         TVector3 TV3_close_TPC_photon;
+                        Int_t flag_close_TPC_photon = 0;
                         if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                         {
                             Double_t dca_min  = 999.0;
@@ -1043,6 +1045,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                                 Double_t helix_point_TPC_photon[3];
                                 TPC_single_helix ->Evaluate(pathA_dca,helix_point_TPC_photon);  // 3D-vector of helixB point at path pB[r]
                                 TV3_close_TPC_photon.SetXYZ(helix_point_TPC_photon[0],helix_point_TPC_photon[1],helix_point_TPC_photon[2]);
+                                flag_close_TPC_photon = 1;
 
                                 if(dcaAB_dca < dca_min)
                                 {
@@ -1051,7 +1054,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                                     i_track_min = i_track;
                                 }
                             }
-
 
                             //-----------------------------------
                             // Topology photon conversion cuts - for print out
@@ -1067,6 +1069,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                                     if(i_bit >= 12)              shared_layer[i_bit-12]       = 1;
                                 }
                             }
+
 
                             if(
                                (
@@ -1090,13 +1093,15 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             {
                                 if(dca_min > 10.0 || (dca_min <= 10.0 && path_min < 0.0)) // no close by TPC track
                                 {
-                                    TEveP_close_TPC_photon ->SetPoint(i_close_TPC_photon,TV3_close_TPC_photon[0],TV3_close_TPC_photon[1],TV3_close_TPC_photon[2]);
+#if defined(USEEVE)
+                                    if(graphics && flag_close_TPC_photon) TEveP_close_TPC_photon ->SetPoint(i_close_TPC_photon,TV3_close_TPC_photon[0],TV3_close_TPC_photon[1],TV3_close_TPC_photon[2]);
+#endif
+                                    i_close_TPC_photon++;
                                     printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d}: dca_min: %4.3f, i_track_min: %d \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1],dca_min,i_track_min);
                                     printf("      --> Found vertex for AP in event: %lld at radius: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,TV3_sec_vertex.X(),TV3_sec_vertex.Y(),TV3_sec_vertex.Z(),AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
                                 }
                             }
                             //-----------------------------------
-
 
 
                             //-----------------------------------
