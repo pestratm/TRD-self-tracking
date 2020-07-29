@@ -178,7 +178,13 @@ void pT_resolution()
 			Double_t pT_TPC = vec_TH2D_pT_TPC_vs_Kalman[1-(Int_t)i_all/3][i_all+1+3*(1-(Int_t)i_all/3)]->GetYaxis()->GetBinCenter(biny);
 			if(fabs(pT_TPC) > 4.0 || fabs(pT_TPC) < 0.35) continue;
 			printf("i_point: %d, pT_TPC: %4.3f \n",i_point,pT_TPC);
-			TH1D* h_proj_x = vec_TH2D_pT_TPC_vs_Kalman[1-(Int_t)i_all/3][i_all+1+3*(1-(Int_t)i_all/3)] ->ProjectionX("blubb",biny,biny);
+			if (fabs(pT_TPC) < 1.2 )
+				TH1D* h_proj_x = vec_TH2D_pT_TPC_vs_Kalman[1-(Int_t)i_all/3][i_all+1+3*(1-(Int_t)i_all/3)] ->ProjectionX("blubb",biny,biny);
+			else
+			{
+				TH1D* h_proj_x = vec_TH2D_pT_TPC_vs_Kalman[1-(Int_t)i_all/3][i_all+1+3*(1-(Int_t)i_all/3)] ->ProjectionX("blubb",biny,biny+2);
+				biny+=2;
+			}	
 			vec_h_proj_x[5-i_all].push_back((TH1D*)h_proj_x->Clone());
 			vec_pT_TPC[5-i_all].push_back(pT_TPC);
 			//Double_t pT_res = h_proj_x ->GetRMS()/fabs(pT_TPC);
