@@ -178,11 +178,12 @@ void pT_resolution()
 			Double_t pT_TPC = vec_TH2D_pT_TPC_vs_Kalman[1-(Int_t)i_all/3][i_all+1+3*(1-(Int_t)i_all/3)]->GetYaxis()->GetBinCenter(biny);
 			if(fabs(pT_TPC) > 4.0 || fabs(pT_TPC) < 0.35) continue;
 			printf("i_point: %d, pT_TPC: %4.3f \n",i_point,pT_TPC);
+			TH1D* h_proj_x;
 			if (fabs(pT_TPC) < 1.2 )
-				TH1D* h_proj_x = vec_TH2D_pT_TPC_vs_Kalman[1-(Int_t)i_all/3][i_all+1+3*(1-(Int_t)i_all/3)] ->ProjectionX("blubb",biny,biny);
+				h_proj_x = vec_TH2D_pT_TPC_vs_Kalman[1-(Int_t)i_all/3][i_all+1+3*(1-(Int_t)i_all/3)] ->ProjectionX("blubb",biny,biny);
 			else
 			{
-				TH1D* h_proj_x = vec_TH2D_pT_TPC_vs_Kalman[1-(Int_t)i_all/3][i_all+1+3*(1-(Int_t)i_all/3)] ->ProjectionX("blubb",biny,biny+2);
+				h_proj_x = vec_TH2D_pT_TPC_vs_Kalman[1-(Int_t)i_all/3][i_all+1+3*(1-(Int_t)i_all/3)] ->ProjectionX("blubb",biny,biny+2);
 				biny+=2;
 			}	
 			vec_h_proj_x[5-i_all].push_back((TH1D*)h_proj_x->Clone());
@@ -368,7 +369,7 @@ void pT_resolution()
     TCanvas* can_proj = new TCanvas("can_proj","can_proj",10,10,1200,1000);
     can_proj->Divide(3,2);
     //Int_t arr_proj_sel[6] = {67,74,82,63,109,119};
-    Int_t arr_proj_sel[6] = {370,74,82,63,109,119};
+    Int_t arr_proj_sel[6] = {20,74,82,63,109,119};
     for(Int_t i_proj_plot = 0; i_proj_plot < 6; i_proj_plot++)
     {
         Int_t i_proj_sel = arr_proj_sel[i_proj_plot];
