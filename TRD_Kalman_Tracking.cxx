@@ -276,8 +276,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 
 		Double_t dy         = 0.2; // 0.2  0.4
 		Double_t dz         = 4.0; // 4.0  4.0
-		Double_t dsin_phi   = 10.0; // 7.0  10.0
-		Double_t dsin_theta = 25.0; // 18.0  25.0
+		Double_t dsin_phi   = 7.0; // 7.0  10.0
+		Double_t dsin_theta = 18.0; // 18.0  25.0
 		Double_t dpT        = 10.0; // 10.0  10.0
 
 		mSig[0][0]	=	dy; // 0.2
@@ -291,7 +291,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		mCov[2][2]	=	TMath::Power(TMath::Sin(dsin_phi*TMath::Pi()/180.0),2);   // 7.0
 		mCov[3][3]	=	TMath::Power(TMath::Tan(dsin_theta*TMath::Pi()/180.0),2); // 20.0
 		//mCov[4][4]	=	0.09; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
-     	mCov[4][4]	=	dpT*dpT; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
+                mCov[4][4]	=	dpT*dpT; // 0.3*0.3  B -> 2.0 B 0.3 -> 0.15
 	        
 		mChi_2		=	0;	
 		
