@@ -80,9 +80,11 @@ private:
 
     TH2D* TH2D_AP_plot;
     const Int_t N_AP_radii = 20;
+    const Int_t N_pT_resolution = 7;
     const Double_t Delta_AP_radius = 18.0;
     vector<TH2D*> vec_TH2D_AP_plot_radius;
     TH2D* TH2D_pT_TPC_vs_Kalman;
+    vector<TH2D*> vec_TH2D_pT_TPC_vs_Kalman;
 
     TFile* outputfile;
     Double_t test;
