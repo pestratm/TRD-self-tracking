@@ -556,8 +556,8 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 				
 		}	
 		//used to look at specific track
-		if(mFound_tracks.size()==44)mShow=1;
-		if(mFound_tracks.size()==45)mShow=0;
+		//if(mFound_tracks.size()==44)mShow=1;
+		//if(mFound_tracks.size()==45)mShow=0;
 		
 		//Loop again for better fit
 		for(Int_t i_layer=1;i_layer<6;i_layer++){
