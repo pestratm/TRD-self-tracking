@@ -25,9 +25,7 @@ Double_t ExpFitFunc(Double_t* x_val, Double_t* par)
 
 void Ana_sec_vertices()
 {
-
-
-
+	SetRootGraphicStyle();
     //--------------------------
     printf("Ana_sec_vertices started \n");
 
@@ -370,9 +368,25 @@ void Ana_sec_vertices()
 
 
     //--------------------------
-    h2D_dEdx_vs_mom ->GetYaxis()->SetTitle("TPC dE/dx (KeV/cm)");
-    h2D_dEdx_vs_mom ->GetXaxis()->SetTitle("p (GeV/c)");
-    h2D_dEdx_vs_mom->GetZaxis()->SetTitle("counts");
+    h2D_dEdx_vs_mom->GetXaxis()->SetTitleFont(42);
+	h2D_dEdx_vs_mom->GetYaxis()->SetTitleFont(42);
+	h2D_dEdx_vs_mom->GetZaxis()->SetTitleFont(42);
+	h2D_dEdx_vs_mom->GetXaxis()->SetLabelFont(42);
+	h2D_dEdx_vs_mom->GetYaxis()->SetLabelFont(42);
+	h2D_dEdx_vs_mom->GetZaxis()->SetLabelFont(42);
+	h2D_dEdx_vs_mom->GetXaxis()->SetTitleSize(0.05);
+	h2D_dEdx_vs_mom->GetYaxis()->SetTitleSize(0.05);
+	h2D_dEdx_vs_mom->GetZaxis()->SetTitleSize(0.05);
+	h2D_dEdx_vs_mom->GetXaxis()->SetLabelSize(0.05);
+	h2D_dEdx_vs_mom->GetYaxis()->SetLabelSize(0.05);
+	h2D_dEdx_vs_mom->GetZaxis()->SetLabelSize(0.05);
+	h2D_dEdx_vs_mom ->GetXaxis()->SetTitle("p (GeV/c)");
+    h2D_dEdx_vs_mom ->GetYaxis()->SetTitle("TPC dE/dx (keV/cm)");
+    h2D_dEdx_vs_mom ->GetZaxis()->SetTitle("counts");
+	h2D_dEdx_vs_mom ->GetXaxis()->CenterTitle();
+    h2D_dEdx_vs_mom ->GetYaxis()->CenterTitle();
+	h2D_dEdx_vs_mom ->GetZaxis()->CenterTitle();
+    
     TCanvas* can_dEdx_vs_mom = Draw_2D_histo_and_canvas(h2D_dEdx_vs_mom,"can_dEdx_vs_mom",1010,820,0.0,-1.0,"colz"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
     can_dEdx_vs_mom->cd()->SetRightMargin(0.15);
 	can_dEdx_vs_mom->cd()->SetLeftMargin(0.15);
@@ -380,8 +394,18 @@ void Ana_sec_vertices()
     can_dEdx_vs_mom->cd()->SetTopMargin(0.08);
     can_dEdx_vs_mom->cd()->SetLogz(1);
     can_dEdx_vs_mom->cd();
-    HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV";
-    plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+    HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, nucl. interaction candidates";
+    plotTopLegend((char*)HistName.Data(),0.17,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+    HistName = "e";
+    plotTopLegend((char*)HistName.Data(),0.4,82,0.045,kBlack,0.0,42,0,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+	HistName = "#pi";
+    plotTopLegend((char*)HistName.Data(),0.4,35,0.045,kBlack,0.0,42,0,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+	HistName = "K";
+    plotTopLegend((char*)HistName.Data(),0.4,110,0.045,kBlack,0.0,42,0,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+	HistName = "p";
+    plotTopLegend((char*)HistName.Data(),0.8,110,0.045,kBlack,0.0,42,0,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+	HistName = "d";
+    plotTopLegend((char*)HistName.Data(),1.4,110,0.045,kBlack,0.0,42,0,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 
     //--------------------------
 
@@ -560,7 +584,7 @@ void Ana_sec_vertices()
     }
     legend_vert->Draw();
     HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, #gamma candidates";
-    plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+    plotTopLegend((char*)HistName.Data(),0.22,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 
 
     //----------------------------
@@ -616,7 +640,7 @@ void Ana_sec_vertices()
     }
     legend->Draw();
 	HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, nucl. interaction candidates";
-    plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+    plotTopLegend((char*)HistName.Data(),0.22,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 
     //--------------------------------------
 
@@ -685,7 +709,7 @@ void Ana_sec_vertices()
 
     plotTopLegend((char*)HistName.Data(),0.45,0.83,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 	HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, #gamma candidates";
-    plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+    plotTopLegend((char*)HistName.Data(),0.22,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 
 
 }

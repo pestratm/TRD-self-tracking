@@ -3284,6 +3284,44 @@ Double_t get_norm_scaling_factor_calc(vector< vector<Double_t> > vec_data_BW, Do
 }
 //------------------------------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
+void SetRootGraphicStyle()
+{
+    cout << "Set basic ROOT graphics style" << endl;
+    //gStyle->Reset();
+    gStyle->SetPalette(1);
+    gStyle->SetCanvasColor(10);
+    gStyle->SetFrameFillColor(10);
+    //gStyle->SetFillColor(4);
+    TGaxis::SetMaxDigits(4);
+    gStyle->SetPadTopMargin(0.15);
+    gStyle->SetPadBottomMargin(0.15);
+    gStyle->SetPadRightMargin(0.14);
+    gStyle->SetPadLeftMargin(0.18);
+    gStyle->SetLabelSize(0.07,"X");
+    gStyle->SetLabelSize(0.07,"Y");
+    gStyle->SetTitleSize(0.07,"X");
+    gStyle->SetTitleSize(0.07,"X");
+    gStyle->SetTextFont(42);
+    gStyle->SetTitleFont(42, "xyz");
+    gStyle->SetLabelFont(42, "xyz");
+
+
+    const Int_t NRGBs = 5;
+    const Int_t NCont = 255;
+    Double_t stops[NRGBs] = { 0.00, 0.34, 0.61, 0.84, 1.00 };
+    Double_t reds[NRGBs]   = { 0.00, 0.00, 0.87, 1.00, 0.51 };
+    Double_t greens[NRGBs] = { 0.00, 0.81, 1.00, 0.20, 0.00 };
+    Double_t blues[NRGBs]  = { 0.51, 1.00, 0.12, 0.00, 0.00 };
+    Int_t  FI = TColor::CreateGradientColorTable(NRGBs, stops, reds,greens, blues, NCont);
+    gStyle->SetNumberContours(NCont);
+
+    gStyle->SetEndErrorSize(3);
+    TRandom3 r3b;
+    r3b.SetSeed(0); // seed for random number generator changes every second
+    gRandom->SetSeed(0);
+}
+//----------------------------------------------------------------------------------------
 
 
 
