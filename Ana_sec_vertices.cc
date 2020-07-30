@@ -238,9 +238,9 @@ void Ana_sec_vertices()
     Int_t bin_nbr=200;
     TH2D* h2d_vertex_pos_xy = new TH2D("h2d_vertex_pos_xy","h2d_vertex_pos_xy",500,-400,400,500,-400,400);
     vector<TH1D*> h1d_vertex_pos_r;
-	h1d_vertex_pos_r.resize(6);
-	for (Int_t i_a=0; i_a<6; i_a++) h1d_vertex_pos_r[i_a] = new TH1D("h1d_vertex_pos_r","h1d_vertex_pos_r",bin_nbr,200,400);
-	TH1D* h1d_vertex_mom_pT = new TH1D("h1d_vertex_mom_pT","h1d_vertex_mom_pT",bin_nbr,0,1);
+    h1d_vertex_pos_r.resize(6);
+    for (Int_t i_a=0; i_a<6; i_a++) h1d_vertex_pos_r[i_a] = new TH1D("h1d_vertex_pos_r","h1d_vertex_pos_r",bin_nbr,200,400);
+    TH1D* h1d_vertex_mom_pT = new TH1D("h1d_vertex_mom_pT","h1d_vertex_mom_pT",bin_nbr,0,1);
     TH1D* h1d_vertex_mom_pT_exp = new TH1D("h1d_vertex_mom_pT_exp","h1d_vertex_mom_pT_exp",bin_nbr,0,1);
     TEvePointSet* TEveP_offset_points = new TEvePointSet();
 
@@ -282,46 +282,46 @@ void Ana_sec_vertices()
                 if(i_bit >= 12)              shared_layer[i_bit-12]       = 1;
             }
         }
-		vector<Bool_t> conds;
-		Bool_t cond1=(
-            (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 1 &&
-            (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 1 &&
-            (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 1 );
+        vector<Bool_t> conds;
+        Bool_t cond1=(
+                      (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 1 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 1 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 1 );
         conds.push_back(cond1);
-		Bool_t cond2=(
-            (shared_layer[0] + shared_layer[1] + shared_layer[2] + shared_layer[3]) > 2 &&
-            (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 0 &&
-            (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 0 );
+        Bool_t cond2=(
+                      (shared_layer[0] + shared_layer[1] + shared_layer[2] + shared_layer[3]) > 2 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 0 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 0 );
         conds.push_back(cond2);
-		   
-		Bool_t cond3=(
-            (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 0 &&
-            (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2]) > 2 &&
-            (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2]) > 2 );
+
+        Bool_t cond3=(
+                      (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 0 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2]) > 2 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2]) > 2 );
         conds.push_back(cond3);
-		
-		Bool_t cond4=(
-            (shared_layer[0] + shared_layer[1] ) > 0 &&
-            (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2]+ independent_layer_A[1]) > 2 &&
-            (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2]+ independent_layer_B[1]) > 2 );
+
+        Bool_t cond4=(
+                      (shared_layer[0] + shared_layer[1] ) > 0 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2]+ independent_layer_A[1]) > 2 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2]+ independent_layer_B[1]) > 2 );
         conds.push_back(cond4);
-		
-		Bool_t cond5=!(
-            (shared_layer[3] + shared_layer[4] + shared_layer[5]) > 0 &&
-            (independent_layer_A[0] + independent_layer_A[1] + independent_layer_A[2] ) > 0 &&
-            (independent_layer_B[0] + independent_layer_B[1] + independent_layer_B[2] ) > 0 );
+
+        Bool_t cond5=!(
+                       (shared_layer[3] + shared_layer[4] + shared_layer[5]) > 0 &&
+                       (independent_layer_A[0] + independent_layer_A[1] + independent_layer_A[2] ) > 0 &&
+                       (independent_layer_B[0] + independent_layer_B[1] + independent_layer_B[2] ) > 0 );
         conds.push_back(cond5);
-		
+
         if((cond1 || cond2 || cond3 ||cond4) && cond5)
         {
             if(dcaTPC_sec > 10.0 || (dcaTPC_sec <= 10.0 && pathTPC_sec < 0.0)) // no close by TPC track
             {
                 h2d_vertex_pos_xy ->Fill(x_sec,y_sec);
-				Double_t rad=TMath::Sqrt(x_sec*x_sec +y_sec*y_sec);
+                Double_t rad=TMath::Sqrt(x_sec*x_sec +y_sec*y_sec);
                 h1d_vertex_pos_r[0]  ->Fill(rad);
-				for(Int_t i_conds=0; i_conds<(Int_t)conds.size(); i_conds++)
-					if (conds[i_conds]) h1d_vertex_pos_r[i_conds+1]  ->Fill(rad);
-				
+                for(Int_t i_conds=0; i_conds<(Int_t)conds.size(); i_conds++)
+                    if (conds[i_conds]) h1d_vertex_pos_r[i_conds+1]  ->Fill(rad);
+
                 h1d_vertex_mom_pT ->Fill(pT_AB_sec);
 
                 TEveP_offset_points  ->SetPoint(i_entry,x_sec,y_sec,z_sec);
@@ -372,13 +372,13 @@ void Ana_sec_vertices()
     //--------------------------
     h2D_dEdx_vs_mom ->GetYaxis()->SetTitle("TPC dE/dx (KeV/cm)");
     h2D_dEdx_vs_mom ->GetXaxis()->SetTitle("p (GeV/c)");
-	h2D_dEdx_vs_mom->GetZaxis()->SetTitle("counts");
+    h2D_dEdx_vs_mom->GetZaxis()->SetTitle("counts");
     TCanvas* can_dEdx_vs_mom = Draw_2D_histo_and_canvas(h2D_dEdx_vs_mom,"can_dEdx_vs_mom",1010,820,0.0,-1.0,"colz"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
     can_dEdx_vs_mom->cd()->SetRightMargin(0.1);
     can_dEdx_vs_mom->cd()->SetTopMargin(0.05);
     can_dEdx_vs_mom->cd()->SetLogz(1);
     can_dEdx_vs_mom->cd();
-	HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV";
+    HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV";
     plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 
     //--------------------------
@@ -462,34 +462,34 @@ void Ana_sec_vertices()
     h1d_cluster_pos_r_norm ->SetFillColor(kRed);
     h1d_cluster_pos_r_norm ->SetFillStyle(3022);
     h1d_cluster_pos_r_norm ->DrawCopy("same h");
-	for(Int_t i_line = 0;i_line < 6; i_line++)
+    for(Int_t i_line = 0;i_line < 6; i_line++)
     {
-		//cout<<"im in the loop "<<endl;
+        //cout<<"im in the loop "<<endl;
         Double_t temp_r=(TRD_layer_radii[i_line][0]+TRD_layer_radii[i_line][1])*0.5;
-		if (!(i_line) || (i_line==5))
-        	PlotArrowHist(h1d_cluster_pos_r_norm,temp_r-1.0,.05,0.02,kBlack,3,1,45.0); //  hist,x_val,arrow_length,arrow_offset,Line_Col,LineWidth,LineStyle,angle
-		else
-			PlotArrowHist(h1d_vertex_pos_r_norm,temp_r-1.0,.05,0.02,kBlack,3,1,45.0); //  hist,x_val,arrow_length,arrow_offset,Line_Col,LineWidth,LineStyle,angle
-		
-	}
-    
-	/*
-    for (Int_t i_line =0;i_line<6 ;i_line++)
-    {
-        //Double_t temp_r=(TRD_layer_radii[i_line][0]+TRD_layer_radii[i_line][1])*0.5;
-        Double_t temp_r=TRD_layer_radii[i_line][0];
-        //PlotLine(temp_r,temp_r,0.0,0.9,kBlue,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
-        PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
-        temp_r=TRD_layer_radii[i_line][1];
-        PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+        if (!(i_line) || (i_line==5))
+            PlotArrowHist(h1d_cluster_pos_r_norm,temp_r-1.0,.05,0.02,kBlack,3,1,45.0); //  hist,x_val,arrow_length,arrow_offset,Line_Col,LineWidth,LineStyle,angle
+        else
+            PlotArrowHist(h1d_vertex_pos_r_norm,temp_r-1.0,.05,0.02,kBlack,3,1,45.0); //  hist,x_val,arrow_length,arrow_offset,Line_Col,LineWidth,LineStyle,angle
 
-    }*/
-	TLegend* legend_p_n = new TLegend(0.22,0.70,0.48,0.8);
-   	legend_p_n->AddEntry(h1d_vertex_pos_r_norm,"photon vertices","f");
-	legend_p_n->AddEntry(h1d_cluster_pos_r_norm,"nuclear vertices","f");
-	legend_p_n->SetLineColor(10);
-   	legend_p_n->Draw();
-	
+    }
+
+    /*
+     for (Int_t i_line =0;i_line<6 ;i_line++)
+     {
+     //Double_t temp_r=(TRD_layer_radii[i_line][0]+TRD_layer_radii[i_line][1])*0.5;
+     Double_t temp_r=TRD_layer_radii[i_line][0];
+     //PlotLine(temp_r,temp_r,0.0,0.9,kBlue,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+     PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+     temp_r=TRD_layer_radii[i_line][1];
+     PlotLine(temp_r,temp_r,0.0,0.9,color_layer_match[i_line],2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+
+     }*/
+    TLegend* legend_p_n = new TLegend(0.22,0.70,0.48,0.8);
+    legend_p_n->AddEntry(h1d_vertex_pos_r_norm,"photon vertices","f");
+    legend_p_n->AddEntry(h1d_cluster_pos_r_norm,"nuclear vertices","f");
+    legend_p_n->SetLineColor(10);
+    legend_p_n->Draw();
+
     can_vertex_photons_and_nucl ->SaveAs("can_vertex_photons_and_nucl.png");
     //----------------------------
 
@@ -513,53 +513,54 @@ void Ana_sec_vertices()
     can_cluster_pos_r->cd()->SetTopMargin(0.08);
     can_cluster_pos_r->cd()->SetLogy(1);
     can_cluster_pos_r->cd();
-	
+
     //--------------------------
     // Plot r vertex
     h1d_vertex_pos_r[0] ->GetXaxis()->SetTitle("r (cm)");
     h1d_vertex_pos_r[0] ->GetYaxis()->SetTitle("counts");
+    h1d_vertex_pos_r[0]->GetXaxis()->SetRangeUser(260,390);
     TCanvas* can_vertex_pos_r = Draw_1D_histo_and_canvas(h1d_vertex_pos_r[0],"can_vertex_pos_r",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
     can_vertex_pos_r->cd()->SetRightMargin(0.20);
     can_vertex_pos_r->cd()->SetTopMargin(0.08);
     can_vertex_pos_r->cd()->SetLogy(0);
-	    
+
     can_vertex_pos_r->cd();
-	for(Int_t i_clusnbr = 0; i_clusnbr < 5; i_clusnbr++)
+    for(Int_t i_clusnbr = 0; i_clusnbr < 5; i_clusnbr++)
     {
         h1d_vertex_pos_r[i_clusnbr] ->SetLineColor(color_layer_match[i_clusnbr]+2);
         h1d_vertex_pos_r[i_clusnbr] ->SetLineWidth(2);
         h1d_vertex_pos_r[i_clusnbr] ->SetFillColor(color_layer_match[i_clusnbr]);
         h1d_vertex_pos_r[i_clusnbr] ->SetFillStyle(3022);
-		h1d_vertex_pos_r[i_clusnbr]->GetXaxis()->SetRangeUser(260,360);
-    
+        h1d_vertex_pos_r[i_clusnbr]->GetXaxis()->SetRangeUser(260,360);
+
         h1d_vertex_pos_r[i_clusnbr] ->DrawCopy("same h");
     }
     for(Int_t i_line = 0;i_line < 6; i_line++)
     {
         Double_t temp_r=(TRD_layer_radii[i_line][0]+TRD_layer_radii[i_line][1])*0.5;
         PlotArrowHist(h1d_vertex_pos_r[0],temp_r-1.0,200.0,100.0,kBlack,3,1,45); //  hist,x_val,arrow_length,arrow_offset,Line_Col,LineWidth,LineStyle,angle
-	}
-   	TLegend* legend_vert = new TLegend(0.57,0.7,0.8,0.9);
+    }
+    TLegend* legend_vert = new TLegend(0.57,0.7,0.8,0.9);
     legend_vert ->SetBorderSize(0);
     legend_vert ->SetFillColor(10);
     legend_vert ->SetTextSize(0.03);
     //legend_vert->SetHeader("The legend_vert Title","C"); // option "C" allows to center the header
     for(Int_t i_clusnbr = 0; i_clusnbr < 5; i_clusnbr++)
     {
-		if (!(i_clusnbr))
-			HistName="All cuts allowed";
-		else
-		{	
-        	HistName = "Cut nbr ";
-        	HistName += i_clusnbr;
-		}
-		legend_vert->AddEntry(h1d_vertex_pos_r[i_clusnbr],HistName,"f");
+        if (!(i_clusnbr))
+            HistName="All cuts allowed";
+        else
+        {
+            HistName = "Cut ";
+            HistName += i_clusnbr;
+        }
+        legend_vert->AddEntry(h1d_vertex_pos_r[i_clusnbr],HistName,"f");
     }
     legend_vert->Draw();
     HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, #gamma candidates";
     plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 
-	
+
     //----------------------------
 
     //------------------------------------
@@ -591,14 +592,14 @@ void Ana_sec_vertices()
         PlotArrowHist(h1d_cluster_pos_r_array[0],temp_r-1.0,40.0,10.0,kBlack,3,1,45); //  hist,x_val,arrow_length,arrow_offset,Line_Col,LineWidth,LineStyle,angle
 
         /*
-        TArrow *ar1 = new TArrow(x_val,hist_val+arrow_length+arrow_offset,x_val,hist_val+arrow_offset,0.01,"|>"); // x1,y1,x2,y2
-        ar1->SetAngle(30.0);
-        ar1->SetLineWidth(2);
-        ar1->SetLineColor(vec_circle_color[N_acc_ring]);
-        //ar1->SetFillStyle(3008);
-        ar1->SetFillColor(vec_circle_color[N_acc_ring]);
-        ar1->Draw();
-        */
+         TArrow *ar1 = new TArrow(x_val,hist_val+arrow_length+arrow_offset,x_val,hist_val+arrow_offset,0.01,"|>"); // x1,y1,x2,y2
+         ar1->SetAngle(30.0);
+         ar1->SetLineWidth(2);
+         ar1->SetLineColor(vec_circle_color[N_acc_ring]);
+         //ar1->SetFillStyle(3008);
+         ar1->SetFillColor(vec_circle_color[N_acc_ring]);
+         ar1->Draw();
+         */
     }
     TLegend* legend = new TLegend(0.75,0.7,0.9,0.92);
     legend ->SetBorderSize(0);
