@@ -256,7 +256,6 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
         HistName += i_pt_res;
         vec_TH2D_pT_TPC_vs_Kalman[i_pt_res] = new TH2D(HistName.Data(),HistName.Data(),2000,-10.0,10.0,2000,-10.0,10.0);
     }
-
 }
 //----------------------------------------------------------------------------------------
 
@@ -1143,8 +1142,13 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             flag_found_good_AP_vertex = 1;
                             if(graphics)
                             {
-                                Draw_Kalman_Helix_Tracks(i_track_A,kGreen);
-                                Draw_Kalman_Helix_Tracks(i_track_B,kRed);
+                                // Draw kalman tracks
+                                Draw_Kalman_Helix_Tracks(i_track_A,kGreen,280.0,500.0);
+                                Draw_Kalman_Helix_Tracks(i_track_B,kRed,280.0,500.0);
+
+                                // Draw kalman tracklets
+                                Draw_matched_Kalman_Tracklets(i_track_A);
+                                Draw_matched_Kalman_Tracklets(i_track_B);
 
                                 TEveP_sec_vertices ->SetPoint(i_vertex_acc,vertex_point[0],vertex_point[1],vertex_point[2]);
                                 //printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
@@ -1318,17 +1322,17 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
 
 #if defined(USEEVE)
-            if(graphics)
+            if(graphics && 1 == 0)
             {
                 TEveP_nucl_int_vertices ->SetPoint(i_vertex_nucl_int,TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2]);
 
                 // Draw kalman tracks which contributed to nuclear interaction vertex
-                Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][i_sec_vtx_A],kGreen+1);
-                Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][i_sec_vtx_A],kGreen+1);
+                Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][i_sec_vtx_A],kGreen+1,280.0,500.0);
+                Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][i_sec_vtx_A],kGreen+1,280.0,500.0);
                 for(Int_t idx_B = 0; idx_B < (Int_t)idx_acc_vtx_B.size(); idx_B++)
                 {
-                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]],kMagenta+1);
-                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]],kMagenta+1);
+                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]],kMagenta+1,280.0,500.0);
+                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]],kMagenta+1,280.0,500.0);
                 }
                 if(idx_close_TPC_track >= 0) Draw_TPC_track(idx_close_TPC_track,kAzure-2,3);
 
@@ -1361,7 +1365,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         TEveP_close_TPC_photon  ->SetMarkerSize(5);
         TEveP_close_TPC_photon  ->SetMarkerStyle(20);
         TEveP_close_TPC_photon  ->SetMarkerColor(kGreen);
-        gEve->AddElement(TEveP_close_TPC_photon);
+        //gEve->AddElement(TEveP_close_TPC_photon);
 
         TEveP_first_point_helix  ->SetMarkerSize(3);
         TEveP_first_point_helix  ->SetMarkerStyle(20);
@@ -1498,13 +1502,14 @@ void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics)
 
                     if(graphics)
                     {
-                        //Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3);
-                        //Draw_Kalman_Helix_Tracks(i_kalm_track,kGreen+1);
+                        //Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3,280.0,500.0);
+                        //Draw_Kalman_Helix_Tracks(i_kalm_track,kGreen+1,280.0,500.0);
                     }
                     //printf("      >>>>> %s idx (Kalman): %d %s, %s idx (TPC): %d %s, pT (TPC): %4.3f, pT (kalman): %4.3f \n",KRED,i_kalm_track,KNRM,KBLU,idx_matched_TPC_track,KNRM,pT_track,pT_kalman);
 
                     TH2D_pT_TPC_vs_Kalman                              ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
                     vec_TH2D_pT_TPC_vs_Kalman[N_good_kalman_tracklets] ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
+                    printf("N_good_kalman_tracklets: %d \n",N_good_kalman_tracklets);
                 }
             }
         }
@@ -1546,7 +1551,7 @@ void Ali_TRD_ST_Analyze::Evaluate(Double_t t,Double_t r[3])  //radius vector
 
 
 //----------------------------------------------------------------------------------------
-void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color)
+void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Double_t low_R, Double_t high_R)
 {
     // n_track = -1 -> all tracks drawn
     Int_t i_track_start = 0;
@@ -1583,7 +1588,8 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color)
             radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
             //printf("i_track: %d, track_path: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, radius_helix: %4.3f \n",i_track,track_path,track_pos[0],track_pos[1],track_pos[2],radius_helix);
             if(isnan(radius_helix)) break;
-            if(radius_helix > 500.0) break;
+            if(radius_helix > high_R) break; // 500.0
+            if(radius_helix < low_R) break; // 280.0
             if(fabs(track_pos[2]) > 430.0) break;
             //if(radius_helix > 80.0)
             {
@@ -2277,6 +2283,63 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Tracks(vector< vector<Ali_TRD_ST_Tracklets*
 #endif
 
                 Int_t i_det           = found_tracks[i_Track][i_lay] ->get_TRD_det();
+                Int_t i_sector = (Int_t)(i_det/30);
+                Int_t i_stack  = (Int_t)(i_det%30/6);
+                Int_t i_layer  = i_det%6;
+
+
+#if defined(USEEVE)
+                HistName = "tracklet (kal) ";
+                HistName += i_Track;
+                HistName += "_";
+                HistName += i_sector;
+                HistName += "_";
+                HistName += i_stack;
+                HistName += "_";
+                HistName += i_lay;
+
+                TEveLine_Kalman_found[i_Track][i_lay]	->SetName(HistName.Data());
+                TEveLine_Kalman_found[i_Track][i_lay]   ->SetLineStyle(1);
+                TEveLine_Kalman_found[i_Track][i_lay]  	->SetLineWidth(6);
+                TEveLine_Kalman_found[i_Track][i_lay]   ->SetMainColor(kOrange);
+                gEve->AddElement(TEveLine_Kalman_found[i_Track][i_lay]);
+#endif
+
+            }
+        }
+    }
+#if defined(USEEVE)
+    gEve->Redraw3D(kTRUE);
+#endif
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Draw_matched_Kalman_Tracklets(Int_t i_track_plot)
+{
+#if defined(USEEVE)
+    vector< vector<TEveLine*> > TEveLine_Kalman_found;
+    TEveLine_Kalman_found.resize((Int_t)vec_kalman_TRD_trackets.size());
+#endif
+    for(Int_t i_Track=i_track_plot;i_Track< (i_track_plot+1);i_Track++)
+    {
+#if defined(USEEVE)
+        TEveLine_Kalman_found[i_Track].resize(6);
+#endif
+
+        for(Int_t i_lay=0;i_lay<6;i_lay++)
+        {
+            if(vec_kalman_TRD_trackets[i_Track][i_lay]!=NULL)
+            {
+#if defined(USEEVE)
+                TEveLine_Kalman_found[i_Track][i_lay]=new TEveLine();
+                TEveLine_Kalman_found[i_Track][i_lay]->SetNextPoint(vec_kalman_TRD_trackets[i_Track][i_lay]->get_TV3_offset()[0],vec_kalman_TRD_trackets[i_Track][i_lay]->get_TV3_offset()[1],vec_kalman_TRD_trackets[i_Track][i_lay]->get_TV3_offset()[2]);
+                TEveLine_Kalman_found[i_Track][i_lay]->SetNextPoint(vec_kalman_TRD_trackets[i_Track][i_lay]->get_TV3_offset()[0] + scale_length_vec*vec_kalman_TRD_trackets[i_Track][i_lay]->get_TV3_dir()[0],vec_kalman_TRD_trackets[i_Track][i_lay]->get_TV3_offset()[1] + scale_length_vec*vec_kalman_TRD_trackets[i_Track][i_lay]->get_TV3_dir()[1],vec_kalman_TRD_trackets[i_Track][i_lay]->get_TV3_offset()[2] + scale_length_vec*vec_kalman_TRD_trackets[i_Track][i_lay]->get_TV3_dir()[2]);
+#endif
+
+                Int_t i_det           = vec_kalman_TRD_trackets[i_Track][i_lay] ->get_TRD_det();
                 Int_t i_sector = (Int_t)(i_det/30);
                 Int_t i_stack  = (Int_t)(i_det%30/6);
                 Int_t i_layer  = i_det%6;

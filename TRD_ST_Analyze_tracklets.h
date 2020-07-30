@@ -186,10 +186,11 @@ public:
     vector<Int_t> vec_idx_matched_TPC_track;
     Int_t Number_Tracklets;
     void Draw_Kalman_Tracks(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks);
+    void Draw_matched_Kalman_Tracklets(Int_t i_track_plot);
     void set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in);
     void set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_in);
     void Match_kalman_tracks_to_TPC_tracks(Int_t graphics);
-    void Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color);
+    void Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Double_t low_R, Double_t high_R);
     void set_single_helix_params(vector<Double_t> vec_params);
     void Evaluate(Double_t t, // helix evaluation, taken from AliHelix
                   Double_t r[3]);  //radius vector

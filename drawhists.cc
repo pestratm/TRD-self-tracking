@@ -3,8 +3,8 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 // Environment variables
-#define ENV_PI
-//#define ENV_ALEX
+//#define ENV_PI
+#define ENV_ALEX
 //#define ENV_PI_SVEN
 
 void drawhists(TString input_list = "List_data_ADC.txt")
@@ -48,7 +48,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     input_dir  = "./Data/";
     output_dir = "./ST_out/";
 #endif
-    Int_t graphics = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics        = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t use_prim_vertex = 0; // 0 = no primary vertex, 1 = primary vertex used
     //------------------------------------
 
@@ -70,8 +70,9 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     // photon events: 88
     // nuclear interaction event: 158
 
-    for (Long64_t event = 0; event < N_Events; event++) // 2,3
-    //for (Long64_t event = 6485; event < 6486; event++) // 2,3   192
+    //for(Long64_t event = 0; event < N_Events; event++) // 2,3
+    Int_t event_plot = 285;
+    for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
     {
 
         if (event != 0  &&  event % 50 == 0)
@@ -88,13 +89,14 @@ void drawhists(TString input_list = "List_data_ADC.txt")
 
         //TRD_ST_Analyze ->Draw_event(event);  // ->draws TPC tracks
         //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
-        TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0,graphics); // last one is graphics  --> draws kalman TRD tracklets
-        //TRD_ST_Analyze ->Do_TPC_TRD_matching_allEvents(3.0,10.0);
+
+        //TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0,graphics); // last one is graphics  --> draws kalman TRD tracklets
+        TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0,0); // last one is graphics  --> draws kalman TRD tracklets
 
 
 #if 1
         vector< vector<Ali_TRD_ST_Tracklets*> > kalman_found_tracks = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,use_prim_vertex); // 0 = no primary vertex, 1 = primary vertex used
-        if(graphics) TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks);
+        //if(graphics) TRD_ST_Analyze ->Draw_Kalman_Tracks(kalman_found_tracks); // Draws the Kalman matched TRD tracklets
 
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks; // TPC track matched tracklets
         vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
