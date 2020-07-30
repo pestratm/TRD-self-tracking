@@ -202,10 +202,10 @@ void Ana_sec_vertices()
     //--------------------------
     // Open Ntuple
     //TFile* inputfile = TFile::Open("./ST_out/Merge_ST_hoppner_V2.root");
-    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABC_V7.root");
+    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABCDE_V9.root");
     TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertices");
     Float_t x_sec,y_sec,z_sec,bitmap_sec,pT_AB_sec;
-    Float_t qpT_A_sec,qpT_B_sec,AP_pT_sec,AP_alpha_sec,dcaTPC_sec,pathTPC_sec;
+    Float_t qpT_A_sec,qpT_B_sec,AP_pT_sec,AP_alpha_sec,dcaTPC_sec,pathTPC_sec,InvM_sec;
     NT_sec_vertices ->SetBranchAddress("x",&x_sec);
     NT_sec_vertices ->SetBranchAddress("y",&y_sec);
     NT_sec_vertices ->SetBranchAddress("z",&z_sec);
@@ -217,6 +217,7 @@ void Ana_sec_vertices()
     NT_sec_vertices ->SetBranchAddress("AP_alpha",&AP_alpha_sec);
     NT_sec_vertices ->SetBranchAddress("dcaTPC",&dcaTPC_sec);
     NT_sec_vertices ->SetBranchAddress("pathTPC",&pathTPC_sec);
+    NT_sec_vertices ->SetBranchAddress("InvM",&InvM_sec);  // of photon candidates
 
     TNtuple* NT_sec_cluster = (TNtuple*)inputfile->Get("NT_secondary_vertex_cluster");
     Float_t x_clus,y_clus,z_clus,ntracks_clus,dcaTPC_clus,tof,trklength,dEdx,dcaprim,pT,mom;
