@@ -128,7 +128,22 @@ void pT_resolution()
     TH2D_pT_TPC_vs_Kalman[0]->GetYaxis()->SetRangeUser(-4.2,4.2);
     TH2D_pT_TPC_vs_Kalman[0]->DrawCopy("colz");
     PlotLine(-4.1,4.1,-4.1,4.1,kRed,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
- 
+ 	HistName = "p-Pb collision";
+	//sprintf(NoP,"%4.1f",pT_TPC);
+	//HistName += NoP;
+	//HistName += " GeV/c";
+	plotTopLegend((char*)HistName.Data(),0.26,0.86,0.055,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+	HistName = "sNN = 5.02";
+	HistName += " TeV/c";
+	plotTopLegend((char*)HistName.Data(),0.26,0.8,0.055,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+	HistName = "";
+	sprintf(NoP,"%d",6);
+	HistName += NoP;
+	HistName += " Tracklets";
+	plotTopLegend((char*)HistName.Data(),0.26,0.74,0.055,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
 	TCanvas* can_TPC_vs_Kalman_prim_vert = new TCanvas("can_TPC_vs_Kalman_prim_vert","can_TPC_vs_Kalman_prim_vert",10,10,800,800);
     can_TPC_vs_Kalman_prim_vert->cd();
     can_TPC_vs_Kalman_prim_vert->SetLeftMargin(0.22);
@@ -159,7 +174,22 @@ void pT_resolution()
     TH2D_pT_TPC_vs_Kalman[1]->DrawCopy("colz");
 
     PlotLine(-4.1,4.1,-4.1,4.1,kRed,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
-   
+    	HistName = "p-Pb collision";
+	//sprintf(NoP,"%4.1f",pT_TPC);
+	//HistName += NoP;
+	//HistName += " GeV/c";
+	plotTopLegend((char*)HistName.Data(),0.26,0.86,0.055,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+	HistName = "sNN = 5.02";
+	HistName += " TeV/c";
+	plotTopLegend((char*)HistName.Data(),0.26,0.8,0.055,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+	HistName = "";
+	sprintf(NoP,"%d",6);
+	HistName += NoP;
+	HistName += " Tracklets";
+	plotTopLegend((char*)HistName.Data(),0.26,0.74,0.055,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
     //----------------------------------------------------
     // Do projections to get resolution
     //TGraphErrors* tge_pT_resolution_RMS = new TGraphErrors();
@@ -369,7 +399,7 @@ void pT_resolution()
     TCanvas* can_proj = new TCanvas("can_proj","can_proj",10,10,1200,1000);
     can_proj->Divide(3,2);
     //Int_t arr_proj_sel[6] = {67,74,82,63,109,119};
-    Int_t arr_proj_sel[6] = {20,74,82,63,109,119};
+    Int_t arr_proj_sel[6] = {180,210,240,267,277,287};
     for(Int_t i_proj_plot = 0; i_proj_plot < 6; i_proj_plot++)
     {
         Int_t i_proj_sel = arr_proj_sel[i_proj_plot];
@@ -394,6 +424,8 @@ void pT_resolution()
         vec_h_proj_x[3*0 +0][i_proj_sel]->GetYaxis()->SetTitleSize(Label_size_mean_pT);
         vec_h_proj_x[3*0 +0][i_proj_sel]->GetXaxis()->SetNdivisions(505,'N');
         vec_h_proj_x[3*0 +0][i_proj_sel]->GetYaxis()->SetNdivisions(505,'N');
+		vec_h_proj_x[3*0 +0][i_proj_sel]->GetXaxis()->SetRangeUser(0,2.5);
+    
         vec_h_proj_x[3*0 +0][i_proj_sel]->GetXaxis()->CenterTitle();
         vec_h_proj_x[3*0 +0][i_proj_sel]->GetYaxis()->CenterTitle();
         vec_h_proj_x[3*0 +0][i_proj_sel]->GetXaxis()->SetTitle("p_{T}^{Kalman} (GeV/c)");
@@ -420,7 +452,7 @@ void pT_resolution()
         printf("mean: %4.3f, sigma: %4.3f, amplitude: %4.3f \n",mean,sigma,amplitude);
 
         //Fit
-        vec_h_proj_x[3*0 +0][i_proj_sel]->Fit("func_Gauss_fit","QMN","",mean-4.0*sigma,mean+4.0*sigma);
+        vec_h_proj_x[3*0 +0][i_proj_sel]->Fit("func_Gauss_fit","QMN","",mean-3.0*sigma,mean+3.0*sigma);
 
         amplitude = func_Gauss_fit ->GetParameter(0);
         mean      = func_Gauss_fit ->GetParameter(1);
@@ -439,17 +471,19 @@ void pT_resolution()
         func_Gauss_fit ->SetParameter(2,sigma);
 
         //Fit
-        vec_h_proj_x[3*0 +0][i_proj_sel] ->Fit("func_Gauss_fit","QMN","",mean-2.0*sigma,mean+2.0*sigma);
+        vec_h_proj_x[3*0 +0][i_proj_sel] ->Fit("func_Gauss_fit","QMN","",mean-1.5*sigma,mean+1.5*sigma);
 
         // Get parameters
         amplitude = func_Gauss_fit ->GetParameter(0);
         mean      = func_Gauss_fit ->GetParameter(1);
         sigma     = fabs(func_Gauss_fit ->GetParameter(2));
 
-        func_Gauss_fit ->SetRange(mean-2.0*sigma,mean+2.0*sigma);
+        func_Gauss_fit ->SetRange(mean-1.5*sigma,mean+1.5*sigma);
 
         func_Gauss_fit ->SetLineColor(kRed);
         func_Gauss_fit ->SetLineWidth(3);
+		//	func_Gauss_fit ->SetRange(0.,2.);
+
         func_Gauss_fit ->DrawCopy("same");
 
         Double_t pT_TPC = vec_pT_TPC[3*0 +0][i_proj_sel];
