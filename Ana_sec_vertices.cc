@@ -374,8 +374,10 @@ void Ana_sec_vertices()
     h2D_dEdx_vs_mom ->GetXaxis()->SetTitle("p (GeV/c)");
     h2D_dEdx_vs_mom->GetZaxis()->SetTitle("counts");
     TCanvas* can_dEdx_vs_mom = Draw_2D_histo_and_canvas(h2D_dEdx_vs_mom,"can_dEdx_vs_mom",1010,820,0.0,-1.0,"colz"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
-    can_dEdx_vs_mom->cd()->SetRightMargin(0.1);
-    can_dEdx_vs_mom->cd()->SetTopMargin(0.05);
+    can_dEdx_vs_mom->cd()->SetRightMargin(0.15);
+	can_dEdx_vs_mom->cd()->SetLeftMargin(0.15);
+    can_dEdx_vs_mom->cd()->SetBottomMargin(0.1);
+    can_dEdx_vs_mom->cd()->SetTopMargin(0.08);
     can_dEdx_vs_mom->cd()->SetLogz(1);
     can_dEdx_vs_mom->cd();
     HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV";
@@ -520,7 +522,7 @@ void Ana_sec_vertices()
     h1d_vertex_pos_r[0] ->GetYaxis()->SetTitle("counts");
     h1d_vertex_pos_r[0]->GetXaxis()->SetRangeUser(260,390);
     TCanvas* can_vertex_pos_r = Draw_1D_histo_and_canvas(h1d_vertex_pos_r[0],"can_vertex_pos_r",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
-    can_vertex_pos_r->cd()->SetRightMargin(0.20);
+    can_vertex_pos_r->cd()->SetRightMargin(0.10);
     can_vertex_pos_r->cd()->SetTopMargin(0.08);
     can_vertex_pos_r->cd()->SetLogy(0);
 
@@ -540,7 +542,7 @@ void Ana_sec_vertices()
         Double_t temp_r=(TRD_layer_radii[i_line][0]+TRD_layer_radii[i_line][1])*0.5;
         PlotArrowHist(h1d_vertex_pos_r[0],temp_r-1.0,200.0,100.0,kBlack,3,1,45); //  hist,x_val,arrow_length,arrow_offset,Line_Col,LineWidth,LineStyle,angle
     }
-    TLegend* legend_vert = new TLegend(0.57,0.7,0.8,0.9);
+    TLegend* legend_vert = new TLegend(0.7,0.7,0.8,0.9);
     legend_vert ->SetBorderSize(0);
     legend_vert ->SetFillColor(10);
     legend_vert ->SetTextSize(0.03);
@@ -567,7 +569,7 @@ void Ana_sec_vertices()
     //Plot all r for different cuts
     TCanvas* can_cluster_pos_r_comp = Draw_1D_histo_and_canvas(h1d_cluster_pos_r_array[0],"can_vertex_nucl_compare",1010,820,0.0,0.0,"h"); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
     can_cluster_pos_r_comp->cd()->SetRightMargin(0.02);
-    can_cluster_pos_r_comp->cd()->SetTopMargin(0.02);
+    can_cluster_pos_r_comp->cd()->SetTopMargin(0.08);
     //can_vertex_photons_and_nucl->cd()->SetLogz(0);
     can_cluster_pos_r_comp->cd();
     for(Int_t i_clusnbr = 0; i_clusnbr < 5; i_clusnbr++)
@@ -601,7 +603,7 @@ void Ana_sec_vertices()
          ar1->Draw();
          */
     }
-    TLegend* legend = new TLegend(0.75,0.7,0.9,0.92);
+    TLegend* legend = new TLegend(0.75,0.7,0.88,0.90);
     legend ->SetBorderSize(0);
     legend ->SetFillColor(10);
     legend ->SetTextSize(0.03);
@@ -613,6 +615,9 @@ void Ana_sec_vertices()
         legend->AddEntry(h1d_cluster_pos_r_array[i_clusnbr],HistName,"f");
     }
     legend->Draw();
+	HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, nucl. interaction candidates";
+    plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
     //--------------------------------------
 
 
@@ -621,7 +626,10 @@ void Ana_sec_vertices()
     //-------------------------------
     // Plot pT
     h1d_vertex_mom_pT ->GetXaxis()->SetTitle("pT (GeV/c)");
-    h1d_vertex_mom_pT ->GetYaxis()->SetTitle("counts");
+    h1d_vertex_mom_pT ->GetXaxis()->SetRangeUser(0.2,0.9);
+	h1d_vertex_mom_pT ->GetYaxis()->SetTitle("counts");
+	h1d_vertex_mom_pT ->GetYaxis()->SetRangeUser(10,3050);
+	
     TCanvas* can_vertex_mom_pT = Draw_1D_histo_and_canvas(h1d_vertex_mom_pT,"can_vertex_mom_pT",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
     can_vertex_mom_pT->cd()->SetRightMargin(0.20);
     can_vertex_mom_pT->cd()->SetTopMargin(0.08);
@@ -632,7 +640,12 @@ void Ana_sec_vertices()
     //-----------------------------
     // Plot pT_exp
     h1d_vertex_mom_pT_exp ->GetXaxis()->SetTitle("p_{T} (GeV/c)");
+	h1d_vertex_mom_pT_exp ->GetXaxis()->SetRangeUser(0.2,0.9);
     h1d_vertex_mom_pT_exp ->GetYaxis()->SetTitle("counts");
+	h1d_vertex_mom_pT_exp ->GetYaxis()->SetRangeUser(10,3050);
+	h1d_vertex_mom_pT_exp ->SetLineColor(kBlack);
+    
+	
     TCanvas* can_vertex_mom_pT_exp = Draw_1D_histo_and_canvas(h1d_vertex_mom_pT_exp,"can_vertex_mom_pT_exp",1010,820,0.0,0.0,""); // TH1D* hist, TString name, Int_t x_size, Int_t y_size, Double_t min_val, Double_t max_val, TString option
     can_vertex_mom_pT_exp->cd()->SetRightMargin(0.20);
     can_vertex_mom_pT_exp->cd()->SetTopMargin(0.08);
@@ -671,6 +684,8 @@ void Ana_sec_vertices()
     //can_vertex_mom_pT_exp->cd()->SetLogy(0);
 
     plotTopLegend((char*)HistName.Data(),0.45,0.83,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+	HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, #gamma candidates";
+    plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 
 
 }
