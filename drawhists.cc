@@ -48,7 +48,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     input_dir  = "./Data/";
     output_dir = "./ST_out/";
 #endif
-    Int_t graphics        = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics        = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t use_prim_vertex = 0; // 0 = no primary vertex, 1 = primary vertex used
     //------------------------------------
 
@@ -67,12 +67,14 @@ void drawhists(TString input_list = "List_data_ADC.txt")
     TRD_Kalman_Trackfinder kalid;
     kalid.set_layer_radii_hist(h_layer_radii);
 
-    // photon events: 88
+    // photon events: 88, 285, 29, 273
+    // pi0 event: 378
     // nuclear interaction event: 158
 
     //for(Long64_t event = 0; event < N_Events; event++) // 2,3
-    Int_t event_plot = 285;
-    for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
+    for(Long64_t event = 0; event < 2000; event++) // 2,3
+    //Int_t event_plot = 378;
+    //for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
     {
 
         if (event != 0  &&  event % 50 == 0)
@@ -111,6 +113,7 @@ void drawhists(TString input_list = "List_data_ADC.txt")
         //if(graphics) TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed); // -1 -> all kalman tracks drawn
 
         TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics);
+        TRD_ST_Analyze ->Calc_Kalman_efficiency();
         //TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(1);
 
 #endif
