@@ -110,6 +110,9 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     }
 
 
+    tp_efficiency_matching_vs_pT = new TProfile("tp_efficiency_matching_vs_pT","tp_efficiency_matching_vs_pT",100,0,10);
+    tp_efficiency_all_vs_pT      = new TProfile("tp_efficiency_all_vs_pT","tp_efficiency_all_vs_pT",100,0,10);
+
 
 
     //--------------------------
@@ -1426,6 +1429,120 @@ void Ali_TRD_ST_Analyze::set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Trac
 
 
 
+#if 1
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Calc_Kalman_efficiency()
+{
+    // Loop over TPC tracks
+    Int_t N_TPC_tracks = (Int_t)matched_tracks.size();
+    for(Int_t i_TPC_track = 0; i_TPC_track < N_TPC_tracks; i_TPC_track++)
+    {
+        //--------------------
+        // Get information from TPC track
+        TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_TPC_track);
+        TLorentzVector TLV_part = TRD_ST_TPC_Track ->get_TLV_part();
+        Float_t momentum        = TLV_part.P();
+        Float_t pT_track        = TLV_part.Pt();
+        Double_t dca            = TRD_ST_TPC_Track ->getdca();  // charge * distance of closest approach to the primary vertex
+        //--------------------
+
+
+        Int_t N_layers_matched_all    = 0;
+        Int_t N_good_TPC_TRD_tracklets = 0;
+        vector<Int_t> vec_N_layers_matched;
+        Int_t N_Kalman_tracks = (Int_t)vec_kalman_TRD_trackets.size();
+        vec_N_layers_matched.resize(N_Kalman_tracks);
+        vector<Int_t> index_kalman_track_matched;
+        index_kalman_track_matched.clear();
+        for(Int_t i_kalm_track = 0; i_kalm_track < N_Kalman_tracks; i_kalm_track++)
+        {
+            vec_N_layers_matched[i_kalm_track] = 0;
+        }
+        //printf("N_layers TPC: %d \n",(Int_t)matched_tracks[i_TPC_track].size());
+
+        // Loop over TRD layers matched with TPC track
+        for(Int_t i_layer_TPC = 0; i_layer_TPC < (Int_t)matched_tracks[i_TPC_track].size(); i_layer_TPC++)
+        {
+            //matched_tracks
+            if(matched_tracks[i_TPC_track][i_layer_TPC] == NULL) continue;
+            TVector3 TPC_TV3_offset = matched_tracks[i_TPC_track][i_layer_TPC]->get_TV3_offset();
+            N_good_TPC_TRD_tracklets++;
+
+            // Loop over kalman matched TRD tracklets
+            for(Int_t i_kalm_track = 0; i_kalm_track < N_Kalman_tracks; i_kalm_track++)
+            {
+                Int_t flag_match = 0;
+                Int_t N_good_kalman_tracklets = 0;
+                //printf("N_layers Kalman: %d \n",(Int_t)vec_kalman_TRD_trackets[i_kalm_track].size());
+
+                // Loop over TRD layers matched with Kalman track
+                for(Int_t i_layer = i_layer_TPC; i_layer <= i_layer_TPC; i_layer++)
+                {
+                    if(vec_kalman_TRD_trackets[i_kalm_track][i_layer] == NULL) continue;
+                    N_good_kalman_tracklets++;
+                    TVector3 kalman_TV3_offset = vec_kalman_TRD_trackets[i_kalm_track][i_layer] ->get_TV3_offset();
+
+                    TVector3 TV3_diff =  kalman_TV3_offset - TPC_TV3_offset;
+                    if(TV3_diff.Mag() < 0.1)
+                    {
+                        N_layers_matched_all++;
+                        vec_N_layers_matched[i_kalm_track]++;
+                        flag_match = 1;
+                    }
+                }
+                if(vec_N_layers_matched[i_kalm_track] == 1 && flag_match) index_kalman_track_matched.push_back(i_kalm_track);
+            }
+        }
+
+        // Calculate actuall matching (only tracklets matched) and tracking (inlcuding momentum) efficieny
+        if(N_good_TPC_TRD_tracklets > 3) // Use only TPC tracks with a certain amount of TRD matched tracklets
+        {
+            for(Int_t index_kalman_track = 0; index_kalman_track < (Int_t)index_kalman_track_matched.size(); index_kalman_track++)
+            {
+                // Fraction of matched Kalman to TPC track TRD tracklets
+                Double_t matches_percent = 100.0*(Double_t)vec_N_layers_matched[index_kalman_track_matched[index_kalman_track]]/(Double_t)N_good_TPC_TRD_tracklets;
+
+                if(matches_percent >= 50.0)
+                {
+                    Int_t i_kalm_track = index_kalman_track_matched[index_kalman_track];
+
+                    Double_t pT_kalman   = mHelices_kalman[i_kalm_track][6]; // pT
+                    Double_t pz_kalman   = mHelices_kalman[i_kalm_track][7]; // pz
+                    Double_t curv_kalman = mHelices_kalman[i_kalm_track][4]; // curvature
+                    Double_t delta_pT    = pT_track - pT_kalman;
+                    if(pT_track != 0.0)
+                    {
+                        Double_t rel_delta_pT = fabs(delta_pT)/pT_track;
+
+                        //printf("%s i_TPC_track: %d %s matched to i_kalm_track: %d, %4.2f%% tracklets matched, delta_pT: %4.3f, pT(TPC): %4.3f, pT(Kalman): %4.3f, N_TPC_tracklets: %d \n",KGRN,i_TPC_track,KNRM,i_kalm_track,matches_percent,delta_pT,pT_track,pT_kalman,N_good_TPC_TRD_tracklets);
+
+                        if(rel_delta_pT < 0.5)
+                        {
+                            tp_efficiency_all_vs_pT ->Fill(pT_track,1.0);
+                        }
+                        else
+                        {
+                            tp_efficiency_all_vs_pT ->Fill(pT_track,0.0);
+                        }
+                    }
+                    tp_efficiency_matching_vs_pT ->Fill(pT_track,1.0);
+                }
+                else
+                {
+                    tp_efficiency_all_vs_pT      ->Fill(pT_track,0.0);
+                    tp_efficiency_matching_vs_pT ->Fill(pT_track,0.0);
+                }
+            }
+        }
+
+    }
+
+}
+//----------------------------------------------------------------------------------------
+#endif
+
+
+
 //----------------------------------------------------------------------------------------
 void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics)
 {
@@ -1509,7 +1626,7 @@ void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics)
 
                     TH2D_pT_TPC_vs_Kalman                              ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
                     vec_TH2D_pT_TPC_vs_Kalman[N_good_kalman_tracklets] ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
-                    printf("N_good_kalman_tracklets: %d \n",N_good_kalman_tracklets);
+                    //printf("N_good_kalman_tracklets: %d \n",N_good_kalman_tracklets);
                 }
             }
         }
@@ -2464,6 +2581,10 @@ void Ali_TRD_ST_Analyze::Write()
         }
     }
     outputfile ->cd();
+
+    tp_efficiency_matching_vs_pT ->Write();
+    tp_efficiency_all_vs_pT      ->Write();
+
 
     printf("All data written \n");
 }

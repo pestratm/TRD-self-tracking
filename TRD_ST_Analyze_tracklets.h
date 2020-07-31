@@ -34,6 +34,7 @@ using namespace std;
 #include "Math/MatrixRepresentationsStatic.h"
 #include "Math/SMatrix.h"
 #include "Math/MatrixFunctions.h"
+#include "TProfile.h"
 
 #if defined(USEEVE)
 #include "TEveBox.h"
@@ -168,6 +169,8 @@ private:
 
     vector< vector<TH2D*> > vec_h2D_pT_vs_TPC_TRD_residuals;
     TString input_dir;
+    TProfile* tp_efficiency_matching_vs_pT;
+    TProfile* tp_efficiency_all_vs_pT;
 
 
 public:
@@ -189,6 +192,7 @@ public:
     void Draw_matched_Kalman_Tracklets(Int_t i_track_plot);
     void set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in);
     void set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_in);
+    void Calc_Kalman_efficiency();
     void Match_kalman_tracks_to_TPC_tracks(Int_t graphics);
     void Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Double_t low_R, Double_t high_R);
     void set_single_helix_params(vector<Double_t> vec_params);
