@@ -171,6 +171,7 @@ private:
     TString input_dir;
     TProfile* tp_efficiency_matching_vs_pT;
     TProfile* tp_efficiency_all_vs_pT;
+    vector<TH2D*> vec_h2D_delta_pT_all_vs_pT;
 
 
 public:
