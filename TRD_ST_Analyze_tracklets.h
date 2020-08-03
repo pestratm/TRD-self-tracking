@@ -212,6 +212,7 @@ public:
     TH1D* get_layer_radii_hist() {return h_layer_radii_det;}
     Long64_t get_N_Events() {return N_Events;}
     void set_input_dir(TString input_dir_in) {input_dir = input_dir_in;}
+    Float_t Calc_nuclev_bitmap(vector<Int_t> vec_idx_kalman_tracks_nuclev_in);
     void Write();
 
 
