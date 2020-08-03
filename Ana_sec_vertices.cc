@@ -200,7 +200,7 @@ void Ana_sec_vertices()
     //--------------------------
     // Open Ntuple
     //TFile* inputfile = TFile::Open("./ST_out/Merge_ST_hoppner_V2.root");
-    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABCDE_V9.root");
+    TFile* inputfile = TFile::Open("./ST_out/Merge_ST_ABCDE_V11.root");
     TNtuple* NT_sec_vertices = (TNtuple*)inputfile->Get("NT_secondary_vertices");
     Float_t x_sec,y_sec,z_sec,bitmap_sec,pT_AB_sec;
     Float_t qpT_A_sec,qpT_B_sec,AP_pT_sec,AP_alpha_sec,dcaTPC_sec,pathTPC_sec,InvM_sec;
@@ -218,7 +218,7 @@ void Ana_sec_vertices()
     NT_sec_vertices ->SetBranchAddress("InvM",&InvM_sec);  // of photon candidates
 
     TNtuple* NT_sec_cluster = (TNtuple*)inputfile->Get("NT_secondary_vertex_cluster");
-    Float_t x_clus,y_clus,z_clus,ntracks_clus,dcaTPC_clus,tof,trklength,dEdx,dcaprim,pT,mom;
+    Float_t x_clus,y_clus,z_clus,ntracks_clus,dcaTPC_clus,tof,trklength,dEdx,dcaprim,pT,mom,layerbitmap;
     NT_sec_cluster ->SetBranchAddress("x",&x_clus);
     NT_sec_cluster ->SetBranchAddress("y",&y_clus);
     NT_sec_cluster ->SetBranchAddress("z",&z_clus);
@@ -230,6 +230,7 @@ void Ana_sec_vertices()
     NT_sec_cluster ->SetBranchAddress("dcaprim",&dcaprim);
     NT_sec_cluster ->SetBranchAddress("pT",&pT);
     NT_sec_cluster ->SetBranchAddress("mom",&mom);
+    NT_sec_cluster ->SetBranchAddress("layerbitmap",&layerbitmap);
 
     //--------------------------
 
@@ -353,6 +354,30 @@ void Ana_sec_vertices()
         //for(Long64_t i_entry = 0; i_entry < 50; i_entry++)
     {
         NT_sec_cluster	 ->GetEntry(i_entry);
+
+
+        //-------------
+        // Read bitmap
+        Int_t Arr_tracklets_layer[6] = {0};
+        Int_t nuclev_bitmap = (Int_t)layerbitmap;
+        for(Int_t i_lay = 0; i_lay < 6; i_lay++)
+        {
+            Int_t N_tracklets_layer = 0;
+            for(Int_t i_bit = 0; i_bit < 5; i_bit++) // asume only 5 bits are filled -> 32 tracklets per layer at maximum
+            {
+                if(((Int_t)nuclev_bitmap >> (i_bit + i_lay*5)) & 1) // read the bits
+                {
+                    N_tracklets_layer |= 1 << i_bit; // set bit i_bit to 1
+                }
+            }
+            Arr_tracklets_layer[i_lay] = N_tracklets_layer;
+            //printf(" --> bitmap read: %d, i_lay: %d, N_tracklets: %d \n",(Int_t)nuclev_bitmap,i_lay,N_tracklets_layer);
+        }
+
+        if(!(Arr_tracklets_layer[5] > 3 || Arr_tracklets_layer[4] > 3 || Arr_tracklets_layer[3] > 3)) continue;
+        //-------------
+
+
         //if(ntracks_clus < 7) continue;
         if(dcaTPC_clus > 3.0) continue;
         h2d_cluster_pos_xy->Fill(x_clus,y_clus);
