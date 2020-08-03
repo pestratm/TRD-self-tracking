@@ -62,7 +62,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 
-    NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom");
+    NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom:layerbitmap");
     NT_secondary_vertex_cluster ->SetAutoSave( 5000000 );
 		
     Tree_TRD_ST_Event_out  = NULL;
@@ -821,6 +821,79 @@ void Ali_TRD_ST_Analyze::fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float
 
 
 //----------------------------------------------------------------------------------------
+Float_t Ali_TRD_ST_Analyze::Calc_nuclev_bitmap(vector<Int_t> vec_idx_kalman_tracks_nuclev_in)
+{
+    // Calculated how many independent tracklets are used for the nuclear interaction vertex candidate.
+    // Returns a bitmap (6 layers, each layer has 5 bits to store the number of tracklets)
+
+#if 0
+    for(Int_t idx_i_kalman_track = 0; idx_i_kalman_track < (Int_t)vec_idx_kalman_tracks_nuclev_in.size() - 1; idx_i_kalman_track++)
+    {
+        for(Int_t idx_i_kalman_trackB = (idx_i_kalman_track+1); idx_i_kalman_trackB < (Int_t)vec_idx_kalman_tracks_nuclev_in.size(); idx_i_kalman_trackB++)
+        {
+            Int_t i_kalman_track_B = vec_idx_kalman_tracks_nuclev_in[idx_i_kalman_trackB];
+            if(i_kalman_track_A == i_kalman_track_B)
+            {
+                //printf("%s WARNING! Same kalman track used twice in nuclev, %s trackA: %d(%d), trackB: %d(%d) \n",KRED,KNRM,i_kalman_track_A,idx_i_kalman_track,i_kalman_track_B,idx_i_kalman_trackB);
+            }
+        }
+    }
+#endif
+
+    vector< vector<Int_t> > vec_nuclev_kalman_tracklets_per_layer;
+    vec_nuclev_kalman_tracklets_per_layer.resize(6);
+    for(Int_t i_lay = 0; i_lay < 6; i_lay++)
+    {
+        for(Int_t idx_i_kalman_track = 0; idx_i_kalman_track < (Int_t)vec_idx_kalman_tracks_nuclev_in.size(); idx_i_kalman_track++)
+        {
+            Int_t i_kalman_track_A = vec_idx_kalman_tracks_nuclev_in[idx_i_kalman_track];
+            if(vec_kalman_TRD_trackets[i_kalman_track_A][i_lay] != NULL)
+            {
+                Int_t idx_TRD_tracklet = vec_kalman_TRD_trackets[i_kalman_track_A][i_lay]->get_TRD_index();
+                Int_t flag_used = 0;
+                for(Int_t idx = 0; idx < (Int_t)vec_nuclev_kalman_tracklets_per_layer[i_lay].size(); idx++)
+                {
+                    Int_t idx_TRD_tracklet_stored = vec_nuclev_kalman_tracklets_per_layer[i_lay][idx];
+                    if(idx_TRD_tracklet_stored == idx_TRD_tracklet)
+                    {
+                        flag_used = 1;
+                        break;
+                    }
+                }
+                if(!flag_used) vec_nuclev_kalman_tracklets_per_layer[i_lay].push_back(idx_TRD_tracklet);
+            }
+        }
+    }
+
+    Int_t bitmap_return = 0;
+    for(Int_t i_lay = 0; i_lay < 6; i_lay++)
+    {
+        Int_t N_independent_tracklets = (Int_t)vec_nuclev_kalman_tracklets_per_layer[i_lay].size();
+
+        for(Int_t i_bit = 0; i_bit < 5; i_bit++) // asume only 5 bits are filled -> 32 tracklets per layer at maximum
+        {
+            if(((Int_t)N_independent_tracklets >> i_bit) & 1)
+            {
+                bitmap_return |= 1 << (i_bit + 5*i_lay); // set bit i_layer to 1
+            }
+        }
+
+#if 0
+        printf("%s i_lay: %d %s, N_independent_tracklets: %d \n",KMAG,i_lay,KNRM,N_independent_tracklets);
+        for(Int_t i_trk = 0; i_trk < N_independent_tracklets; i_trk++)
+        {
+            printf(" ----> i_trk: %d, idx: %d \n",i_trk,vec_nuclev_kalman_tracklets_per_layer[i_lay][i_trk]);
+        }
+#endif
+    }
+
+    return (Float_t)bitmap_return;
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
 Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 {
     Int_t flag_found_good_AP_vertex = 0;
@@ -1114,8 +1187,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                                     if(graphics && flag_close_TPC_photon) TEveP_close_TPC_photon ->SetPoint(i_close_TPC_photon,TV3_close_TPC_photon[0],TV3_close_TPC_photon[1],TV3_close_TPC_photon[2]);
 #endif
                                     i_close_TPC_photon++;
-                                    printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d}: dca_min: %4.3f, i_track_min: %d \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1],dca_min,i_track_min);
-                                    printf("      --> Found vertex for AP in event: %lld at radius: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,TV3_sec_vertex.X(),TV3_sec_vertex.Y(),TV3_sec_vertex.Z(),AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
+                                    //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d}: dca_min: %4.3f, i_track_min: %d \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1],dca_min,i_track_min);
+                                    //printf("      --> Found vertex for AP in event: %lld at radius: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,TV3_sec_vertex.X(),TV3_sec_vertex.Y(),TV3_sec_vertex.Z(),AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
                                 }
                             }
                             //-----------------------------------
@@ -1208,23 +1281,28 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     Double_t radius_sec_vertex;
     TVector3 TV3_diff_sec_vertices;
     TVector3 TV3_avg_sec_vertex;
-    Float_t Arr_cluster_params[11];
+    Float_t Arr_cluster_params[12];
 
-    Bool_t visited[N_sec_vertices];
+    //Bool_t visited[N_sec_vertices];
+    vector<Int_t> visited;
+    visited.resize(N_sec_vertices);
     for(Int_t i_vis = 0; i_vis < N_sec_vertices; i_vis++) visited[i_vis] = 0;
 
     Int_t i_vertex_nucl_int = 0;
     for(Int_t i_sec_vtx_A = 0; i_sec_vtx_A < (N_sec_vertices - 1); i_sec_vtx_A++)
     {
+        //printf("i_sec_vtx_A: %d \n",i_sec_vtx_A);
         radius_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A].Perp();
         if(radius_sec_vertex < 240.0 || radius_sec_vertex > 370.0) continue;
-        if (visited[i_sec_vtx_A]) continue;
+        if(visited[i_sec_vtx_A]) continue;
+        visited[i_sec_vtx_A] = 1;
         Int_t N_close_vertex = 1;
-        TV3_avg_sec_vertex	 = vec_TV3_secondary_vertices[i_sec_vtx_A]*1;
+        TV3_avg_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A]*1;
         vector<Int_t> idx_acc_vtx_B;
         idx_acc_vtx_B.clear();
         for(Int_t i_sec_vtx_B = (i_sec_vtx_A + 1); i_sec_vtx_B < N_sec_vertices; i_sec_vtx_B++)
         {
+            if(visited[i_sec_vtx_B]) continue;
             TV3_diff_sec_vertices = vec_TV3_secondary_vertices[i_sec_vtx_A] - vec_TV3_secondary_vertices[i_sec_vtx_B];
             if(TV3_diff_sec_vertices.Mag() < 3.0)
             {
@@ -1237,6 +1315,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
         if(N_close_vertex > 2)
         {
+#if 0
+            for(Int_t i_sec_vtx = 0; i_sec_vtx < N_sec_vertices; i_sec_vtx++)
+            {
+                printf("i_sec_vtx: %d, visited: %d \n",i_sec_vtx,visited[i_sec_vtx]);
+            }
+#endif
 
             TV3_avg_sec_vertex *= 1.0/(Float_t)(N_close_vertex);
 
@@ -1310,7 +1394,46 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             //printf("dcaAB_min: %4.3f \n",dcaAB_min);
 
 
+
             //-----------------------------------
+            // Store the kalman tracks which are used in nuclear event candidate
+            vector<Int_t> vec_idx_kalman_tracks_nuclev;
+            vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[0][i_sec_vtx_A]);
+            vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[1][i_sec_vtx_A]);
+            for(Int_t idx_B = 0; idx_B < (Int_t)idx_acc_vtx_B.size(); idx_B++)
+            {
+                vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]]);
+                vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]]);
+            }
+
+            ///if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min);
+            Float_t nuclev_bitmap = Calc_nuclev_bitmap(vec_idx_kalman_tracks_nuclev); // Calculates the number of shared/independent tracklets per layer
+
+            // Read bitmap
+            Int_t Arr_tracklets_layer[6] = {0};
+            for(Int_t i_lay = 0; i_lay < 6; i_lay++)
+            {
+                Int_t N_tracklets_layer = 0;
+                for(Int_t i_bit = 0; i_bit < 5; i_bit++) // asume only 5 bits are filled -> 32 tracklets per layer at maximum
+                {
+                    if(((Int_t)nuclev_bitmap >> (i_bit + i_lay*5)) & 1) // read the bits
+                    {
+                        N_tracklets_layer |= 1 << i_bit; // set bit i_bit to 1
+                    }
+                }
+                Arr_tracklets_layer[i_lay] = N_tracklets_layer;
+                //printf(" --> bitmap read: %d, i_lay: %d, N_tracklets: %d \n",(Int_t)nuclev_bitmap,i_lay,N_tracklets_layer);
+            }
+            //-----------------------------------
+
+
+
+            //-----------------------------------
+            if(Arr_tracklets_layer[5] > 3 || Arr_tracklets_layer[4] > 3 || Arr_tracklets_layer[3] > 3)
+            {
+                //if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f, trkl: {%d, %d, %d, %d, %d, %d} \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min,Arr_tracklets_layer[0],Arr_tracklets_layer[1],Arr_tracklets_layer[2],Arr_tracklets_layer[3],Arr_tracklets_layer[4],Arr_tracklets_layer[5]);
+            }
+
             // Ntuple for nculear interaction event candidates
             Arr_cluster_params[0]	= (Float_t)TV3_avg_sec_vertex[0];
             Arr_cluster_params[1]	= (Float_t)TV3_avg_sec_vertex[1];
@@ -1323,26 +1446,36 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
             Arr_cluster_params[8]	= (Float_t)dca_to_prim;
             Arr_cluster_params[9]	= (Float_t)pT_min;
             Arr_cluster_params[10]	= (Float_t)momentum_min;
+            Arr_cluster_params[11]	= (Float_t)nuclev_bitmap;
 
             NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
             //-----------------------------------
 
 
-            //if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min);
+         
 
 
 #if defined(USEEVE)
-            if(graphics && 1 == 0)
+            if(graphics)
             {
                 TEveP_nucl_int_vertices ->SetPoint(i_vertex_nucl_int,TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2]);
 
                 // Draw kalman tracks which contributed to nuclear interaction vertex
                 Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][i_sec_vtx_A],kGreen+1,280.0,500.0);
                 Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][i_sec_vtx_A],kGreen+1,280.0,500.0);
+
+                // Draw kalman tracklets
+                Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[0][i_sec_vtx_A]);
+                Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[1][i_sec_vtx_A]);
+
                 for(Int_t idx_B = 0; idx_B < (Int_t)idx_acc_vtx_B.size(); idx_B++)
                 {
                     Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]],kMagenta+1,280.0,500.0);
                     Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]],kMagenta+1,280.0,500.0);
+
+                    // Draw kalman tracklets
+                    Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]]);
+                    Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]]);
                 }
                 if(idx_close_TPC_track >= 0) Draw_TPC_track(idx_close_TPC_track,kAzure-2,3);
 
@@ -1436,7 +1569,6 @@ void Ali_TRD_ST_Analyze::set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Trac
 
 
 
-#if 1
 //----------------------------------------------------------------------------------------
 void Ali_TRD_ST_Analyze::Calc_Kalman_efficiency()
 {
@@ -1577,7 +1709,6 @@ void Ali_TRD_ST_Analyze::Calc_Kalman_efficiency()
 
 }
 //----------------------------------------------------------------------------------------
-#endif
 
 
 
