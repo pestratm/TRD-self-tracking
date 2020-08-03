@@ -236,8 +236,8 @@ void Ana_sec_vertices()
     Int_t bin_nbr=200;
     TH2D* h2d_vertex_pos_xy = new TH2D("h2d_vertex_pos_xy","h2d_vertex_pos_xy",500,-400,400,500,-400,400);
     vector<TH1D*> h1d_vertex_pos_r;
-    h1d_vertex_pos_r.resize(6);
-    for (Int_t i_a=0; i_a<6; i_a++) h1d_vertex_pos_r[i_a] = new TH1D("h1d_vertex_pos_r","h1d_vertex_pos_r",bin_nbr,200,400);
+    h1d_vertex_pos_r.resize(7);
+    for (Int_t i_a=0; i_a<7; i_a++) h1d_vertex_pos_r[i_a] = new TH1D("h1d_vertex_pos_r","h1d_vertex_pos_r",bin_nbr,200,400);
     TH1D* h1d_vertex_mom_pT = new TH1D("h1d_vertex_mom_pT","h1d_vertex_mom_pT",bin_nbr,0,1);
     TH1D* h1d_vertex_mom_pT_exp = new TH1D("h1d_vertex_mom_pT_exp","h1d_vertex_mom_pT_exp",bin_nbr,0,1);
     TEvePointSet* TEveP_offset_points = new TEvePointSet();
@@ -299,18 +299,24 @@ void Ana_sec_vertices()
         conds.push_back(cond3);
 
         Bool_t cond4=(
-                      (shared_layer[0] + shared_layer[1] ) > 0 &&
-                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2]+ independent_layer_A[1]) > 2 &&
-                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2]+ independent_layer_B[1]) > 2 );
+                      (shared_layer[0] + shared_layer[1]) > 0 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2] + independent_layer_A[1]) > 2 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2] + independent_layer_B[1]) > 2 );
         conds.push_back(cond4);
-
-        Bool_t cond5=!(
+		
+		Bool_t cond5=(
+                      (shared_layer[0] + shared_layer[1] + shared_layer[2]) == 0 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2] + independent_layer_A[1] + independent_layer_A[0]) > 3 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2] + independent_layer_B[1] + independent_layer_B[0]) > 3 );
+        conds.push_back(cond5);
+		
+        Bool_t cond6=!(
                        (shared_layer[3] + shared_layer[4] + shared_layer[5]) > 0 &&
                        (independent_layer_A[0] + independent_layer_A[1] + independent_layer_A[2] ) > 0 &&
                        (independent_layer_B[0] + independent_layer_B[1] + independent_layer_B[2] ) > 0 );
-        conds.push_back(cond5);
+        conds.push_back(cond6);
 
-        if((cond1 || cond2 || cond3 ||cond4) && cond5)
+        if((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6)
         {
             if(dcaTPC_sec > 10.0 || (dcaTPC_sec <= 10.0 && pathTPC_sec < 0.0)) // no close by TPC track
             {
@@ -409,7 +415,8 @@ void Ana_sec_vertices()
 
     //--------------------------
 
-
+	can_dEdx_vs_mom ->SaveAs("can_dEdx_vs_mom.png");
+    
 
     //--------------------------
     gEve->AddElement(TEveP_offset_points);
@@ -443,6 +450,7 @@ void Ana_sec_vertices()
             vec_PL_TRD_det_2D[i_sector][i_layer] ->Draw("l");
         }
     }
+	
     //--------------------------
 
     //--------------------------
@@ -551,7 +559,7 @@ void Ana_sec_vertices()
     can_vertex_pos_r->cd()->SetLogy(0);
 
     can_vertex_pos_r->cd();
-    for(Int_t i_clusnbr = 0; i_clusnbr < 5; i_clusnbr++)
+    for(Int_t i_clusnbr = 0; i_clusnbr < 6; i_clusnbr++)
     {
         h1d_vertex_pos_r[i_clusnbr] ->SetLineColor(color_layer_match[i_clusnbr]+2);
         h1d_vertex_pos_r[i_clusnbr] ->SetLineWidth(2);
@@ -571,7 +579,7 @@ void Ana_sec_vertices()
     legend_vert ->SetFillColor(10);
     legend_vert ->SetTextSize(0.03);
     //legend_vert->SetHeader("The legend_vert Title","C"); // option "C" allows to center the header
-    for(Int_t i_clusnbr = 0; i_clusnbr < 5; i_clusnbr++)
+    for(Int_t i_clusnbr = 0; i_clusnbr < 6; i_clusnbr++)
     {
         if (!(i_clusnbr))
             HistName="All cuts allowed";
@@ -585,8 +593,9 @@ void Ana_sec_vertices()
     legend_vert->Draw();
     HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, #gamma candidates";
     plotTopLegend((char*)HistName.Data(),0.22,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
-
-
+	
+	can_vertex_pos_r ->SaveAs("can_vertex_pos_r.png");
+    
     //----------------------------
 
     //------------------------------------
@@ -641,7 +650,8 @@ void Ana_sec_vertices()
     legend->Draw();
 	HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, nucl. interaction candidates";
     plotTopLegend((char*)HistName.Data(),0.22,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
-
+	can_cluster_pos_r_comp ->SaveAs("can_cluster_pos_r_comp.png");
+    
     //--------------------------------------
 
 
@@ -710,6 +720,7 @@ void Ana_sec_vertices()
     plotTopLegend((char*)HistName.Data(),0.45,0.83,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
 	HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, #gamma candidates";
     plotTopLegend((char*)HistName.Data(),0.22,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
-
+	can_vertex_mom_pT_exp ->SaveAs("can_vertex_mom_pT_exp.png");
+    
 
 }
