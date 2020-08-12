@@ -1043,7 +1043,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                     cout << "i_bit: " << i_bit << ", value: " << (((Int_t)test >> i_bit) & 1) << endl;
                 }
 #endif
-                //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d} \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1]);
+                printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d} \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1]);
                 //------------------------------------------------------------
 
 
@@ -1533,7 +1533,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     }
 #endif
 
-    return flag_found_good_AP_vertex;
+    return flag_found_good_vertex;
 }
 //----------------------------------------------------------------------------------------
 
@@ -1574,13 +1574,22 @@ void Ali_TRD_ST_Analyze::Calc_Kalman_efficiency()
 {
     // Loop over TPC tracks
     Int_t N_TPC_tracks = (Int_t)matched_tracks.size();
+	Int_t i_TPC_mom_list=0;
     for(Int_t i_TPC_track = 0; i_TPC_track < N_TPC_tracks; i_TPC_track++)
     {
         //--------------------
         // Get information from TPC track
-        TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_TPC_track);
+        TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_TPC_mom_list);
+		Float_t momentum        = TLV_part.P();
+        while(momentum<0.3)
+		{	
+			i_TPC_mom_list++;
+			TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_TPC_mom_list);
+			momentum        = TLV_part.P();
+        
+		}	
+		
         TLorentzVector TLV_part = TRD_ST_TPC_Track ->get_TLV_part();
-        Float_t momentum        = TLV_part.P();
         Float_t pT_track        = TLV_part.Pt();
         Double_t dca            = TRD_ST_TPC_Track ->getdca();  // charge * distance of closest approach to the primary vertex
         Float_t charge = 1.0;
@@ -1704,7 +1713,7 @@ void Ali_TRD_ST_Analyze::Calc_Kalman_efficiency()
                 }
             }
         }
-
+		i_TPC_mom_list++;
     }
 
 }
