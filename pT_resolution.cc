@@ -122,9 +122,16 @@ void pT_resolution()
     vec_TH2D_pT_TPC_vs_Kalman[0].resize(N_pT_resolution);
     vec_TH2D_pT_TPC_vs_Kalman[1].resize(N_pT_resolution);
 
+    vector<vector<TH2D*>> vec_TH2D_one_over_pT_TPC_vs_Kalman;
+    vec_TH2D_one_over_pT_TPC_vs_Kalman.resize(2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0].resize(N_pT_resolution);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1].resize(N_pT_resolution);
+
     vector<TFile*> input_file;
-    input_file.push_back(TFile::Open("./ST_out/Merge_ST_ABCDE_V9.root"));
-    input_file.push_back(TFile::Open("./ST_out/Merge_ST_ABCDE_V9_prim_vertex.root"));
+    //input_file.push_back(TFile::Open("./ST_out/Merge_ST_ABCDE_V9.root"));
+    //input_file.push_back(TFile::Open("./ST_out/Merge_ST_ABCDE_V9_prim_vertex.root"));
+    input_file.push_back(TFile::Open("./ST_out/Merge_ST_ABCDE_V13.root"));
+    input_file.push_back(TFile::Open("./ST_out/Merge_ST_ABCDE_V13_PV.root"));
     //TFile* input_file = TFile::Open("./ST_out/Merge_ST_ABCDE_V9.root");
     //TFile* input_file_b = TFile::Open("./ST_out/Merge_ST_ABCDE_V9_prim_vertex.root");
     TH2D_pT_TPC_vs_Kalman.push_back( (TH2D*)(input_file[0]->Get("TH2D_pT_TPC_vs_Kalman")));
@@ -136,10 +143,20 @@ void pT_resolution()
         HistName += i_pt_res;
         vec_TH2D_pT_TPC_vs_Kalman[0][i_pt_res]=(TH2D*)(input_file[0]->Get(HistName.Data()));
         vec_TH2D_pT_TPC_vs_Kalman[1][i_pt_res]=(TH2D*)(input_file[1]->Get(HistName.Data()));
+
+        HistName = "vec_TH2D_one_over_pT_TPC_vs_Kalman_";
+        HistName += i_pt_res;
+        vec_TH2D_one_over_pT_TPC_vs_Kalman[0][i_pt_res]=(TH2D*)(input_file[0]->Get(HistName.Data()));
+        vec_TH2D_one_over_pT_TPC_vs_Kalman[1][i_pt_res]=(TH2D*)(input_file[1]->Get(HistName.Data()));
     }
 
     //TH2D_pT_TPC_vs_Kalman = vec_TH2D_pT_TPC_vs_Kalman[6]; // set number of tracklets for Kalman track, 4..6
 
+
+
+
+    //----------------------------------------------------
+    // pT correlation
     TH2D_pT_TPC_vs_Kalman[0] = vec_TH2D_pT_TPC_vs_Kalman[0][6];
     TH2D_pT_TPC_vs_Kalman[1] = vec_TH2D_pT_TPC_vs_Kalman[1][6];
     TCanvas* can_TPC_vs_Kalman = new TCanvas("can_TPC_vs_Kalman","can_TPC_vs_Kalman",10,10,800,800);
@@ -230,6 +247,102 @@ void pT_resolution()
 
     HistName = "TRD + PV";
     plotTopLegend((char*)HistName.Data(),0.26,0.88,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+    //----------------------------------------------------
+
+
+
+    //----------------------------------------------------
+    // One over pT correlation
+    TCanvas* can_one_over_TPC_vs_Kalman = new TCanvas("can_one_over_TPC_vs_Kalman","can_one_over_TPC_vs_Kalman",10,10,800,800);
+    can_one_over_TPC_vs_Kalman->cd();
+    can_one_over_TPC_vs_Kalman->SetLeftMargin(0.22);
+    can_one_over_TPC_vs_Kalman->SetRightMargin(0.2);
+    can_one_over_TPC_vs_Kalman->SetBottomMargin(0.15);
+    can_one_over_TPC_vs_Kalman->SetTopMargin(0.07);
+    can_one_over_TPC_vs_Kalman->SetLogz(1);
+
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->SetTitle("");
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->SetStats(0);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->SetTitleOffset(1.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->SetTitleOffset(1.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetZaxis()->SetTitleOffset(1.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->SetLabelOffset(0.0);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->SetLabelOffset(0.01);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->SetLabelSize(Label_size_mean_pT);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->SetLabelSize(Label_size_mean_pT);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->SetTitleSize(Label_size_mean_pT);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->SetTitleSize(Label_size_mean_pT);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->SetNdivisions(505,'N');
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->SetNdivisions(505,'N');
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->CenterTitle();
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->CenterTitle();
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetZaxis()->CenterTitle();
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->SetTitleFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->SetTitleFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetZaxis()->SetTitleFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->SetLabelFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->SetLabelFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetZaxis()->SetLabelFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->SetTitle("q/p_{T}^{Kalman} (GeV/c)^{-1}");
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->SetTitle("q/p_{T}^{TPC} (GeV/c)^{-1}");
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetZaxis()->SetTitle("counts");
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetXaxis()->SetRangeUser(-4.2,4.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->GetYaxis()->SetRangeUser(-4.2,4.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[0][6]->DrawCopy("colz");
+    PlotLine(-4.1,4.1,-4.1,4.1,kRed,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+    HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, N_{trk}= 6";
+    plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+    HistName = "TRD only";
+    plotTopLegend((char*)HistName.Data(),0.26,0.88,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+    TCanvas* can_one_over_TPC_vs_Kalman_prim_vert = new TCanvas("can_one_over_TPC_vs_Kalman_prim_vert","can_one_over_TPC_vs_Kalman_prim_vert",10,10,800,800);
+    can_one_over_TPC_vs_Kalman_prim_vert->cd();
+    can_one_over_TPC_vs_Kalman_prim_vert->SetLeftMargin(0.22);
+    can_one_over_TPC_vs_Kalman_prim_vert->SetRightMargin(0.2);
+    can_one_over_TPC_vs_Kalman_prim_vert->SetBottomMargin(0.15);
+    can_one_over_TPC_vs_Kalman_prim_vert->SetTopMargin(0.07);
+    can_one_over_TPC_vs_Kalman_prim_vert->SetLogz(1);
+
+    //Double_t Label_size_mean_pT = 0.05;
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->SetTitle("");
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->SetStats(0);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->SetTitleOffset(1.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->SetTitleOffset(1.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetZaxis()->SetTitleOffset(1.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->SetLabelOffset(0.0);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->SetLabelOffset(0.01);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->SetLabelSize(Label_size_mean_pT);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->SetLabelSize(Label_size_mean_pT);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->SetTitleSize(Label_size_mean_pT);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->SetTitleSize(Label_size_mean_pT);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->SetNdivisions(505,'N');
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->SetNdivisions(505,'N');
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->CenterTitle();
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->CenterTitle();
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetZaxis()->CenterTitle();
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->SetTitleFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->SetTitleFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetZaxis()->SetTitleFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->SetLabelFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->SetLabelFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetZaxis()->SetLabelFont(42);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->SetTitle("q/p_{T}^{Kalman} (GeV/c)^{-1}");
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->SetTitle("q/p_{T}^{TPC} (GeV/c)^{-1}");
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetZaxis()->SetTitle("counts");
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetXaxis()->SetRangeUser(-4.2,4.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->GetYaxis()->SetRangeUser(-4.2,4.2);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman[1][6]->DrawCopy("colz");
+
+    PlotLine(-4.1,4.1,-4.1,4.1,kRed,2,9); // (Double_t x1_val, Double_t x2_val, Double_t y1_val, Double_t y2_val, Int_t Line_Col, Int_t LineWidth, Int_t LineStyle)
+    HistName = "p-Pb, #sqrt{s_{NN}}=5.02 TeV, N_{trk}= 6";
+    plotTopLegend((char*)HistName.Data(),0.26,0.95,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+
+    HistName = "TRD + PV";
+    plotTopLegend((char*)HistName.Data(),0.26,0.88,0.045,kBlack,0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+    //----------------------------------------------------
+
+
 
 
     //----------------------------------------------------
