@@ -260,11 +260,16 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     }
 
     vec_TH2D_pT_TPC_vs_Kalman.resize(N_pT_resolution);
+    vec_TH2D_one_over_pT_TPC_vs_Kalman.resize(N_pT_resolution);
     for(Int_t i_pt_res = 0; i_pt_res < N_pT_resolution; i_pt_res++)
     {
         HistName = "vec_TH2D_pT_TPC_vs_Kalman_";
         HistName += i_pt_res;
         vec_TH2D_pT_TPC_vs_Kalman[i_pt_res] = new TH2D(HistName.Data(),HistName.Data(),2000,-10.0,10.0,2000,-10.0,10.0);
+
+        HistName = "vec_TH2D_one_over_pT_TPC_vs_Kalman_";
+        HistName += i_pt_res;
+        vec_TH2D_one_over_pT_TPC_vs_Kalman[i_pt_res] = new TH2D(HistName.Data(),HistName.Data(),2000,-10.0,10.0,2000,-10.0,10.0);
     }
 }
 //----------------------------------------------------------------------------------------
@@ -406,9 +411,12 @@ Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_
         };
         Double_t dist_inv =1/dist;
 	
-        if(dist<(r1+r2))
+        if((dist<(r1+r2))&& (dist> TMath::Abs(r1-r2)))
         {
 	//2 intersections
+//		8<i<i<i<iii<i<iiii>ii
+
+
 		Double_t x_loc 		=((dist*dist +r1*r1 -r2*r2)*(0.5*dist_inv));
 		Double_t y_loc		=TMath::Sqrt(r1*r1 -x_loc*x_loc);
 		
@@ -419,21 +427,42 @@ Int_t Ali_TRD_ST_Analyze::fCircle_Interception(Double_t x1, Double_t y1, Double_
                 y2_c	=(y1*dist+x_loc*dif_y -y_loc*dif_x)*dist_inv;
 
                 return 1;
-	}
+		}
+		else if (dist<= TMath::Abs(r1-r2))
+		{
+			Double_t normrad	=(r1-dist+r2)*dist_inv*0.5;
+            
+            //Double_t normrad	= (r1 + 0.5*(dist - r1 - r2))*dist_inv;
+			if(r2>r1)
+			{	
+                x1_c		=x1 - normrad*dif_x;
+                y1_c		=y1 - normrad*dif_y;
+			}
+			else
+			{
+				x1_c		=x2 + normrad*dif_x;
+                y1_c		=y2 + normrad*dif_y;
+			
+			}	
+                x2_c		=x1_c;
+                y2_c		=y1_c;
+        
+            	return 2;
+		}	
         else
         {
 	//no intersection (maybe 1)
             Double_t normrad	=(r1+dist-r2)*dist_inv*0.5;
             
             //Double_t normrad	= (r1 + 0.5*(dist - r1 - r2))*dist_inv;
-                x1_c		=x1 + normrad*dif_x;
-                y1_c		=y1 + normrad*dif_y;
+           	x1_c		=x1 + normrad*dif_x;
+       	    y1_c		=y1 + normrad*dif_y;
 		
-                x2_c		=x1_c;
-                y2_c		=y1_c;
+  	        x2_c		=x1_c;
+            y2_c		=y1_c;
         
-            	return 2;
-	}	
+         	return 2;
+		}	
 	
 	return 3;
 }	
@@ -1803,8 +1832,9 @@ void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics)
                     }
                     //printf("      >>>>> %s idx (Kalman): %d %s, %s idx (TPC): %d %s, pT (TPC): %4.3f, pT (kalman): %4.3f \n",KRED,i_kalm_track,KNRM,KBLU,idx_matched_TPC_track,KNRM,pT_track,pT_kalman);
 
-                    TH2D_pT_TPC_vs_Kalman                              ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
-                    vec_TH2D_pT_TPC_vs_Kalman[N_good_kalman_tracklets] ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
+                    TH2D_pT_TPC_vs_Kalman                                       ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
+                    vec_TH2D_pT_TPC_vs_Kalman[N_good_kalman_tracklets]          ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
+                    if((-TMath::Sign(1,curv_kalman)*pT_kalman) != 0.0) vec_TH2D_one_over_pT_TPC_vs_Kalman[N_good_kalman_tracklets] ->Fill(1.0/(-TMath::Sign(1,curv_kalman)*pT_kalman),TMath::Sign(1,dca)*pT_track);
                     //printf("N_good_kalman_tracklets: %d \n",N_good_kalman_tracklets);
                 }
             }
@@ -2740,6 +2770,7 @@ void Ali_TRD_ST_Analyze::Write()
     for(Int_t i_pt_res = 0; i_pt_res < N_pT_resolution; i_pt_res++)
     {
         vec_TH2D_pT_TPC_vs_Kalman[i_pt_res] ->Write();
+        vec_TH2D_one_over_pT_TPC_vs_Kalman[i_pt_res] ->Write();
     }
 
     outputfile ->mkdir("layer_radii");
