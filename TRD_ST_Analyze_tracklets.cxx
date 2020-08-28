@@ -1839,7 +1839,7 @@ void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics)
 
                     TH2D_pT_TPC_vs_Kalman                                       ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
                     vec_TH2D_pT_TPC_vs_Kalman[N_good_kalman_tracklets]          ->Fill(-TMath::Sign(1,curv_kalman)*pT_kalman,TMath::Sign(1,dca)*pT_track);
-                    if((-TMath::Sign(1,curv_kalman)*pT_kalman) != 0.0) vec_TH2D_one_over_pT_TPC_vs_Kalman[N_good_kalman_tracklets] ->Fill(1.0/(-TMath::Sign(1,curv_kalman)*pT_kalman),TMath::Sign(1,dca)*pT_track);
+                    if((-TMath::Sign(1,curv_kalman)*pT_kalman) != 0.0 && pT_track != 0.0) vec_TH2D_one_over_pT_TPC_vs_Kalman[N_good_kalman_tracklets] ->Fill(1.0/(-TMath::Sign(1,curv_kalman)*pT_kalman),1.0/(TMath::Sign(1,dca)*pT_track));
                     //printf("N_good_kalman_tracklets: %d \n",N_good_kalman_tracklets);
                 }
             }
