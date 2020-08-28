@@ -59,7 +59,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
 
-    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM");
+    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 
     NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom:layerbitmap");
@@ -927,7 +927,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 {
     Int_t flag_found_good_AP_vertex = 0;
 
-    Float_t Arr_seconary_params[12];
+    Float_t Arr_seconary_params[15];
 
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
@@ -944,7 +944,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     TLorentzVector TLV_B;
     TLorentzVector TLV_AB;
     Double_t EnergyA, EnergyB, Energy_AB;
-    Double_t Inv_mass_AB, Momentum_AB, pT_AB;
+    Double_t Inv_mass_AB, Momentum_AB, pT_AB, Eta_AB, Phi_AB;
 
     TVector3 TV3_prim_vertex(EventVertexX,EventVertexY,EventVertexZ);
     TVector3 TV3_sec_vertex;
@@ -1072,7 +1072,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                     cout << "i_bit: " << i_bit << ", value: " << (((Int_t)test >> i_bit) & 1) << endl;
                 }
 #endif
-                printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d} \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1]);
+                //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d} \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1]);
                 //------------------------------------------------------------
 
 
@@ -1138,6 +1138,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         TLV_B.SetXYZM(TV3_dirB.X(),TV3_dirB.Y(),TV3_dirB.Z(),0.000511);
                         TLV_AB = TLV_A + TLV_B;
                         Inv_mass_AB = TLV_AB.M();
+                        Eta_AB      = TLV_AB.Eta();
+                        Phi_AB      = TLV_AB.Phi();
                         Energy_AB   = TLV_AB.Energy();
                         Momentum_AB = TLV_AB.P();
                         pT_AB 	    = TLV_AB.Pt();
@@ -1237,6 +1239,9 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             Arr_seconary_params[9]  = (Float_t)dca_min;
                             Arr_seconary_params[10] = (Float_t)path_min;
                             Arr_seconary_params[11] = (Float_t)Inv_mass_AB;
+                            Arr_seconary_params[12] = (Float_t)Eta_AB;
+                            Arr_seconary_params[13] = (Float_t)Phi_AB;
+                            Arr_seconary_params[14] = (Float_t)Global_Event;
 
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
                             NT_secondary_vertices ->Fill(Arr_seconary_params);
@@ -2381,6 +2386,7 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
     }
     //--------------------------------------------------
 
+
     //--------------------------------------------------
     // TPC track loop
     Double_t track_pos[3];
@@ -2414,6 +2420,7 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
         Float_t pT_track        = TLV_part.Pt();
         Float_t theta_track     = TLV_part.Theta();
         Float_t phi_track       = TLV_part.Phi();
+
 
         if(momentum < 0.3) continue;
 
@@ -2483,6 +2490,7 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
 
             matched_tracks[tracks_size].push_back(NULL);
 
+
             if(det_best < 0 || tracklet_best < 0) continue;
 
             Ali_TRD_ST_Tracklets* temp_tracklet = new Ali_TRD_ST_Tracklets();
@@ -2515,12 +2523,15 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
             //------------------------------------------
 
 #if defined(USEEVE)
-            Int_t size_tracklet = (Int_t)vec_TEveLine_tracklets_match[i_layer].size();
+            Int_t size_tracklet = 0;
+            if(graphics)  size_tracklet = (Int_t)vec_TEveLine_tracklets_match[i_layer].size();
 #endif
 
             //printf("i_layer: %d, size_tracklet: %d \n",i_layer,size_tracklet);
 
 #if defined(USEEVE)
+
+
             if(graphics)
             {
                 vec_TEveLine_tracklets_match[i_layer].resize(size_tracklet+1);
