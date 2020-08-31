@@ -59,7 +59,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
 
-    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv");
+    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv:dotprod");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 
     NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom:layerbitmap");
@@ -927,7 +927,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 {
     Int_t flag_found_good_AP_vertex = 0;
 
-    Float_t Arr_seconary_params[15];
+    Float_t Arr_seconary_params[16];
 
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
@@ -1149,7 +1149,15 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
                         TVector3 TV3_close_TPC_photon;
                         Int_t flag_close_TPC_photon = 0;
-                        if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+
+                        // AP cuts from https://www.physi.uni-heidelberg.de//Publications/PhDThesis_Leardini.pdf (eqn. 5.2)
+                        Double_t AP_alpha_max = 0.95;
+                        Double_t AP_qT_max    = 0.05;
+                        Double_t AP_cut_value = 1.0;
+                        Double_t AP_value = TMath::Power(AP_alpha/AP_alpha_max,2.0) + TMath::Power(AP_pT/AP_qT_max,2.0);
+
+                        //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+                        if(AP_value < AP_cut_value && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.8 && pTB < 0.8 && dot_product_dir_vertex > 0.9)
                         {
                             Double_t dca_min  = 999.0;
                             Double_t path_min = -999.0;
@@ -1242,6 +1250,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             Arr_seconary_params[12] = (Float_t)Eta_AB;
                             Arr_seconary_params[13] = (Float_t)Phi_AB;
                             Arr_seconary_params[14] = (Float_t)Global_Event;
+                            Arr_seconary_params[15] = (Float_t)dot_product_dir_vertex;
 
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
                             NT_secondary_vertices ->Fill(Arr_seconary_params);
