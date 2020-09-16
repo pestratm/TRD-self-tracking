@@ -59,7 +59,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 1; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
-    Int_t draw_all_TRD_tracks       = 1; // Draw all TRD tracks
+    Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
     Int_t draw_all_tracklets        = 0; // Draw all TRD tracklets
     Int_t draw_found_tracklets      = 0; // Draws tracklets found by tracker
     Int_t draw_matched_TPC_track    = 1; // Draw TPC to TRD matched TPC track
@@ -108,7 +108,10 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
             printf("event: %lld out of %lld, %4.2f%% total done \n",event,N_Events,((Double_t)event/(Double_t)N_Events)*100.0);
         }
 
-        vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets;
+        vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets_KF;
+        vector<vector<Double_t>>                mHelices_tracker_KF;
+        vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets_TF;
+        vector<vector<Double_t>>                mHelices_tracker_TF;
 
 
         TRD_ST_Analyze ->Loop_event(event,graphics);
@@ -123,17 +126,20 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
         //Kalman Filter tracker
         if(KF_tracker)
         {
-            tracker_found_tracklets = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,use_prim_vertex); // 0 = no primary vertex, 1 = primary vertex used
-            //if(graphics) TRD_ST_Analyze ->Draw_Kalman_Tracklets(tracker_found_tracklets); // Draws the Kalman matched TRD tracklets
+            tracker_found_tracklets_KF = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,use_prim_vertex); // 0 = no primary vertex, 1 = primary vertex used
 
             vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks; // TPC track matched tracklets
             vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
 
-            vector<vector<Double_t>> mHelices_kalman = kalid.get_Kalman_helix_params();
-            //printf("size of mHelices_kalman: %d \n",(Int_t)mHelices_kalman.size());
+            mHelices_tracker_KF = kalid.get_Kalman_helix_params();
+            //printf("size of mHelices_tracker: %d \n",(Int_t)mHelices_tracker_KF.size());
 
-            TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_kalman);
-            TRD_ST_Analyze ->set_Kalman_TRD_tracklets(tracker_found_tracklets);
+            TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_tracker_KF);
+            TRD_ST_Analyze ->set_Kalman_TRD_tracklets(tracker_found_tracklets_KF);
+
+            if(graphics && draw_found_tracklets) TRD_ST_Analyze ->Draw_Kalman_Tracklets(tracker_found_tracklets_KF); // Draws the Kalman matched TRD tracklets
+            if(graphics && draw_all_TRD_tracks)  TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kGreen,3.0,500.0); // -1 -> all kalman tracks drawn
+            TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics,draw_matched_TPC_track,draw_matched_TRD_track,kGreen+1);
         }
         //------------------------------------------------------------
 
@@ -143,20 +149,23 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
         if(TF_tracker)
         {
             tftracker.Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
-            vector<vector<Double_t>> mHelices_kalman = tftracker.get_Kalman_helix_params();
-            tracker_found_tracklets = tftracker.get_Tracklets();
-            TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_kalman);
+            mHelices_tracker_TF = tftracker.get_Kalman_helix_params();
+            tracker_found_tracklets_TF = tftracker.get_Tracklets();
+
+            TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_tracker_TF);
+            TRD_ST_Analyze ->set_Kalman_TRD_tracklets(tracker_found_tracklets_TF);
+
+            if(graphics && draw_found_tracklets) TRD_ST_Analyze ->Draw_Kalman_Tracklets(tracker_found_tracklets_TF); // Draws the Kalman matched TRD tracklets
+            if(graphics && draw_all_TRD_tracks)  TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed,3.0,500.0); // -1 -> all kalman tracks drawn
+            TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics,draw_matched_TPC_track,draw_matched_TRD_track,kRed+1);
         }
         //------------------------------------------------------------
 
+       
 
+        
 
-        if(graphics && draw_found_tracklets) TRD_ST_Analyze ->Draw_Kalman_Tracklets(tracker_found_tracklets); // Draws the Kalman matched TRD tracklets
-        if(graphics && draw_all_TRD_tracks)  TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kGreen,3.0,500.0); // -1 -> all kalman tracks drawn
-     
-
-        TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics,draw_matched_TPC_track,draw_matched_TRD_track);
-        //TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(0);
+        
         TRD_ST_Analyze ->Calc_Kalman_efficiency();
 
 

@@ -1472,10 +1472,33 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
 
             //-----------------------------------
-            if(Arr_tracklets_layer[5] > 3 || Arr_tracklets_layer[4] > 3 || Arr_tracklets_layer[3] > 3)
-            {
-                //if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f, trkl: {%d, %d, %d, %d, %d, %d} \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min,Arr_tracklets_layer[0],Arr_tracklets_layer[1],Arr_tracklets_layer[2],Arr_tracklets_layer[3],Arr_tracklets_layer[4],Arr_tracklets_layer[5]);
-            }
+            // Toplogy selection for nuclear events
+            //if(Arr_tracklets_layer[5] > 3 || Arr_tracklets_layer[4] > 3 || Arr_tracklets_layer[3] > 3)
+#if 0
+            if(
+               (Arr_tracklets_layer[5] > 2 && Arr_tracklets_layer[4] > 1 && Arr_tracklets_layer[3] > 0)
+               || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[3] > 1 && Arr_tracklets_layer[2] > 0)
+               || (Arr_tracklets_layer[3] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[1] > 0)
+               || (Arr_tracklets_layer[2] > 2 && Arr_tracklets_layer[1] > 1 && Arr_tracklets_layer[0] > 0)
+               //
+               || (Arr_tracklets_layer[5] > 2 && Arr_tracklets_layer[3] > 1 && Arr_tracklets_layer[2] > 0)
+               || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[1] > 0)
+               || (Arr_tracklets_layer[3] > 2 && Arr_tracklets_layer[1] > 1 && Arr_tracklets_layer[0] > 0)
+               //
+               || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[1] > 0)
+               || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[1] > 1 && Arr_tracklets_layer[0] > 0)
+               || (Arr_tracklets_layer[3] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[0] > 0)
+              )
+#endif
+                if(
+                   (Arr_tracklets_layer[5] > 2 && Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[3] > 2)
+                  )
+                {
+                    if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track)
+                    {
+                        printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f, trkl: {%d, %d, %d, %d, %d, %d} \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min,Arr_tracklets_layer[0],Arr_tracklets_layer[1],Arr_tracklets_layer[2],Arr_tracklets_layer[3],Arr_tracklets_layer[4],Arr_tracklets_layer[5]);
+                    }
+                }
 
             // Ntuple for nculear interaction event candidates
             Arr_cluster_params[0]	= (Float_t)TV3_avg_sec_vertex[0];
@@ -1766,7 +1789,7 @@ void Ali_TRD_ST_Analyze::Calc_Kalman_efficiency()
 
 
 //----------------------------------------------------------------------------------------
-void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics)
+void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics, Int_t draw_matched_TPC_track, Int_t draw_matched_TRD_track, Int_t color)
 {
     //printf("size: %d \n",(Int_t)vec_kalman_TRD_trackets.size());
     // Loop over kalman matched TRD tracklets
@@ -1841,8 +1864,9 @@ void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics)
 
                     if(graphics)
                     {
-                        //Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3,280.0,500.0);
-                        //Draw_Kalman_Helix_Tracks(i_kalm_track,kGreen+1,280.0,500.0);
+                        if(draw_matched_TPC_track) Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3);
+                        //if(draw_matched_TPC_track) Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3,280.0,500.0);
+                        if(draw_matched_TRD_track) Draw_Kalman_Helix_Tracks(i_kalm_track,color,0.0,500.0);
                     }
                     //printf("      >>>>> %s idx (Kalman): %d %s, %s idx (TPC): %d %s, pT (TPC): %4.3f, pT (kalman): %4.3f \n",KRED,i_kalm_track,KNRM,KBLU,idx_matched_TPC_track,KNRM,pT_track,pT_kalman);
 
@@ -2211,7 +2235,7 @@ void Ali_TRD_ST_Analyze::Draw_TPC_track(Int_t i_track, Int_t color, Double_t lin
 
 
 //----------------------------------------------------------------------------------------
-Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
+Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets)
 {
     //printf("Ali_TRD_ST_Analyze::Draw_event \n");
 	
@@ -2261,7 +2285,7 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
         if(momentum < 0.3) continue;
 
 
-        Draw_TPC_track(i_track,track_color,3);
+        if(graphics && draw_tracks) Draw_TPC_track(i_track,track_color,3);
     }
 
     //--------------------------------------------------
@@ -2310,7 +2334,7 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
         vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetMainColor(color_layer[i_layer]);
         //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
         {
-             gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
+             if(graphics && draw_tracklets) gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
         }
 #endif
 
@@ -2318,7 +2342,7 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event)
     }
 
 #if defined(USEEVE)
-    gEve->Redraw3D(kTRUE);
+    if(graphics) gEve->Redraw3D(kTRUE);
 #endif
     //--------------------------------------------------
 
@@ -2606,7 +2630,7 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
 
 
 //----------------------------------------------------------------------------------------
-void Ali_TRD_ST_Analyze::Draw_Kalman_Tracks(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks)
+void Ali_TRD_ST_Analyze::Draw_Kalman_Tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks)
 {
 #if defined(USEEVE)
     vector< vector<TEveLine*> > TEveLine_Kalman_found;
