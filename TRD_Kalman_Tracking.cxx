@@ -715,7 +715,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
         cout<<endl;
               
 		//used to look at specific track
-		if(mFound_tracks.size()==1)mShow=1;
+		if(mFound_tracks.size()==-1)mShow=1;
 		if(mFound_tracks.size()==2)mShow=0;
 			
 	}
