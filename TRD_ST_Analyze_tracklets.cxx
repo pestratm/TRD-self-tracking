@@ -595,7 +595,7 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
 
 
     Int_t cCross_points = fCircle_Interception(x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c);
-    //printf("2D circle cross points (Sven): {%4.3f, %4.3f}, {%4.3f, %4.3f}, return: %d \n",x1_c,y1_c,x2_c,y2_c,cCross_points);
+    //printf("2D circle cross points, circle: {x1: %4.3f, y1: %4.3f, r1: %4.3f} {x2: %4.3f, y2: %4.3f, r2: %4.3f} (Sven): {%4.3f, %4.3f}, {%4.3f, %4.3f}, return: %d \n",x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c,cCross_points);
 
     Double_t radiusA = sqrt(x1_c*x1_c+y1_c*y1_c);
     Double_t radiusB = sqrt(x2_c*x2_c+y2_c*y2_c);
@@ -923,8 +923,21 @@ Float_t Ali_TRD_ST_Analyze::Calc_nuclev_bitmap(vector<Int_t> vec_idx_kalman_trac
 
 
 //----------------------------------------------------------------------------------------
-Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
+Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t flag_TRD_TPC_tracks)
 {
+    Double_t min_radius_cut = 250.0;
+    Double_t max_radius_cut = 356.0;
+    if(flag_TRD_TPC_tracks == 0) // TRD tracks
+    {
+        vec_helices = vec_helices_TRD;
+    }
+    else // TPC tracks
+    {
+        vec_helices = vec_helices_TPC;
+        min_radius_cut = 10.0;
+        max_radius_cut = 85.0;
+    }
+
     Int_t flag_found_good_AP_vertex = 0;
 
     Float_t Arr_seconary_params[16];
@@ -977,9 +990,9 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
         {
             Float_t pathA_est, pathB_est, dcaAB_est;
             //printf("i_track_A: %d, i_track_B: %d, i_comb: %d \n",i_track_A,i_track_B,i_comb);
-            //printf("3D cross point: {%4.3f, %4.3f, %4.3f} \n",vertex_point[0],vertex_point[1],vertex_point[2]);
             Int_t est_return = fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
 
+            //printf("track A,B: {%d, %d}, dcaAB_est: %4.3f \n",i_track_A,i_track_B,dcaAB_est);
             //printf(" \n");
 
             if(dcaAB_est > 15.0) continue;
@@ -1014,66 +1027,74 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                 // Int_t bit_status = (TRD_ADC_time_layer[i_layer] >> bitcheck) & 1; // check bit bitcheck
                 // Int_t     HasITShit_on_layer(Int_t ilayer) { return ((NITScls >> ilayer) & 1);}  // ITShit -> LOL
                 Int_t bit_TRD_layer_shared = 0;
+                if(flag_TRD_TPC_tracks != 0) bit_TRD_layer_shared = -1; // TPC track
 
-                for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+
+
+                //------------------------
+                if(flag_TRD_TPC_tracks == 0) // TRD track
                 {
-                    TVector3 kalman_TV3_offset_A;
-                    Int_t flag_use_A = 0;
-                    if(vec_kalman_TRD_trackets[i_track_A][i_layer] != NULL)
+                    for(Int_t i_layer = 0; i_layer < 6; i_layer++)
                     {
-                        kalman_TV3_offset_A = vec_kalman_TRD_trackets[i_track_A][i_layer] ->get_TV3_offset();
-                        flag_use_A = 1;
-                    }
-
-                    TVector3 kalman_TV3_offset_B;
-                    Int_t flag_use_B = 0;
-                    if(vec_kalman_TRD_trackets[i_track_B][i_layer] != NULL)
-                    {
-                        kalman_TV3_offset_B = vec_kalman_TRD_trackets[i_track_B][i_layer] ->get_TV3_offset();
-                        flag_use_B = 1;
-                    }
-
-                    Int_t flag_shared = 0;
-                    if(flag_use_A && flag_use_B)
-                    {
-                        TVector3 TV3_diff_AB = kalman_TV3_offset_A - kalman_TV3_offset_B;
-                        Double_t diff_AB = TV3_diff_AB.Mag();
-
-                        if(diff_AB < 0.1)
+                        TVector3 kalman_TV3_offset_A;
+                        Int_t flag_use_A = 0;
+                        if(vec_kalman_TRD_trackets[i_track_A][i_layer] != NULL)
                         {
-                            N_shared_AB++;
-                            flag_shared = 1;
-                            bit_TRD_layer_shared |= 1 << (i_layer + 12); // set bit i_layer to 1
-                            //printf("Shared layer: %d \n",i_layer);
+                            kalman_TV3_offset_A = vec_kalman_TRD_trackets[i_track_A][i_layer] ->get_TV3_offset();
+                            flag_use_A = 1;
+                        }
+
+                        TVector3 kalman_TV3_offset_B;
+                        Int_t flag_use_B = 0;
+                        if(vec_kalman_TRD_trackets[i_track_B][i_layer] != NULL)
+                        {
+                            kalman_TV3_offset_B = vec_kalman_TRD_trackets[i_track_B][i_layer] ->get_TV3_offset();
+                            flag_use_B = 1;
+                        }
+
+                        Int_t flag_shared = 0;
+                        if(flag_use_A && flag_use_B)
+                        {
+                            TVector3 TV3_diff_AB = kalman_TV3_offset_A - kalman_TV3_offset_B;
+                            Double_t diff_AB = TV3_diff_AB.Mag();
+
+                            if(diff_AB < 0.1)
+                            {
+                                N_shared_AB++;
+                                flag_shared = 1;
+                                bit_TRD_layer_shared |= 1 << (i_layer + 12); // set bit i_layer to 1
+                                //printf("Shared layer: %d \n",i_layer);
+                            }
+                        }
+                        if(!flag_shared) // only one tracklet available per track or tracklets are not shared
+                        {
+                            if(flag_use_A)
+                            {
+                                N_independent_AB[0]++;
+                                bit_TRD_layer_shared |= 1 << i_layer; // set bit i_layer to 1
+                                //printf("Independent layer track A: %d \n",i_layer);
+                            }
+                            if(flag_use_B)
+                            {
+                                N_independent_AB[1]++;
+                                bit_TRD_layer_shared |= 1 << (i_layer + 6); // set bit i_layer to 1
+                                //printf("Independent layer track B: %d \n",i_layer);
+                            }
                         }
                     }
-                    if(!flag_shared) // only one tracklet available per track or tracklets are not shared
-                    {
-                        if(flag_use_A)
-                        {
-                            N_independent_AB[0]++;
-                            bit_TRD_layer_shared |= 1 << i_layer; // set bit i_layer to 1
-                            //printf("Independent layer track A: %d \n",i_layer);
-                        }
-                        if(flag_use_B)
-                        {
-                            N_independent_AB[1]++;
-                            bit_TRD_layer_shared |= 1 << (i_layer + 6); // set bit i_layer to 1
-                            //printf("Independent layer track B: %d \n",i_layer);
-                        }
-                    }
-                }
 
 #if 0
-                // Test the bit map
-                Float_t test = (Float_t)bit_TRD_layer_shared;
-                for(Int_t i_bit = 0; i_bit < 18; i_bit++)
-                {
-                    cout << "i_bit: " << i_bit << ", value: " << (((Int_t)test >> i_bit) & 1) << endl;
-                }
+                    // Test the bit map
+                    Float_t test = (Float_t)bit_TRD_layer_shared;
+                    for(Int_t i_bit = 0; i_bit < 18; i_bit++)
+                    {
+                        cout << "i_bit: " << i_bit << ", value: " << (((Int_t)test >> i_bit) & 1) << endl;
+                    }
 #endif
-                //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d} \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1]);
-                //------------------------------------------------------------
+                    //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d} \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1]);
+                    //------------------------------------------------------------
+                }
+                //------------------------
 
 
 
@@ -1099,14 +1120,30 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                     Int_t i_radius = (Int_t)(radius_vertex/Delta_AP_radius);
 
 
-                    Double_t pTA = mHelices_kalman[i_track_A][6]; // pT
-                    Double_t pzA = mHelices_kalman[i_track_A][7]; // pz
-                    Double_t pA  = TMath::Sqrt(pTA*pTA + pzA*pzA); // p
-                    Double_t pTB = mHelices_kalman[i_track_B][6]; // pT
-                    Double_t pzB = mHelices_kalman[i_track_B][7]; // pz
-                    Double_t pB  = TMath::Sqrt(pTB*pTB + pzB*pzB); // p
-                    Double_t CA  = mHelices_kalman[i_track_A][4]; // curvature
-                    Double_t CB  = mHelices_kalman[i_track_B][4]; // curvature
+                    Double_t pTA, pzA, pA, pTB, pzB, pB, CA, CB;
+
+                    if(flag_TRD_TPC_tracks == 0) // TRD track
+                    {
+                        pTA = mHelices_kalman[i_track_A][6]; // pT
+                        pzA = mHelices_kalman[i_track_A][7]; // pz
+                        pA  = TMath::Sqrt(pTA*pTA + pzA*pzA); // p
+                        pTB = mHelices_kalman[i_track_B][6]; // pT
+                        pzB = mHelices_kalman[i_track_B][7]; // pz
+                        pB  = TMath::Sqrt(pTB*pTB + pzB*pzB); // p
+                        CA  = mHelices_kalman[i_track_A][4]; // curvature
+                        CB  = mHelices_kalman[i_track_B][4]; // curvature
+                    }
+                    else // TPC track
+                    {
+                        pTA = mHelices_TPC[i_track_A][6]; // pT
+                        pzA = mHelices_TPC[i_track_A][7]; // pz
+                        pA  = TMath::Sqrt(pTA*pTA + pzA*pzA); // p
+                        pTB = mHelices_TPC[i_track_B][6]; // pT
+                        pzB = mHelices_TPC[i_track_B][7]; // pz
+                        pB  = TMath::Sqrt(pTB*pTB + pzB*pzB); // p
+                        CA  = mHelices_TPC[i_track_A][4]; // curvature
+                        CB  = mHelices_TPC[i_track_B][4]; // curvature
+                    }
 
                     //if(radius_vertex > 240.0 && radius_vertex < 360.0)
 #if defined(USEEVE)
@@ -1115,8 +1152,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
 
                     //-------------------------------------------------
                     // Armenteros-Podolanski
-                    if(radius_vertex > 250.0 && radius_vertex < 356.0) // TRD acceptance in R-direction
-                        //if(radius_vertex > 100.0 && radius_vertex < 240.0)
+                    if(radius_vertex > min_radius_cut && radius_vertex < max_radius_cut) // TRD acceptance in R-direction
                     {
                         vec_helices[i_track_A] ->Evaluate(pathA+0.1,helix_pointAs);
                         vec_helices[i_track_B] ->Evaluate(pathB+0.1,helix_pointBs);
@@ -1162,27 +1198,35 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                             Double_t dca_min  = 999.0;
                             Double_t path_min = -999.0;
                             Int_t    i_track_min = -1;
-                            UShort_t NumTracks = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
-                            for(Int_t i_track = 0; i_track < NumTracks; i_track++)
+
+
+                            //------------
+                            if(flag_TRD_TPC_tracks == 0) // TRD track
                             {
-                                Float_t pathA_dca = -1.0;
-                                Float_t dcaAB_dca = -1.0;
-                                TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
-                                TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
-                                fHelixAtoPointdca(TV3_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
-
-                                Double_t helix_point_TPC_photon[3];
-                                TPC_single_helix ->Evaluate(pathA_dca,helix_point_TPC_photon);  // 3D-vector of helixB point at path pB[r]
-                                TV3_close_TPC_photon.SetXYZ(helix_point_TPC_photon[0],helix_point_TPC_photon[1],helix_point_TPC_photon[2]);
-                                flag_close_TPC_photon = 1;
-
-                                if(dcaAB_dca < dca_min)
+                                UShort_t NumTracks = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
+                                for(Int_t i_track = 0; i_track < NumTracks; i_track++)
                                 {
-                                    dca_min     = dcaAB_dca;
-                                    path_min    = pathA_dca;
-                                    i_track_min = i_track;
+                                    Float_t pathA_dca = -1.0;
+                                    Float_t dcaAB_dca = -1.0;
+                                    TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
+                                    TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
+                                    fHelixAtoPointdca(TV3_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
+
+                                    Double_t helix_point_TPC_photon[3];
+                                    TPC_single_helix ->Evaluate(pathA_dca,helix_point_TPC_photon);  // 3D-vector of helixB point at path pB[r]
+                                    TV3_close_TPC_photon.SetXYZ(helix_point_TPC_photon[0],helix_point_TPC_photon[1],helix_point_TPC_photon[2]);
+                                    flag_close_TPC_photon = 1;
+
+                                    if(dcaAB_dca < dca_min)
+                                    {
+                                        dca_min     = dcaAB_dca;
+                                        path_min    = pathA_dca;
+                                        i_track_min = i_track;
+                                    }
                                 }
                             }
+                            //------------
+
 
                             //-----------------------------------
                             // Topology photon conversion cuts - for print out
@@ -1258,52 +1302,55 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
                         }
 
 
-#if defined(USEEVE)
-                        //if(AP_pT > 0.05 && AP_pT < 0.25 && CA*CB < 0.0 && pTA > 0.2 && pTB > 0.2 && dot_product_dir_vertex > 0.95)
-                        if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
-                        //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.2 && pTB < 0.2 && dot_product_dir_vertex > 0.9) // TRD photon conversion
-                            //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.3 && pTB > 0.3 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TPC photon conversion
+                        if(flag_TRD_TPC_tracks == 0) // TRD tracks
                         {
-                            //printf("-----> Found vertex for AP in event: %lld at radius: %4.3f, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
-                            flag_found_good_AP_vertex = 1;
-                            if(graphics)
+#if defined(USEEVE)
+                            //if(AP_pT > 0.05 && AP_pT < 0.25 && CA*CB < 0.0 && pTA > 0.2 && pTB > 0.2 && dot_product_dir_vertex > 0.95)
+                            if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+                                //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.2 && pTB < 0.2 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+                                //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.3 && pTB > 0.3 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TPC photon conversion
                             {
-                                // Draw kalman tracks
-                                Draw_Kalman_Helix_Tracks(i_track_A,kGreen,280.0,500.0);
-                                Draw_Kalman_Helix_Tracks(i_track_B,kRed,280.0,500.0);
+                                //printf("-----> Found vertex for AP in event: %lld at radius: %4.3f, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
+                                flag_found_good_AP_vertex = 1;
+                                if(graphics)
+                                {
+                                    // Draw kalman tracks
+                                    Draw_Kalman_Helix_Tracks(i_track_A,kGreen,280.0,500.0);
+                                    Draw_Kalman_Helix_Tracks(i_track_B,kRed,280.0,500.0);
 
-                                // Draw kalman tracklets
-                                Draw_matched_Kalman_Tracklets(i_track_A);
-                                Draw_matched_Kalman_Tracklets(i_track_B);
+                                    // Draw kalman tracklets
+                                    Draw_matched_Kalman_Tracklets(i_track_A);
+                                    Draw_matched_Kalman_Tracklets(i_track_B);
 
-                                TEveP_sec_vertices ->SetPoint(i_vertex_acc,vertex_point[0],vertex_point[1],vertex_point[2]);
-                                //printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
+                                    TEveP_sec_vertices ->SetPoint(i_vertex_acc,vertex_point[0],vertex_point[1],vertex_point[2]);
+                                    //printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
 
 
-                                TEveP_first_point_helix  ->SetPoint(i_vertex_acc,helix_pointA[0],helix_pointA[1],helix_pointA[2]);
-                                TEveP_second_point_helix ->SetPoint(i_vertex_acc,helix_pointAs[0],helix_pointAs[1],helix_pointAs[2]);
-                                TEveP_first_point_helix  ->SetPoint(i_vertex_acc+2,helix_pointB[0],helix_pointB[1],helix_pointB[2]);
-                                TEveP_second_point_helix ->SetPoint(i_vertex_acc+2,helix_pointBs[0],helix_pointBs[1],helix_pointBs[2]);
+                                    TEveP_first_point_helix  ->SetPoint(i_vertex_acc,helix_pointA[0],helix_pointA[1],helix_pointA[2]);
+                                    TEveP_second_point_helix ->SetPoint(i_vertex_acc,helix_pointAs[0],helix_pointAs[1],helix_pointAs[2]);
+                                    TEveP_first_point_helix  ->SetPoint(i_vertex_acc+2,helix_pointB[0],helix_pointB[1],helix_pointB[2]);
+                                    TEveP_second_point_helix ->SetPoint(i_vertex_acc+2,helix_pointBs[0],helix_pointBs[1],helix_pointBs[2]);
 
-                                TEveLine_mother.resize(i_vertex_acc+1);
-                                TEveLine_mother[i_vertex_acc] = new TEveLine();
+                                    TEveLine_mother.resize(i_vertex_acc+1);
+                                    TEveLine_mother[i_vertex_acc] = new TEveLine();
 
-                                TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0],vertex_point[1],vertex_point[2]);
-                                TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0] + 30.0*TV3_dirAB[0],vertex_point[1] + 30.0*TV3_dirAB[1],vertex_point[2] + 30.0*TV3_dirAB[2]);
+                                    TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0],vertex_point[1],vertex_point[2]);
+                                    TEveLine_mother[i_vertex_acc] ->SetNextPoint(vertex_point[0] + 30.0*TV3_dirAB[0],vertex_point[1] + 30.0*TV3_dirAB[1],vertex_point[2] + 30.0*TV3_dirAB[2]);
 
-                                i_vertex_acc++;
+                                    i_vertex_acc++;
+                                }
                             }
-                        }
 #endif
 
-                        if(pTA > 0.3 && pTB > 0.3 && CA*CB < 0.0 && (pzA + pzB) != 0.0)
-                        {
-                            //printf("CA: %4.3f, CB: %4.3f \n",CA,CB);
+                            if(pTA > 0.3 && pTB > 0.3 && CA*CB < 0.0 && (pzA + pzB) != 0.0)
+                            {
+                                //printf("CA: %4.3f, CB: %4.3f \n",CA,CB);
 
 
-                            //printf("   ----> AP_alpha: %4.3f, AP_pT: %4.3f, AP_pTB: %4.3f, projA: %4.3f, projB: %4.3f \n",AP_alpha,AP_pT,AP_pTB,projA,projB);
-                            TH2D_AP_plot ->Fill(AP_alpha,AP_pT);
-                            if(i_radius < N_AP_radii) vec_TH2D_AP_plot_radius[i_radius] ->Fill(AP_alpha,AP_pT);
+                                //printf("   ----> AP_alpha: %4.3f, AP_pT: %4.3f, AP_pTB: %4.3f, projA: %4.3f, projB: %4.3f \n",AP_alpha,AP_pT,AP_pTB,projA,projB);
+                                TH2D_AP_plot ->Fill(AP_alpha,AP_pT);
+                                if(i_radius < N_AP_radii) vec_TH2D_AP_plot_radius[i_radius] ->Fill(AP_alpha,AP_pT);
+                            }
                         }
                     }
                     //-------------------------------------------------
@@ -1318,286 +1365,288 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics)
     //printf("Number of secondary vertices found: %d \n",i_vertex);
 
 
-
-    //------------------------
-    Int_t N_sec_vertices = (Int_t)vec_TV3_secondary_vertices.size();
-    Double_t radius_sec_vertex;
-    TVector3 TV3_diff_sec_vertices;
-    TVector3 TV3_avg_sec_vertex;
-    Float_t Arr_cluster_params[12];
-
-    //Bool_t visited[N_sec_vertices];
-    vector<Int_t> visited;
-    visited.resize(N_sec_vertices);
-    for(Int_t i_vis = 0; i_vis < N_sec_vertices; i_vis++) visited[i_vis] = 0;
-
-    Int_t i_vertex_nucl_int = 0;
-    for(Int_t i_sec_vtx_A = 0; i_sec_vtx_A < (N_sec_vertices - 1); i_sec_vtx_A++)
+    if(flag_TRD_TPC_tracks == 0) // TRD tracks
     {
-        //printf("i_sec_vtx_A: %d \n",i_sec_vtx_A);
-        radius_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A].Perp();
-        if(radius_sec_vertex < 240.0 || radius_sec_vertex > 370.0) continue;
-        if(visited[i_sec_vtx_A]) continue;
-        visited[i_sec_vtx_A] = 1;
-        Int_t N_close_vertex = 1;
-        TV3_avg_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A]*1;
-        vector<Int_t> idx_acc_vtx_B;
-        idx_acc_vtx_B.clear();
-        for(Int_t i_sec_vtx_B = (i_sec_vtx_A + 1); i_sec_vtx_B < N_sec_vertices; i_sec_vtx_B++)
-        {
-            if(visited[i_sec_vtx_B]) continue;
-            TV3_diff_sec_vertices = vec_TV3_secondary_vertices[i_sec_vtx_A] - vec_TV3_secondary_vertices[i_sec_vtx_B];
-            if(TV3_diff_sec_vertices.Mag() < 3.0)
-            {
-                TV3_avg_sec_vertex += vec_TV3_secondary_vertices[i_sec_vtx_B];
-                N_close_vertex++;
-                visited[i_sec_vtx_B] = 1;
-                idx_acc_vtx_B.push_back(i_sec_vtx_B);
-            }
-        }
+        //------------------------
+        Int_t N_sec_vertices = (Int_t)vec_TV3_secondary_vertices.size();
+        Double_t radius_sec_vertex;
+        TVector3 TV3_diff_sec_vertices;
+        TVector3 TV3_avg_sec_vertex;
+        Float_t Arr_cluster_params[12];
 
-        if(N_close_vertex > 2)
+        //Bool_t visited[N_sec_vertices];
+        vector<Int_t> visited;
+        visited.resize(N_sec_vertices);
+        for(Int_t i_vis = 0; i_vis < N_sec_vertices; i_vis++) visited[i_vis] = 0;
+
+        Int_t i_vertex_nucl_int = 0;
+        for(Int_t i_sec_vtx_A = 0; i_sec_vtx_A < (N_sec_vertices - 1); i_sec_vtx_A++)
         {
-#if 0
-            for(Int_t i_sec_vtx = 0; i_sec_vtx < N_sec_vertices; i_sec_vtx++)
+            //printf("i_sec_vtx_A: %d \n",i_sec_vtx_A);
+            radius_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A].Perp();
+            if(radius_sec_vertex < 240.0 || radius_sec_vertex > 370.0) continue;
+            if(visited[i_sec_vtx_A]) continue;
+            visited[i_sec_vtx_A] = 1;
+            Int_t N_close_vertex = 1;
+            TV3_avg_sec_vertex = vec_TV3_secondary_vertices[i_sec_vtx_A]*1;
+            vector<Int_t> idx_acc_vtx_B;
+            idx_acc_vtx_B.clear();
+            for(Int_t i_sec_vtx_B = (i_sec_vtx_A + 1); i_sec_vtx_B < N_sec_vertices; i_sec_vtx_B++)
             {
-                printf("i_sec_vtx: %d, visited: %d \n",i_sec_vtx,visited[i_sec_vtx]);
+                if(visited[i_sec_vtx_B]) continue;
+                TV3_diff_sec_vertices = vec_TV3_secondary_vertices[i_sec_vtx_A] - vec_TV3_secondary_vertices[i_sec_vtx_B];
+                if(TV3_diff_sec_vertices.Mag() < 3.0)
+                {
+                    TV3_avg_sec_vertex += vec_TV3_secondary_vertices[i_sec_vtx_B];
+                    N_close_vertex++;
+                    visited[i_sec_vtx_B] = 1;
+                    idx_acc_vtx_B.push_back(i_sec_vtx_B);
+                }
             }
+
+            if(N_close_vertex > 2)
+            {
+#if 0
+                for(Int_t i_sec_vtx = 0; i_sec_vtx < N_sec_vertices; i_sec_vtx++)
+                {
+                    printf("i_sec_vtx: %d, visited: %d \n",i_sec_vtx,visited[i_sec_vtx]);
+                }
 #endif
 
-            TV3_avg_sec_vertex *= 1.0/(Float_t)(N_close_vertex);
+                TV3_avg_sec_vertex *= 1.0/(Float_t)(N_close_vertex);
 
-            // Determine TPC track(s) which are close to nuclear interaction vertex
-            Float_t pathA_dca = -1.0;
-            Float_t dcaAB_dca = -1.0;
-            Float_t dcaAB_min        = 999.0;
-            Float_t TOFsignal_min    = 999.0;
-            Float_t Track_length_min = 999.0;
-            Float_t TPCdEdx_min      = 999.0;
-            Float_t dca_to_prim      = 999.0;
-            Float_t pT_min           = 999.0;
-            Float_t momentum_min     = 999.0;
-            Float_t path_min         = 999.0;
-
-
-            //-------------------------------
-            // Get TPC track information
-            UShort_t NumTracks = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
-            Double_t nsigma_TPC_e   = TRD_ST_TPC_Track ->getnsigma_e_TPC();
-            Double_t nsigma_TPC_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TPC();
-            Double_t nsigma_TPC_p   = TRD_ST_TPC_Track ->getnsigma_p_TPC();
-            Double_t nsigma_TOF_e   = TRD_ST_TPC_Track ->getnsigma_e_TOF();
-            Double_t nsigma_TOF_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TOF();
-            Double_t TRD_signal     = TRD_ST_TPC_Track ->getTRDSignal();
-            Double_t TRDsumADC      = TRD_ST_TPC_Track ->getTRDsumADC();
-            Double_t dca            = TRD_ST_TPC_Track ->getdca();  // charge * distance of closest approach to the primary vertex
-            TLorentzVector TLV_part = TRD_ST_TPC_Track ->get_TLV_part();
-            UShort_t NTPCcls        = TRD_ST_TPC_Track ->getNTPCcls();
-            UShort_t NTRDcls        = TRD_ST_TPC_Track ->getNTRDcls();
-            UShort_t NITScls        = TRD_ST_TPC_Track ->getNITScls();
-            Float_t TPCchi2         = TRD_ST_TPC_Track ->getTPCchi2();
-            Float_t TPCdEdx         = TRD_ST_TPC_Track ->getTPCdEdx();
-            Float_t TOFsignal       = TRD_ST_TPC_Track ->getTOFsignal(); // in ps (1E-12 s)
-            Float_t Track_length    = TRD_ST_TPC_Track ->getTrack_length();
-
-            Float_t momentum        = TLV_part.P();
-            Float_t eta_track       = TLV_part.Eta();
-            Float_t pT_track        = TLV_part.Pt();
-            Float_t theta_track     = TLV_part.Theta();
-            Float_t phi_track       = TLV_part.Phi();
-            //-------------------------------
+                // Determine TPC track(s) which are close to nuclear interaction vertex
+                Float_t pathA_dca = -1.0;
+                Float_t dcaAB_dca = -1.0;
+                Float_t dcaAB_min        = 999.0;
+                Float_t TOFsignal_min    = 999.0;
+                Float_t Track_length_min = 999.0;
+                Float_t TPCdEdx_min      = 999.0;
+                Float_t dca_to_prim      = 999.0;
+                Float_t pT_min           = 999.0;
+                Float_t momentum_min     = 999.0;
+                Float_t path_min         = 999.0;
 
 
+                //-------------------------------
+                // Get TPC track information
+                UShort_t NumTracks = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
+                Double_t nsigma_TPC_e   = TRD_ST_TPC_Track ->getnsigma_e_TPC();
+                Double_t nsigma_TPC_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TPC();
+                Double_t nsigma_TPC_p   = TRD_ST_TPC_Track ->getnsigma_p_TPC();
+                Double_t nsigma_TOF_e   = TRD_ST_TPC_Track ->getnsigma_e_TOF();
+                Double_t nsigma_TOF_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TOF();
+                Double_t TRD_signal     = TRD_ST_TPC_Track ->getTRDSignal();
+                Double_t TRDsumADC      = TRD_ST_TPC_Track ->getTRDsumADC();
+                Double_t dca            = TRD_ST_TPC_Track ->getdca();  // charge * distance of closest approach to the primary vertex
+                TLorentzVector TLV_part = TRD_ST_TPC_Track ->get_TLV_part();
+                UShort_t NTPCcls        = TRD_ST_TPC_Track ->getNTPCcls();
+                UShort_t NTRDcls        = TRD_ST_TPC_Track ->getNTRDcls();
+                UShort_t NITScls        = TRD_ST_TPC_Track ->getNITScls();
+                Float_t TPCchi2         = TRD_ST_TPC_Track ->getTPCchi2();
+                Float_t TPCdEdx         = TRD_ST_TPC_Track ->getTPCdEdx();
+                Float_t TOFsignal       = TRD_ST_TPC_Track ->getTOFsignal(); // in ps (1E-12 s)
+                Float_t Track_length    = TRD_ST_TPC_Track ->getTrack_length();
 
-            Int_t flag_close_TPC_track = 0;
-            Int_t idx_close_TPC_track = -1;
-            for(Int_t i_track = 0; i_track < NumTracks; i_track++)
-            {
-                TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
-                TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
-                fHelixAtoPointdca(TV3_avg_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
-                if(dcaAB_dca < dcaAB_min)
+                Float_t momentum        = TLV_part.P();
+                Float_t eta_track       = TLV_part.Eta();
+                Float_t pT_track        = TLV_part.Pt();
+                Float_t theta_track     = TLV_part.Theta();
+                Float_t phi_track       = TLV_part.Phi();
+                //-------------------------------
+
+
+
+                Int_t flag_close_TPC_track = 0;
+                Int_t idx_close_TPC_track = -1;
+                for(Int_t i_track = 0; i_track < NumTracks; i_track++)
                 {
-                    dcaAB_min        = dcaAB_dca;
-                    TOFsignal_min    = TOFsignal;
-                    Track_length_min = Track_length;
-                    TPCdEdx_min      = TPCdEdx;
-                    dca_to_prim      = dca;
-                    pT_min           = pT_track;
-                    momentum_min     = momentum;
-                    path_min         = pathA_dca;
-                }
-                if(dcaAB_dca < 3.0)
-                {
-                    idx_close_TPC_track = i_track;
-                    flag_close_TPC_track = 1;
-                }
-            }
-
-            //printf("dcaAB_min: %4.3f \n",dcaAB_min);
-
-
-
-            //-----------------------------------
-            // Store the kalman tracks which are used in nuclear event candidate
-            vector<Int_t> vec_idx_kalman_tracks_nuclev;
-            vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[0][i_sec_vtx_A]);
-            vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[1][i_sec_vtx_A]);
-            for(Int_t idx_B = 0; idx_B < (Int_t)idx_acc_vtx_B.size(); idx_B++)
-            {
-                vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]]);
-                vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]]);
-            }
-
-            ///if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min);
-            Float_t nuclev_bitmap = Calc_nuclev_bitmap(vec_idx_kalman_tracks_nuclev); // Calculates the number of shared/independent tracklets per layer
-
-            // Read bitmap
-            Int_t Arr_tracklets_layer[6] = {0};
-            for(Int_t i_lay = 0; i_lay < 6; i_lay++)
-            {
-                Int_t N_tracklets_layer = 0;
-                for(Int_t i_bit = 0; i_bit < 5; i_bit++) // asume only 5 bits are filled -> 32 tracklets per layer at maximum
-                {
-                    if(((Int_t)nuclev_bitmap >> (i_bit + i_lay*5)) & 1) // read the bits
+                    TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
+                    TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
+                    fHelixAtoPointdca(TV3_avg_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
+                    if(dcaAB_dca < dcaAB_min)
                     {
-                        N_tracklets_layer |= 1 << i_bit; // set bit i_bit to 1
+                        dcaAB_min        = dcaAB_dca;
+                        TOFsignal_min    = TOFsignal;
+                        Track_length_min = Track_length;
+                        TPCdEdx_min      = TPCdEdx;
+                        dca_to_prim      = dca;
+                        pT_min           = pT_track;
+                        momentum_min     = momentum;
+                        path_min         = pathA_dca;
                     }
-                }
-                Arr_tracklets_layer[i_lay] = N_tracklets_layer;
-                //printf(" --> bitmap read: %d, i_lay: %d, N_tracklets: %d \n",(Int_t)nuclev_bitmap,i_lay,N_tracklets_layer);
-            }
-            //-----------------------------------
-
-
-
-            //-----------------------------------
-            // Toplogy selection for nuclear events
-            //if(Arr_tracklets_layer[5] > 3 || Arr_tracklets_layer[4] > 3 || Arr_tracklets_layer[3] > 3)
-#if 0
-            if(
-               (Arr_tracklets_layer[5] > 2 && Arr_tracklets_layer[4] > 1 && Arr_tracklets_layer[3] > 0)
-               || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[3] > 1 && Arr_tracklets_layer[2] > 0)
-               || (Arr_tracklets_layer[3] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[1] > 0)
-               || (Arr_tracklets_layer[2] > 2 && Arr_tracklets_layer[1] > 1 && Arr_tracklets_layer[0] > 0)
-               //
-               || (Arr_tracklets_layer[5] > 2 && Arr_tracklets_layer[3] > 1 && Arr_tracklets_layer[2] > 0)
-               || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[1] > 0)
-               || (Arr_tracklets_layer[3] > 2 && Arr_tracklets_layer[1] > 1 && Arr_tracklets_layer[0] > 0)
-               //
-               || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[1] > 0)
-               || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[1] > 1 && Arr_tracklets_layer[0] > 0)
-               || (Arr_tracklets_layer[3] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[0] > 0)
-              )
-#endif
-                if(
-                   (Arr_tracklets_layer[5] > 2 && Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[3] > 2)
-                  )
-                {
-                    if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track)
+                    if(dcaAB_dca < 3.0)
                     {
-                        printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f, trkl: {%d, %d, %d, %d, %d, %d} \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min,Arr_tracklets_layer[0],Arr_tracklets_layer[1],Arr_tracklets_layer[2],Arr_tracklets_layer[3],Arr_tracklets_layer[4],Arr_tracklets_layer[5]);
+                        idx_close_TPC_track = i_track;
+                        flag_close_TPC_track = 1;
                     }
                 }
 
-            // Ntuple for nculear interaction event candidates
-            Arr_cluster_params[0]	= (Float_t)TV3_avg_sec_vertex[0];
-            Arr_cluster_params[1]	= (Float_t)TV3_avg_sec_vertex[1];
-            Arr_cluster_params[2]	= (Float_t)TV3_avg_sec_vertex[2];
-            Arr_cluster_params[3]	= (Float_t)N_close_vertex;
-            Arr_cluster_params[4]	= (Float_t)dcaAB_min;
-            Arr_cluster_params[5]	= (Float_t)TOFsignal_min;
-            Arr_cluster_params[6]	= (Float_t)Track_length_min;
-            Arr_cluster_params[7]	= (Float_t)TPCdEdx_min;
-            Arr_cluster_params[8]	= (Float_t)dca_to_prim;
-            Arr_cluster_params[9]	= (Float_t)pT_min;
-            Arr_cluster_params[10]	= (Float_t)momentum_min;
-            Arr_cluster_params[11]	= (Float_t)nuclev_bitmap;
-
-            NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
-            //-----------------------------------
+                //printf("dcaAB_min: %4.3f \n",dcaAB_min);
 
 
-         
 
-
-#if defined(USEEVE)
-            if(graphics)
-            {
-                TEveP_nucl_int_vertices ->SetPoint(i_vertex_nucl_int,TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2]);
-
-                // Draw kalman tracks which contributed to nuclear interaction vertex
-                Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][i_sec_vtx_A],kGreen+1,280.0,500.0);
-                Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][i_sec_vtx_A],kGreen+1,280.0,500.0);
-
-                // Draw kalman tracklets
-                Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[0][i_sec_vtx_A]);
-                Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[1][i_sec_vtx_A]);
-
+                //-----------------------------------
+                // Store the kalman tracks which are used in nuclear event candidate
+                vector<Int_t> vec_idx_kalman_tracks_nuclev;
+                vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[0][i_sec_vtx_A]);
+                vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[1][i_sec_vtx_A]);
                 for(Int_t idx_B = 0; idx_B < (Int_t)idx_acc_vtx_B.size(); idx_B++)
                 {
-                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]],kMagenta+1,280.0,500.0);
-                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]],kMagenta+1,280.0,500.0);
-
-                    // Draw kalman tracklets
-                    Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]]);
-                    Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]]);
+                    vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]]);
+                    vec_idx_kalman_tracks_nuclev.push_back(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]]);
                 }
-                if(idx_close_TPC_track >= 0) Draw_TPC_track(idx_close_TPC_track,kAzure-2,3);
 
-                //Float_t pathA_dca, dcaAB_dca;
-                //fHelixAtoPointdca(TV3_EventVertex,vec_helices[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
-                //Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3);
-            }
+                ///if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track) printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min);
+                Float_t nuclev_bitmap = Calc_nuclev_bitmap(vec_idx_kalman_tracks_nuclev); // Calculates the number of shared/independent tracklets per layer
+
+                // Read bitmap
+                Int_t Arr_tracklets_layer[6] = {0};
+                for(Int_t i_lay = 0; i_lay < 6; i_lay++)
+                {
+                    Int_t N_tracklets_layer = 0;
+                    for(Int_t i_bit = 0; i_bit < 5; i_bit++) // asume only 5 bits are filled -> 32 tracklets per layer at maximum
+                    {
+                        if(((Int_t)nuclev_bitmap >> (i_bit + i_lay*5)) & 1) // read the bits
+                        {
+                            N_tracklets_layer |= 1 << i_bit; // set bit i_bit to 1
+                        }
+                    }
+                    Arr_tracklets_layer[i_lay] = N_tracklets_layer;
+                    //printf(" --> bitmap read: %d, i_lay: %d, N_tracklets: %d \n",(Int_t)nuclev_bitmap,i_lay,N_tracklets_layer);
+                }
+                //-----------------------------------
+
+
+
+                //-----------------------------------
+                // Toplogy selection for nuclear events
+                //if(Arr_tracklets_layer[5] > 3 || Arr_tracklets_layer[4] > 3 || Arr_tracklets_layer[3] > 3)
+#if 0
+                if(
+                   (Arr_tracklets_layer[5] > 2 && Arr_tracklets_layer[4] > 1 && Arr_tracklets_layer[3] > 0)
+                   || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[3] > 1 && Arr_tracklets_layer[2] > 0)
+                   || (Arr_tracklets_layer[3] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[1] > 0)
+                   || (Arr_tracklets_layer[2] > 2 && Arr_tracklets_layer[1] > 1 && Arr_tracklets_layer[0] > 0)
+                   //
+                   || (Arr_tracklets_layer[5] > 2 && Arr_tracklets_layer[3] > 1 && Arr_tracklets_layer[2] > 0)
+                   || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[1] > 0)
+                   || (Arr_tracklets_layer[3] > 2 && Arr_tracklets_layer[1] > 1 && Arr_tracklets_layer[0] > 0)
+                   //
+                   || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[1] > 0)
+                   || (Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[1] > 1 && Arr_tracklets_layer[0] > 0)
+                   || (Arr_tracklets_layer[3] > 2 && Arr_tracklets_layer[2] > 1 && Arr_tracklets_layer[0] > 0)
+                  )
 #endif
-            i_vertex_nucl_int++;
-        }
-        //if(N_close_vertex > 3) printf("%s ----> N_close_vertex: %d %s, event: %lld \n",KRED,N_close_vertex,KNRM,Global_Event);
-    }
-    //------------------------
-    //cout << "End of nuclear interaction finder" << endl;
+                    if(
+                       (Arr_tracklets_layer[5] > 2 && Arr_tracklets_layer[4] > 2 && Arr_tracklets_layer[3] > 2)
+                      )
+                    {
+                        if(TV3_avg_sec_vertex.Perp() > 297.0 && flag_close_TPC_track)
+                        {
+                            printf("%s ----> Nuclear interaction vertex at radius:  %s %4.3f cm, pos: {%4.3f, %4.3f, %4.3f} at event: %lld, i_vertex_nucl_int: %d, N_close_vertex: %d, path_min: %4.3f, trkl: {%d, %d, %d, %d, %d, %d} \n",KRED,KNRM,TV3_avg_sec_vertex.Perp(),TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2],Global_Event,i_vertex_nucl_int,N_close_vertex,path_min,Arr_tracklets_layer[0],Arr_tracklets_layer[1],Arr_tracklets_layer[2],Arr_tracklets_layer[3],Arr_tracklets_layer[4],Arr_tracklets_layer[5]);
+                        }
+                    }
+
+                // Ntuple for nculear interaction event candidates
+                Arr_cluster_params[0]	= (Float_t)TV3_avg_sec_vertex[0];
+                Arr_cluster_params[1]	= (Float_t)TV3_avg_sec_vertex[1];
+                Arr_cluster_params[2]	= (Float_t)TV3_avg_sec_vertex[2];
+                Arr_cluster_params[3]	= (Float_t)N_close_vertex;
+                Arr_cluster_params[4]	= (Float_t)dcaAB_min;
+                Arr_cluster_params[5]	= (Float_t)TOFsignal_min;
+                Arr_cluster_params[6]	= (Float_t)Track_length_min;
+                Arr_cluster_params[7]	= (Float_t)TPCdEdx_min;
+                Arr_cluster_params[8]	= (Float_t)dca_to_prim;
+                Arr_cluster_params[9]	= (Float_t)pT_min;
+                Arr_cluster_params[10]	= (Float_t)momentum_min;
+                Arr_cluster_params[11]	= (Float_t)nuclev_bitmap;
+
+                NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
+                //-----------------------------------
+
+
+
 
 
 #if defined(USEEVE)
-    if(graphics)
-    {
-        TEveP_sec_vertices  ->SetMarkerSize(3);
-        TEveP_sec_vertices  ->SetMarkerStyle(20);
-        TEveP_sec_vertices  ->SetMarkerColor(kRed);
-        gEve->AddElement(TEveP_sec_vertices);
+                if(graphics)
+                {
+                    TEveP_nucl_int_vertices ->SetPoint(i_vertex_nucl_int,TV3_avg_sec_vertex[0],TV3_avg_sec_vertex[1],TV3_avg_sec_vertex[2]);
 
-        TEveP_nucl_int_vertices  ->SetMarkerSize(5);
-        TEveP_nucl_int_vertices  ->SetMarkerStyle(20);
-        TEveP_nucl_int_vertices  ->SetMarkerColor(kBlue);
-        gEve->AddElement(TEveP_nucl_int_vertices);
+                    // Draw kalman tracks which contributed to nuclear interaction vertex
+                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][i_sec_vtx_A],kGreen+1,280.0,500.0);
+                    Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][i_sec_vtx_A],kGreen+1,280.0,500.0);
 
-        TEveP_close_TPC_photon  ->SetMarkerSize(5);
-        TEveP_close_TPC_photon  ->SetMarkerStyle(20);
-        TEveP_close_TPC_photon  ->SetMarkerColor(kGreen);
-        //gEve->AddElement(TEveP_close_TPC_photon);
+                    // Draw kalman tracklets
+                    Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[0][i_sec_vtx_A]);
+                    Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[1][i_sec_vtx_A]);
 
-        TEveP_first_point_helix  ->SetMarkerSize(3);
-        TEveP_first_point_helix  ->SetMarkerStyle(20);
-        TEveP_first_point_helix  ->SetMarkerColor(kBlue);
-        //gEve->AddElement(TEveP_first_point_helix);
+                    for(Int_t idx_B = 0; idx_B < (Int_t)idx_acc_vtx_B.size(); idx_B++)
+                    {
+                        Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]],kMagenta+1,280.0,500.0);
+                        Draw_Kalman_Helix_Tracks(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]],kMagenta+1,280.0,500.0);
 
-        TEveP_second_point_helix  ->SetMarkerSize(3);
-        TEveP_second_point_helix  ->SetMarkerStyle(20);
-        TEveP_second_point_helix  ->SetMarkerColor(kMagenta);
-        //gEve->AddElement(TEveP_second_point_helix);
+                        // Draw kalman tracklets
+                        Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]]);
+                        Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]]);
+                    }
+                    if(idx_close_TPC_track >= 0) Draw_TPC_track(idx_close_TPC_track,kAzure-2,3);
 
-        for(Int_t i_mother = 0; i_mother < (Int_t)TEveLine_mother.size(); i_mother++)
-        {
-            TEveLine_mother[i_mother]    ->SetLineStyle(1);
-            TEveLine_mother[i_mother]    ->SetLineWidth(3);
-            TEveLine_mother[i_mother]    ->SetMainColor(kMagenta);
-            TEveLine_mother[i_mother]    ->SetMainAlpha(1.0);
-            gEve->AddElement(TEveLine_mother[i_mother]);
-        }
-
-        gEve->Redraw3D(kTRUE);
-    }
+                    //Float_t pathA_dca, dcaAB_dca;
+                    //fHelixAtoPointdca(TV3_EventVertex,vec_helices[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
+                    //Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3);
+                }
 #endif
+                i_vertex_nucl_int++;
+            }
+            //if(N_close_vertex > 3) printf("%s ----> N_close_vertex: %d %s, event: %lld \n",KRED,N_close_vertex,KNRM,Global_Event);
+        }
+        //------------------------
+        //cout << "End of nuclear interaction finder" << endl;
+
+
+#if defined(USEEVE)
+        if(graphics)
+        {
+            TEveP_sec_vertices  ->SetMarkerSize(3);
+            TEveP_sec_vertices  ->SetMarkerStyle(20);
+            TEveP_sec_vertices  ->SetMarkerColor(kRed);
+            gEve->AddElement(TEveP_sec_vertices);
+
+            TEveP_nucl_int_vertices  ->SetMarkerSize(5);
+            TEveP_nucl_int_vertices  ->SetMarkerStyle(20);
+            TEveP_nucl_int_vertices  ->SetMarkerColor(kBlue);
+            gEve->AddElement(TEveP_nucl_int_vertices);
+
+            TEveP_close_TPC_photon  ->SetMarkerSize(5);
+            TEveP_close_TPC_photon  ->SetMarkerStyle(20);
+            TEveP_close_TPC_photon  ->SetMarkerColor(kGreen);
+            //gEve->AddElement(TEveP_close_TPC_photon);
+
+            TEveP_first_point_helix  ->SetMarkerSize(3);
+            TEveP_first_point_helix  ->SetMarkerStyle(20);
+            TEveP_first_point_helix  ->SetMarkerColor(kBlue);
+            //gEve->AddElement(TEveP_first_point_helix);
+
+            TEveP_second_point_helix  ->SetMarkerSize(3);
+            TEveP_second_point_helix  ->SetMarkerStyle(20);
+            TEveP_second_point_helix  ->SetMarkerColor(kMagenta);
+            //gEve->AddElement(TEveP_second_point_helix);
+
+            for(Int_t i_mother = 0; i_mother < (Int_t)TEveLine_mother.size(); i_mother++)
+            {
+                TEveLine_mother[i_mother]    ->SetLineStyle(1);
+                TEveLine_mother[i_mother]    ->SetLineWidth(3);
+                TEveLine_mother[i_mother]    ->SetMainColor(kMagenta);
+                TEveLine_mother[i_mother]    ->SetMainAlpha(1.0);
+                gEve->AddElement(TEveLine_mother[i_mother]);
+            }
+
+            gEve->Redraw3D(kTRUE);
+        }
+#endif
+    }
 
     return flag_found_good_AP_vertex;
 }
@@ -1611,15 +1660,86 @@ void Ali_TRD_ST_Analyze::set_Kalman_helix_params(vector<vector<Double_t>> mHelic
     //printf("Ali_TRD_ST_Analyze::set_Kalman_helix_params");
     mHelices_kalman = mHelices_kalman_in;
 
-    vec_helices.clear();
-    vec_helices.resize((Int_t)mHelices_kalman.size());
+    vec_helices_TRD.clear();
+    vec_helices_TRD.resize((Int_t)mHelices_kalman.size());
 
     for(Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
     {
-        vec_helices[i_track] = new Ali_Helix();
-        vec_helices[i_track] ->setHelix(mHelices_kalman[i_track][0],mHelices_kalman[i_track][1],mHelices_kalman[i_track][2],mHelices_kalman[i_track][3],mHelices_kalman[i_track][4],mHelices_kalman[i_track][5]);
+        vec_helices_TRD[i_track] = new Ali_Helix();
+        vec_helices_TRD[i_track] ->setHelix(mHelices_kalman[i_track][0],mHelices_kalman[i_track][1],mHelices_kalman[i_track][2],mHelices_kalman[i_track][3],mHelices_kalman[i_track][4],mHelices_kalman[i_track][5]);
+        //printf("i_KF_track: %d, par: {%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f} \n",i_track,mHelices_kalman[i_track][0],mHelices_kalman[i_track][1],mHelices_kalman[i_track][2],mHelices_kalman[i_track][3],mHelices_kalman[i_track][4],mHelices_kalman[i_track][5]);
     }
 
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+Int_t Ali_TRD_ST_Analyze::set_TPC_helix_params(Long64_t i_event)
+{
+    //printf("Ali_TRD_ST_Analyze::set_TPC_helix_params");
+
+    vec_helices_TPC.clear();
+
+
+    if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
+
+    //--------------------------------------------------
+    // Event information (more data members available, see Ali_TRD_ST_Event class definition)
+    UShort_t NumTracks   = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
+    EventVertexX         = TRD_ST_Event ->getx();
+    EventVertexY         = TRD_ST_Event ->gety();
+    EventVertexZ         = TRD_ST_Event ->getz();
+    Float_t  V0MEq       = TRD_ST_Event ->getcent_class_V0MEq();
+    //--------------------------------------------------
+
+
+
+    //--------------------------------------------------
+    // TPC track loop
+    mHelices_TPC.clear();
+    mHelices_TPC.resize(NumTracks);
+    for(Int_t i_track = 0; i_track < NumTracks; i_track++)
+    {
+        TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
+
+        Double_t nsigma_TPC_e   = TRD_ST_TPC_Track ->getnsigma_e_TPC();
+        Double_t nsigma_TPC_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TPC();
+        Double_t nsigma_TPC_p   = TRD_ST_TPC_Track ->getnsigma_p_TPC();
+        Double_t nsigma_TOF_e   = TRD_ST_TPC_Track ->getnsigma_e_TOF();
+        Double_t nsigma_TOF_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TOF();
+        Double_t TRD_signal     = TRD_ST_TPC_Track ->getTRDSignal();
+        Double_t TRDsumADC      = TRD_ST_TPC_Track ->getTRDsumADC();
+        Double_t dca            = TRD_ST_TPC_Track ->getdca();  // charge * distance of closest approach to the primary vertex
+        TLorentzVector TLV_part = TRD_ST_TPC_Track ->get_TLV_part();
+        UShort_t NTPCcls        = TRD_ST_TPC_Track ->getNTPCcls();
+        UShort_t NTRDcls        = TRD_ST_TPC_Track ->getNTRDcls();
+        UShort_t NITScls        = TRD_ST_TPC_Track ->getNITScls();
+        Float_t TPCchi2         = TRD_ST_TPC_Track ->getTPCchi2();
+        Float_t TPCdEdx         = TRD_ST_TPC_Track ->getTPCdEdx();
+        Float_t TOFsignal       = TRD_ST_TPC_Track ->getTOFsignal(); // in ps (1E-12 s)
+        Float_t Track_length    = TRD_ST_TPC_Track ->getTrack_length();
+        Float_t charge = 1.0;
+        if(dca < 0.0) charge = -1.0;
+
+        Float_t momentum        = TLV_part.P();
+        Float_t eta_track       = TLV_part.Eta();
+        Float_t pT_track        = TLV_part.Pt();
+        Float_t theta_track     = TLV_part.Theta();
+        Float_t phi_track       = TLV_part.Phi();
+
+        vec_helices_TPC.push_back(new Ali_Helix());
+        vec_helices_TPC[(Int_t)vec_helices_TPC.size()-1] ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
+        mHelices_TPC[i_track].resize(9);
+        for(Int_t i_param = 0; i_param < 9; i_param++)
+        {
+            mHelices_TPC[i_track][i_param] = TRD_ST_TPC_Track->getHelix_param(i_param);
+            //printf("i_track: %d, i_param: %d, val: %4.3f \n",i_track,i_param,mHelices_TPC[i_track][i_param]);
+        }
+    }
+
+    return 1;
 }
 //----------------------------------------------------------------------------------------
 
@@ -1942,7 +2062,7 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Do
 #endif
 
         Float_t pathA_dca, dcaAB_dca;
-        fHelixAtoPointdca(TV3_EventVertex,vec_helices[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
+        fHelixAtoPointdca(TV3_EventVertex,vec_helices_TRD[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
         //if(dcaAB_dca > 50.0) continue;
 
         Double_t radius_helix = 0.0;
@@ -2238,10 +2358,10 @@ void Ali_TRD_ST_Analyze::Draw_TPC_track(Int_t i_track, Int_t color, Double_t lin
 Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets)
 {
     //printf("Ali_TRD_ST_Analyze::Draw_event \n");
-	
+
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
-	
+
     //--------------------------------------------------
     // Event information (more data members available, see Ali_TRD_ST_Event class definition)
     UShort_t NumTracks            = TRD_ST_Event ->getNumTracks(); // number of tracks in this event
@@ -2317,27 +2437,29 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t dra
       
 
 #if defined(USEEVE)
-        vec_TEveLine_tracklets[i_layer].resize(N_tracklets_layers[i_layer]+1);
-        vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] = new TEveLine();
-
-        vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0],TV3_offset[1],TV3_offset[2]);
-        vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0] + scale_length_vec*TV3_dir[0],TV3_offset[1] + scale_length_vec*TV3_dir[1],TV3_offset[2] + scale_length_vec*TV3_dir[2]);
-
-
-        //printf("i_tracklet: %d, radius: %4.3f, pos A: {%4.2f, %4.2f, %4.2f}, pos B: {%4.2f, %4.2f, %4.2f} \n",i_tracklet,radius,TV3_offset[0],TV3_offset[1],TV3_offset[2],TV3_offset[0] + scale_length_vec*TV3_dir[0],TV3_offset[1] + scale_length_vec*TV3_dir[1],TV3_offset[2] + scale_length_vec*TV3_dir[2]);
-
-        HistName = "tracklet ";
-        HistName += i_tracklet;
-        vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetName(HistName.Data());
-        vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetLineStyle(1);
-        vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetLineWidth(3);
-        vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetMainColor(color_layer[i_layer]);
-        //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
+        if(graphics)
         {
-             if(graphics && draw_tracklets) gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
-        }
-#endif
+            vec_TEveLine_tracklets[i_layer].resize(N_tracklets_layers[i_layer]+1);
+            vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] = new TEveLine();
 
+            vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0],TV3_offset[1],TV3_offset[2]);
+            vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0] + scale_length_vec*TV3_dir[0],TV3_offset[1] + scale_length_vec*TV3_dir[1],TV3_offset[2] + scale_length_vec*TV3_dir[2]);
+
+
+            //printf("i_tracklet: %d, radius: %4.3f, pos A: {%4.2f, %4.2f, %4.2f}, pos B: {%4.2f, %4.2f, %4.2f} \n",i_tracklet,radius,TV3_offset[0],TV3_offset[1],TV3_offset[2],TV3_offset[0] + scale_length_vec*TV3_dir[0],TV3_offset[1] + scale_length_vec*TV3_dir[1],TV3_offset[2] + scale_length_vec*TV3_dir[2]);
+
+            HistName = "tracklet ";
+            HistName += i_tracklet;
+            vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetName(HistName.Data());
+            vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetLineStyle(1);
+            vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetLineWidth(3);
+            vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]    ->SetMainColor(color_layer[i_layer]);
+            //if(i_tracklet == 63 || i_tracklet == 67 || i_tracklet == 72 || i_tracklet == 75 || i_tracklet == 83 || i_tracklet == 88)
+            {
+             if(graphics && draw_tracklets) gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
+            }
+#endif
+        }
         N_tracklets_layers[i_layer]++;
     }
 

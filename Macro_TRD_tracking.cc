@@ -53,10 +53,10 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     output_dir = "./ST_out/";
 #endif
     Int_t use_prim_vertex           = 0; // 0 = no primary vertex, 1 = primary vertex used
-    Int_t KF_tracker                = 0; // Kalman filter tracker
-    Int_t TF_tracker                = 1; // Tensorflow tracker
+    Int_t KF_tracker                = 1; // Kalman filter tracker
+    Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 1; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
@@ -64,7 +64,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     Int_t draw_found_tracklets      = 0; // Draws tracklets found by tracker
     Int_t draw_matched_TPC_track    = 1; // Draw TPC to TRD matched TPC track
     Int_t draw_matched_TRD_track    = 1; // Draw TPC to TRD matched Kalman/TF track
-    Int_t draw_secondary_vertices   = 0; // Draws tracks and secondary vertices
+    Int_t draw_secondary_vertices   = 1; // Draws tracks and secondary vertices
     //------------------------------------
 
     TH1F *histo = new TH1F("histogram","efficiency Kalman Trackfinder",20,0,1.2);
@@ -96,9 +96,9 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
 
     //for(Long64_t event = 0; event < N_Events; event++) // 2,3
-    //for(Long64_t event = 0; event < 2000; event++) // 2,3
-    Int_t event_plot = 555; // 168
-    for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
+    for(Long64_t event = 0; event < 1; event++) // 2,3
+    //Int_t event_plot = 555; // 168
+    //for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
     {
 
         if (event != 0  &&  event % 50 == 0)
@@ -120,7 +120,10 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
         TRD_ST_Analyze ->Draw_event(event,graphics,draw_all_TPC_tracks,draw_all_tracklets);  // ->draws TPC tracks
         //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
 
+
         TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0,graphics*draw_tracklets_TPC_match); // last one is graphics  --> draws kalman TRD tracklets
+
+        TRD_ST_Analyze ->set_TPC_helix_params(event);
 
         //------------------------------------------------------------
         //Kalman Filter tracker
@@ -169,7 +172,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
         TRD_ST_Analyze ->Calc_Kalman_efficiency();
 
 
-        Int_t found_good_AP_vertex = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices); // 0 = no graphics
+        Int_t found_good_AP_vertex = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,0); // (0 = no graphics), (0 = TRD, 1 = TPC)
         //if(found_good_AP_vertex) printf(" ----> Good AP vertex found in event: %lld \n",event);
 
         //vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets=kalid.found_tracks;

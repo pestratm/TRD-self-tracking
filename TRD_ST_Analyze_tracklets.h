@@ -157,8 +157,11 @@ private:
     vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
 
     vector<vector<Double_t>> mHelices_kalman; // Kalman helix parameters, based on AliHelix
+    vector<vector<Double_t>> mHelices_TPC; // Kalman helix parameters, based on AliHelix
     Double_t aliHelix_params[6];
     vector<Ali_Helix*> vec_helices;
+    vector<Ali_Helix*> vec_helices_TRD;
+    vector<Ali_Helix*> vec_helices_TPC;
     Ali_Helix* TPC_single_helix;
     vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets;
 
@@ -193,6 +196,7 @@ public:
     void Draw_Kalman_Tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks);
     void Draw_matched_Kalman_Tracklets(Int_t i_track_plot);
     void set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in);
+    Int_t set_TPC_helix_params(Long64_t i_event);
     void set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_in);
     void Calc_Kalman_efficiency();
     void Match_kalman_tracks_to_TPC_tracks(Int_t graphics, Int_t draw_matched_TPC_track, Int_t draw_matched_TRD_track, Int_t color);
@@ -204,7 +208,7 @@ public:
     void fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB,Float_t pathA_in, Float_t pathB_in);
     Int_t fCross_points_Circles(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
     Int_t fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
-    Int_t Calculate_secondary_vertices(Int_t graphics);
+    Int_t Calculate_secondary_vertices(Int_t graphics, Int_t flag_TRD_TPC_tracks);
     pair<Double_t,Double_t>fpathLength(Double_t r,Ali_Helix* helixA) const;
     Int_t fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
     void Plot_AP();
