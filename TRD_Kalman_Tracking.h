@@ -93,7 +93,7 @@ class TRD_Kalman_Trackfinder
   ROOT::Math::SVector<double, 4> measure(Ali_TRD_ST_Tracklets* tracklet);
   Bool_t fitting(Ali_TRD_ST_Tracklets* a, Ali_TRD_ST_Tracklets* b);
   void get_seed(Ali_TRD_ST_Tracklets** Tracklets, Int_t Num_Tracklets);
-  void prediction(Double_t dist);
+  Bool_t prediction(Double_t dist);
   void correction(ROOT::Math::SVector<double, 4> measure);
   //Bool_t fits(ROOT::Math::SVector<double, 4> measure);
   void Kalman(vector<Ali_TRD_ST_Tracklets*> start);
