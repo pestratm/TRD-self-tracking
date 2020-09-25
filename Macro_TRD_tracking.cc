@@ -96,7 +96,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
 
     //for(Long64_t event = 0; event < N_Events; event++) // 2,3
-    for(Long64_t event = 0; event < 1; event++) // 2,3
+    for(Long64_t event = 0; event < 5000; event++) // 2,3
     //Int_t event_plot = 555; // 168
     //for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
     {
@@ -172,7 +172,8 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
         TRD_ST_Analyze ->Calc_Kalman_efficiency();
 
 
-        Int_t found_good_AP_vertex = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,0); // (0 = no graphics), (0 = TRD, 1 = TPC)
+        Int_t found_good_AP_vertex_TPC = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,0); // (0 = no graphics), (0 = TRD, 1 = TPC)
+        Int_t found_good_AP_vertex_TRD = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,1); // (0 = no graphics), (0 = TRD, 1 = TPC)
         //if(found_good_AP_vertex) printf(" ----> Good AP vertex found in event: %lld \n",event);
 
         //vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets=kalid.found_tracks;
@@ -181,5 +182,6 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
         //Ali_TRD_ST_Tracklets* last_tracklet;
 
     }
+    TRD_ST_Analyze ->Write();
 
 }

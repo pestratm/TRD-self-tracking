@@ -1014,7 +1014,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                 pathB_est = -9999.0;
             }
             fHelixABdca(vec_helices[i_track_A],vec_helices[i_track_B],pathA,pathB,dcaAB,pathA_est,pathB_est);
-            //printf("track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
+            //printf("  --> track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
 
             if(dcaAB < 5.0)
             {
@@ -1143,6 +1143,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         pB  = TMath::Sqrt(pTB*pTB + pzB*pzB); // p
                         CA  = mHelices_TPC[i_track_A][4]; // curvature
                         CB  = mHelices_TPC[i_track_B][4]; // curvature
+
+                        //printf("CA: %4.3f, CB: %4.3f, pTA: %4.3f, pTB: %4.3f \n",CA,CB,pTA,pTB);
                     }
 
                     //if(radius_vertex > 240.0 && radius_vertex < 360.0)
@@ -1152,6 +1154,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
                     //-------------------------------------------------
                     // Armenteros-Podolanski
+                    //printf("radius_vertex: %4.3f \n",radius_vertex);
                     if(radius_vertex > min_radius_cut && radius_vertex < max_radius_cut) // TRD acceptance in R-direction
                     {
                         vec_helices[i_track_A] ->Evaluate(pathA+0.1,helix_pointAs);
@@ -1193,6 +1196,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         Double_t AP_value = TMath::Power(AP_alpha/AP_alpha_max,2.0) + TMath::Power(AP_pT/AP_qT_max,2.0);
 
                         //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+                        //printf("AP_value: %4.3f, dot_product_dir_vertex: %4.3f, CA*CB: %4.3f, pTA: %4.3f, pTB: %4.3f \n",AP_value,dot_product_dir_vertex,CA*CB,pTA,pTB);
                         if(AP_value < AP_cut_value && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.8 && pTB < 0.8 && dot_product_dir_vertex > 0.9)
                         {
                             Double_t dca_min  = 999.0;
@@ -1726,6 +1730,7 @@ Int_t Ali_TRD_ST_Analyze::set_TPC_helix_params(Long64_t i_event)
         Float_t momentum        = TLV_part.P();
         Float_t eta_track       = TLV_part.Eta();
         Float_t pT_track        = TLV_part.Pt();
+        Float_t pZ_track        = TLV_part.Pz();
         Float_t theta_track     = TLV_part.Theta();
         Float_t phi_track       = TLV_part.Phi();
 
@@ -1737,6 +1742,8 @@ Int_t Ali_TRD_ST_Analyze::set_TPC_helix_params(Long64_t i_event)
             mHelices_TPC[i_track][i_param] = TRD_ST_TPC_Track->getHelix_param(i_param);
             //printf("i_track: %d, i_param: %d, val: %4.3f \n",i_track,i_param,mHelices_TPC[i_track][i_param]);
         }
+        mHelices_TPC[i_track][6] = pT_track;
+        mHelices_TPC[i_track][7] = pZ_track;
     }
 
     return 1;
