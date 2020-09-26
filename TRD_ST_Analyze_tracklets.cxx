@@ -59,12 +59,13 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
 
-    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv:dotprod");
+
+    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv:dotprod:TPCdEdx_A:dca_TPC_A:p_TPC_A:TPCdEdx_B:dca_TPC_B:p_TPC_B:InvMK0s:dcaAB");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 
     NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom:layerbitmap");
     NT_secondary_vertex_cluster ->SetAutoSave( 5000000 );
-		
+
     Tree_TRD_ST_Event_out  = NULL;
     Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
     Tree_TRD_ST_Event_out  ->Branch("Tree_TRD_ST_Event_branch_out"  , "TRD_ST_Event_out", TRD_ST_Event_out );
@@ -929,10 +930,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
     Double_t max_radius_cut = 356.0;
     if(flag_TRD_TPC_tracks == 0) // TRD tracks
     {
+        //printf("Secondary vertex finding: TRD tracks used \n");
         vec_helices = vec_helices_TRD;
     }
     else // TPC tracks
     {
+        //printf("Secondary vertex finding: TPC tracks used \n");
         vec_helices = vec_helices_TPC;
         min_radius_cut = 10.0;
         max_radius_cut = 85.0;
@@ -940,7 +943,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
     Int_t flag_found_good_AP_vertex = 0;
 
-    Float_t Arr_seconary_params[16];
+    Float_t Arr_seconary_params[24];
 
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
@@ -957,7 +960,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
     TLorentzVector TLV_B;
     TLorentzVector TLV_AB;
     Double_t EnergyA, EnergyB, Energy_AB;
-    Double_t Inv_mass_AB, Momentum_AB, pT_AB, Eta_AB, Phi_AB;
+    Double_t Inv_mass_AB, Inv_mass_AB_K0s, Momentum_AB, pT_AB, Eta_AB, Phi_AB;
 
     TVector3 TV3_prim_vertex(EventVertexX,EventVertexY,EventVertexZ);
     TVector3 TV3_sec_vertex;
@@ -1121,6 +1124,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
 
                     Double_t pTA, pzA, pA, pTB, pzB, pB, CA, CB;
+                    Double_t TPCdEdx_A = -1.0;
+                    Double_t dca_TPC_A = -1.0;
+                    Double_t p_TPC_A   = -1.0;
+                    Double_t TPCdEdx_B = -1.0;
+                    Double_t dca_TPC_B = -1.0;
+                    Double_t p_TPC_B   = -1.0;
 
                     if(flag_TRD_TPC_tracks == 0) // TRD track
                     {
@@ -1144,7 +1153,17 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         CA  = mHelices_TPC[i_track_A][4]; // curvature
                         CB  = mHelices_TPC[i_track_B][4]; // curvature
 
-                        //printf("CA: %4.3f, CB: %4.3f, pTA: %4.3f, pTB: %4.3f \n",CA,CB,pTA,pTB);
+
+                        TPCdEdx_A = PID_params_TPC[i_track_A][0];
+                        dca_TPC_A = PID_params_TPC[i_track_A][1];
+                        p_TPC_A   = PID_params_TPC[i_track_A][2];
+
+                        TPCdEdx_B = PID_params_TPC[i_track_B][0];
+                        dca_TPC_B = PID_params_TPC[i_track_B][1];
+                        p_TPC_B   = PID_params_TPC[i_track_B][2];
+
+                        //printf("CA: {%4.5f, %4.5f}, p: {%4.5f, %4.5f} \n",CA,vec_helices[i_track_A]->getHelix_param(4),pA,p_TPC_A);
+                        //printf("CA: %4.3f, CB: %4.5f, pTA: %4.5f, pTB: %4.3f \n",CA,CB,pTA,pTB);
                     }
 
                     //if(radius_vertex > 240.0 && radius_vertex < 360.0)
@@ -1172,6 +1191,11 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         Double_t AP_pTB = TMath::Sqrt(TMath::Power(TV3_dirB.Mag(),2) - projB*projB);
                         Double_t AP_alpha = (projA - projB)/(projA + projB);
                         if(CA < CB) AP_alpha *= -1.0;
+
+                        TLV_A.SetXYZM(TV3_dirA.X(),TV3_dirA.Y(),TV3_dirA.Z(),0.13957);
+                        TLV_B.SetXYZM(TV3_dirB.X(),TV3_dirB.Y(),TV3_dirB.Z(),0.13957);
+                        TLV_AB = TLV_A + TLV_B;
+                        Inv_mass_AB_K0s = TLV_AB.M();
 
                         TLV_A.SetXYZM(TV3_dirA.X(),TV3_dirA.Y(),TV3_dirA.Z(),0.000511);
                         TLV_B.SetXYZM(TV3_dirB.X(),TV3_dirB.Y(),TV3_dirB.Z(),0.000511);
@@ -1299,9 +1323,19 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                             Arr_seconary_params[13] = (Float_t)Phi_AB;
                             Arr_seconary_params[14] = (Float_t)Global_Event;
                             Arr_seconary_params[15] = (Float_t)dot_product_dir_vertex;
+                            Arr_seconary_params[16] = (Float_t)TPCdEdx_A;
+                            Arr_seconary_params[17] = (Float_t)dca_TPC_A;
+                            Arr_seconary_params[18] = (Float_t)p_TPC_A;
+                            Arr_seconary_params[19] = (Float_t)TPCdEdx_B;
+                            Arr_seconary_params[20] = (Float_t)dca_TPC_B;
+                            Arr_seconary_params[21] = (Float_t)p_TPC_B;
+                            Arr_seconary_params[22] = (Float_t)Inv_mass_AB_K0s;
+                            Arr_seconary_params[23] = (Float_t)dcaAB;
 
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
                             NT_secondary_vertices ->Fill(Arr_seconary_params);
+
+                            //printf("bit_TRD_layer_shared: %d \n",bit_TRD_layer_shared);
                             //-----------------------------------
                         }
 
@@ -1703,7 +1737,9 @@ Int_t Ali_TRD_ST_Analyze::set_TPC_helix_params(Long64_t i_event)
     //--------------------------------------------------
     // TPC track loop
     mHelices_TPC.clear();
+    PID_params_TPC.clear();
     mHelices_TPC.resize(NumTracks);
+    PID_params_TPC.resize(NumTracks);
     for(Int_t i_track = 0; i_track < NumTracks; i_track++)
     {
         TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
@@ -1737,6 +1773,10 @@ Int_t Ali_TRD_ST_Analyze::set_TPC_helix_params(Long64_t i_event)
         vec_helices_TPC.push_back(new Ali_Helix());
         vec_helices_TPC[(Int_t)vec_helices_TPC.size()-1] ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
         mHelices_TPC[i_track].resize(9);
+        PID_params_TPC[i_track].resize(3);
+        PID_params_TPC[i_track][0] = TPCdEdx;
+        PID_params_TPC[i_track][1] = dca;
+        PID_params_TPC[i_track][2] = momentum;
         for(Int_t i_param = 0; i_param < 9; i_param++)
         {
             mHelices_TPC[i_track][i_param] = TRD_ST_TPC_Track->getHelix_param(i_param);
@@ -2465,8 +2505,8 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t dra
             {
              if(graphics && draw_tracklets) gEve->AddElement(vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]]);
             }
-#endif
         }
+#endif
         N_tracklets_layers[i_layer]++;
     }
 
