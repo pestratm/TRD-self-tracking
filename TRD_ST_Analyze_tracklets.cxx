@@ -60,7 +60,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
 
 
-    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv:dotprod:TPCdEdx_A:dca_TPC_A:p_TPC_A:TPCdEdx_B:dca_TPC_B:p_TPC_B:InvMK0s:dcaAB");
+    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv:dotprod:TPCdEdx_A:dca_TPC_A:p_TPC_A:TPCdEdx_B:dca_TPC_B:p_TPC_B:InvMK0s:dcaAB:InvML:InvMaL");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
 
     NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom:layerbitmap");
@@ -943,7 +943,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
     Int_t flag_found_good_AP_vertex = 0;
 
-    Float_t Arr_seconary_params[24];
+    Float_t Arr_seconary_params[26];
 
     Double_t helix_pointA[3];
     Double_t helix_pointB[3];
@@ -960,7 +960,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
     TLorentzVector TLV_B;
     TLorentzVector TLV_AB;
     Double_t EnergyA, EnergyB, Energy_AB;
-    Double_t Inv_mass_AB, Inv_mass_AB_K0s, Momentum_AB, pT_AB, Eta_AB, Phi_AB;
+    Double_t Inv_mass_AB, Inv_mass_AB_K0s, Inv_mass_AB_Lambda, Inv_mass_AB_antiLambda, Momentum_AB, pT_AB, Eta_AB, Phi_AB;
 
     TVector3 TV3_prim_vertex(EventVertexX,EventVertexY,EventVertexZ);
     TVector3 TV3_sec_vertex;
@@ -1197,6 +1197,17 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         TLV_AB = TLV_A + TLV_B;
                         Inv_mass_AB_K0s = TLV_AB.M();
 
+                        TLV_A.SetXYZM(TV3_dirA.X(),TV3_dirA.Y(),TV3_dirA.Z(),0.938272);
+                        TLV_B.SetXYZM(TV3_dirB.X(),TV3_dirB.Y(),TV3_dirB.Z(),0.13957);
+                        TLV_AB = TLV_A + TLV_B;
+                        Inv_mass_AB_Lambda = TLV_AB.M();
+
+                        TLV_A.SetXYZM(TV3_dirA.X(),TV3_dirA.Y(),TV3_dirA.Z(),0.13957);
+                        TLV_B.SetXYZM(TV3_dirB.X(),TV3_dirB.Y(),TV3_dirB.Z(),0.938272);
+                        TLV_AB = TLV_A + TLV_B;
+                        Inv_mass_AB_antiLambda = TLV_AB.M();
+
+
                         TLV_A.SetXYZM(TV3_dirA.X(),TV3_dirA.Y(),TV3_dirA.Z(),0.000511);
                         TLV_B.SetXYZM(TV3_dirB.X(),TV3_dirB.Y(),TV3_dirB.Z(),0.000511);
                         TLV_AB = TLV_A + TLV_B;
@@ -1331,6 +1342,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                             Arr_seconary_params[21] = (Float_t)p_TPC_B;
                             Arr_seconary_params[22] = (Float_t)Inv_mass_AB_K0s;
                             Arr_seconary_params[23] = (Float_t)dcaAB;
+                            Arr_seconary_params[24] = (Float_t)Inv_mass_AB_Lambda;
+                            Arr_seconary_params[25] = (Float_t)Inv_mass_AB_antiLambda;
 
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
                             NT_secondary_vertices ->Fill(Arr_seconary_params);
