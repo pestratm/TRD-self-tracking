@@ -3217,17 +3217,18 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration()
         }
     }
 	
-	TFile* outputfile;
+	TFile* outputfile_hist = new TFile("delta_vs_impact.root","RECREATE");
     
 	 printf("Write data to output file \n");
 	//TFile* h_detector_hit_outputfile = new TFile("./h_detector_hit.root","RECREATE");
    // h_detector_hit_outputfile ->cd();
   //  h_detector_hit->Write();
-
+printf("test 0 \n");
 
 // THIS NEEDED
-    outputfile ->mkdir("Delta_impact_circle");
-    outputfile ->cd("Delta_impact_circle");
+outputfile_hist ->cd();
+    outputfile_hist ->mkdir("Delta_impact_circle");
+    outputfile_hist ->cd("Delta_impact_circle");
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
         vec_tp_Delta_vs_impact_circle[i_det]   ->Write();
