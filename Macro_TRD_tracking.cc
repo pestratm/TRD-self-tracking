@@ -56,12 +56,12 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     Int_t KF_tracker                = 1; // Kalman filter tracker
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 1; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
-    Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
-    Int_t draw_all_tracklets        = 0; // Draw all TRD tracklets
-    Int_t draw_found_tracklets      = 0; // Draws tracklets found by tracker
+    Int_t draw_all_TRD_tracks       = 1; // Draw all TRD tracks
+    Int_t draw_all_tracklets        = 1; // Draw all TRD tracklets
+    Int_t draw_found_tracklets      = 1; // Draws tracklets found by tracker
     Int_t draw_matched_TPC_track    = 1; // Draw TPC to TRD matched TPC track
     Int_t draw_matched_TRD_track    = 1; // Draw TPC to TRD matched Kalman/TF track
     Int_t draw_secondary_vertices   = 1; // Draws tracks and secondary vertices
@@ -85,7 +85,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
 
     //------------------------------------------------------------
     //Tensorflow tracker
-    TRD_TFTrackMaker tftracker;
+  //  TRD_TFTrackMaker tftracker;
     //------------------------------------------------------------
 
 
@@ -95,8 +95,9 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     // pi0 event: 378
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
 
-    //for(Long64_t event = 0; event < N_Events; event++) // 2,3
-    for(Long64_t event = 0; event < 1; event++) // 2,3
+    //for(Long64_t event = 0; event < (Int_t) N_Events; event++) // 2,3
+    for(Long64_t event = 0; event < 2000; event++) // 2,3
+    //for(Long64_t event = 0; event < 1; event++) // 2,3
     //Int_t event_plot = 555; // 168
     //for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
     {
@@ -149,7 +150,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
 
         //------------------------------------------------------------
         //TensorFlow tracker
-        if(TF_tracker)
+   /*     if(TF_tracker)
         {
             tftracker.Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
             mHelices_tracker_TF = tftracker.get_Kalman_helix_params();
@@ -164,10 +165,8 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
         }
         //------------------------------------------------------------
 
-       
-
-        
-
+ */      
+		TRD_ST_Analyze ->Calibrate();
         
         TRD_ST_Analyze ->Calc_Kalman_efficiency();
 
@@ -181,5 +180,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
         //Ali_TRD_ST_Tracklets* last_tracklet;
 
     }
+	
+	TRD_ST_Analyze ->Draw_n_Save_Calibration();
 
 }
