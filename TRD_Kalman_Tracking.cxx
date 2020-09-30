@@ -709,11 +709,11 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			cout<<"x[1]: "<<x[1] <<endl;	
 			
 		}   
-		cout<<"Helix indices "<<mHelices.size()-1<<": ";
+		/*cout<<"Helix indices "<<mHelices.size()-1<<": ";
 		for(int i=0;i< (int)fHelix.size();i++)
 			cout<<fHelix[i]<<" ";
         cout<<endl;
-              
+         */     
 		//used to look at specific track
 		if(mFound_tracks.size()==-1)mShow=1;
 		if(mFound_tracks.size()==2)mShow=0;

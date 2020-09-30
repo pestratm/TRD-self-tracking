@@ -271,6 +271,23 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
         HistName += i_pt_res;
         vec_TH2D_one_over_pT_TPC_vs_Kalman[i_pt_res] = new TH2D(HistName.Data(),HistName.Data(),2000,-10.0,10.0,2000,-10.0,10.0);
     }
+	
+	TFile* file_TRD_centers = TFile::Open("./TV3_TRD_center.root");
+	vec_TV3_TRD_center.resize(540);
+	Int_t i_vec;
+
+	for(Int_t i_det = 0; i_det < 540; i_det++)
+	{
+		vec_TV3_TRD_center[i_det].resize(3);
+		for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+		{
+
+			i_vec = i_det*3 +i_xyz+1;
+
+			vec_TV3_TRD_center[i_det][i_xyz] = (TVector3*)file_TRD_centers -> Get(Form("TVector3;%d",i_vec));
+			//vec_TV3_TRD_center[i_det][i_xyz] = file_TRD_geometry ->GetObject(Form("TVector3;%d",i_vec), TVector3);
+		}
+	}
 }
 //----------------------------------------------------------------------------------------
 
@@ -2971,3 +2988,192 @@ void Ali_TRD_ST_Analyze::Write()
 //----------------------------------------------------------------------------------------
 
 
+
+//----------------------------------------------------------------------------------------
+
+void Ali_TRD_ST_Analyze::Calibrate()
+{
+	//printf("Ali_TRD_ST_Analyze::Calibrate() \n");
+	if ((Int_t)vec_tp_Delta_vs_impact_circle.size() == 0)
+	{
+		vec_tp_Delta_vs_impact_circle.resize(540);
+		vec_TH2D_Delta_vs_impact_circle.resize(540);
+
+		for (Int_t i_det = 0; i_det < 540; i_det++)
+		{
+			//vec_tp_Delta_vs_impact[i_det] = new TProfile(Form("vec_th1d_Delta_vs_impact_%d",i_det),Form("vec_th1d_Delta_vs_impact_%d",i_det),360,-360,360);
+			//vec_TH2D_Delta_vs_impact[i_det] = new TH2D(Form("vec_th2d_Delta_vs_impact_%d",i_det),Form("vec_th2d_Delta_vs_impact_%d",i_det),10,70,110,50,-25,25);
+			vec_tp_Delta_vs_impact_circle[i_det] = new TProfile(Form("vec_th1d_Delta_vs_impact_circle_%d",i_det),Form("vec_th1d_Delta_vs_impact_circle_%d",i_det),360,-360,360);
+			vec_TH2D_Delta_vs_impact_circle[i_det] = new TH2D(Form("vec_th2d_Delta_vs_impact_circle_%d",i_det),Form("vec_th2d_Delta_vs_impact_circle_%d",i_det),13,70,110,200,-100,100);
+
+
+		}
+	}
+	TVector3 vec_TV3_tracklet_vectors, TV3_tracklet_off_vector, vec_dir_vec_circle;
+	Float_t pathA_dca, dcaAB_dca;	        
+	Double_t track_posA[3], track_posB[3];
+	Int_t detector;
+	
+	for (Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
+	{
+		for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+       	{
+            if (vec_kalman_TRD_trackets[i_track][i_layer] == NULL ) continue;
+			
+			vec_TV3_tracklet_vectors 	 = vec_kalman_TRD_trackets[i_track][i_layer] -> get_TV3_dir();
+            vec_TV3_tracklet_vectors[2]  = 0.0;
+			vec_TV3_tracklet_vectors    *= 1/ vec_TV3_tracklet_vectors.Mag();
+			
+			TV3_tracklet_off_vector  	 = vec_kalman_TRD_trackets[i_track][i_layer] -> get_TV3_offset();
+			detector				 	 = vec_kalman_TRD_trackets[i_track][i_layer] -> get_TRD_det();
+			
+			set_single_helix_params(mHelices_kalman[i_track]);
+            fHelixAtoPointdca(vec_TV3_tracklet_vectors, vec_helices_TRD[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
+  			Evaluate(pathA_dca,track_posA);
+            Evaluate(pathA_dca+0.1,track_posB);
+			
+            vec_dir_vec_circle[0]   = track_posB[0] - track_posA[0];
+			vec_dir_vec_circle[1]   = track_posB[1] - track_posA[1];
+			vec_dir_vec_circle[2]   = 0.0;
+			vec_dir_vec_circle	   *= 1/vec_dir_vec_circle.Mag();
+			
+			
+			
+			
+			Double_t delta_x_local_global_circle 	= vec_dir_vec_circle.Dot((*vec_TV3_TRD_center[detector][0]));
+                        // vec_dir_vec_circle[i_layer] - this is a tangent to the circle track 
+                        // vec_TV3_TRD_center this is a vector from {0,0,0} to the middle of a chamber - from TRD geometry
+                        // but all related to the circle track that you probably dont need 
+
+
+
+           	Double_t sign_direction_impact_circle 	= TMath::Sign(1.0,delta_x_local_global_circle);
+           	Double_t impact_angle_circle			= vec_dir_vec_circle.Angle((*vec_TV3_TRD_center[detector][2]));  //i need something like that for circles
+
+                        //printf("test 3.4 \n");
+
+           	if(impact_angle_circle > TMath::Pi()*0.5) impact_angle_circle -= TMath::Pi();
+			impact_angle_circle = 0.5*TMath::Pi() - sign_direction_impact_circle*impact_angle_circle;
+
+			
+			Double_t delta_x_local_tracklet = vec_TV3_tracklet_vectors.Dot((*vec_TV3_TRD_center[detector][0]));
+
+                        //Double_t sign_angle        = 1.0;
+			Double_t sign_angle_circle = 1.0;
+                        //if(delta_x_local_tracklet < delta_x_local_global[i_layer])        sign_angle        = -1.0;
+			if(delta_x_local_tracklet < delta_x_local_global_circle) sign_angle_circle = -1.0;
+
+			
+			Double_t Delta_angle_circle  = sign_angle_circle*vec_dir_vec_circle.Angle(vec_TV3_tracklet_vectors);
+			if(Delta_angle_circle > TMath::Pi()*0.5)  Delta_angle_circle -= TMath::Pi();
+			if(Delta_angle_circle < -TMath::Pi()*0.5) Delta_angle_circle += TMath::Pi();
+            
+			vec_tp_Delta_vs_impact_circle[detector]   ->Fill(impact_angle_circle*TMath::RadToDeg(),Delta_angle_circle*TMath::RadToDeg());
+			vec_TH2D_Delta_vs_impact_circle[detector] ->Fill(impact_angle_circle*TMath::RadToDeg(),Delta_angle_circle*TMath::RadToDeg());
+
+			//vec_helices_TRD					
+			//mHelices_kalman
+			//vec_kalman_TRD_trackets
+								
+     	}	
+	}	
+	
+}
+
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+
+void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration()
+{
+	   vector<TCanvas*> vec_can_Delta_vs_impact_circle;
+	    char NoP[50];
+
+    vec_can_Delta_vs_impact_circle.resize(6); // 6 sector blocks with 3 sectors each (18)
+
+    TH1D* h_dummy_Delta_vs_impact_circle = new TH1D("h_dummy_Delta_vs_impact_circle","h_dummy_Delta_vs_impact_circle",90,50,140);
+    h_dummy_Delta_vs_impact_circle->SetStats(0);
+    h_dummy_Delta_vs_impact_circle->SetTitle("");
+    h_dummy_Delta_vs_impact_circle->GetXaxis()->SetTitleOffset(0.85);
+    h_dummy_Delta_vs_impact_circle->GetYaxis()->SetTitleOffset(0.78);
+    h_dummy_Delta_vs_impact_circle->GetXaxis()->SetLabelOffset(0.0);
+    h_dummy_Delta_vs_impact_circle->GetYaxis()->SetLabelOffset(0.01);
+    h_dummy_Delta_vs_impact_circle->GetXaxis()->SetLabelSize(0.08);
+    h_dummy_Delta_vs_impact_circle->GetYaxis()->SetLabelSize(0.08);
+    h_dummy_Delta_vs_impact_circle->GetXaxis()->SetTitleSize(0.08);
+    h_dummy_Delta_vs_impact_circle->GetYaxis()->SetTitleSize(0.08);
+    h_dummy_Delta_vs_impact_circle->GetXaxis()->SetNdivisions(505,'N');
+    h_dummy_Delta_vs_impact_circle->GetYaxis()->SetNdivisions(505,'N');
+    h_dummy_Delta_vs_impact_circle->GetXaxis()->CenterTitle();
+    h_dummy_Delta_vs_impact_circle->GetYaxis()->CenterTitle();
+    h_dummy_Delta_vs_impact_circle->GetXaxis()->SetTitle("impact angle");
+    h_dummy_Delta_vs_impact_circle->GetYaxis()->SetTitle("#Delta #alpha");
+    h_dummy_Delta_vs_impact_circle->GetXaxis()->SetRangeUser(70,110);
+    h_dummy_Delta_vs_impact_circle->GetYaxis()->SetRangeUser(-24,24);
+
+     Int_t arr_color_layer[6] = {kBlack,kRed,kBlue,kGreen,kMagenta,kCyan};
+
+    for(Int_t i_sec_block = 0; i_sec_block < 6; i_sec_block++)
+    {
+        HistName = "vec_can_Delta_vs_impact_circle_";
+        HistName += i_sec_block;
+        vec_can_Delta_vs_impact_circle[i_sec_block] = new TCanvas(HistName.Data(),HistName.Data(),10,10,1600,1000);
+
+        vec_can_Delta_vs_impact_circle[i_sec_block] ->Divide(5,3); // x = stack, y = sector
+
+        for(Int_t i_sec_sub = 0; i_sec_sub < 3; i_sec_sub++)
+        {
+            Int_t i_sector = i_sec_block + 6*i_sec_sub;
+            for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+            {
+                Int_t iPad = i_sec_sub*5 + i_stack + 1;
+                vec_can_Delta_vs_impact_circle[i_sec_block] ->cd(iPad)->SetTicks(1,1);
+                vec_can_Delta_vs_impact_circle[i_sec_block] ->cd(iPad)->SetGrid(0,0);
+                vec_can_Delta_vs_impact_circle[i_sec_block] ->cd(iPad)->SetFillColor(10);
+                vec_can_Delta_vs_impact_circle[i_sec_block] ->cd(iPad)->SetRightMargin(0.01);
+                vec_can_Delta_vs_impact_circle[i_sec_block] ->cd(iPad)->SetTopMargin(0.01);
+                vec_can_Delta_vs_impact_circle[i_sec_block] ->cd(iPad)->SetBottomMargin(0.2);
+                vec_can_Delta_vs_impact_circle[i_sec_block] ->cd(iPad)->SetLeftMargin(0.2);
+                vec_can_Delta_vs_impact_circle[i_sec_block] ->cd(iPad);
+                h_dummy_Delta_vs_impact_circle->Draw("h");
+
+                for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+                {
+                    Int_t i_detector = i_layer + 6*i_stack + 30*i_sector;
+                    // printf("detector: %d \n",i_detector);
+                    vec_tp_Delta_vs_impact_circle[i_detector] ->SetLineColor(arr_color_layer[i_layer]);
+                    vec_tp_Delta_vs_impact_circle[i_detector] ->SetLineWidth(2);
+                    vec_tp_Delta_vs_impact_circle[i_detector] ->SetLineStyle(1);
+                    vec_tp_Delta_vs_impact_circle[i_detector] ->Draw("same hl");
+
+                    HistName = "";
+                    sprintf(NoP,"%4.0f",(Double_t)i_detector);
+                    HistName += NoP;
+                    //plotTopLegend((char*)HistName.Data(),0.24,0.89-i_layer*0.07,0.045,arr_color_layer[i_layer],0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+                }
+            }
+        }
+    }
+	
+	TFile* outputfile;
+    
+	 printf("Write data to output file \n");
+	//TFile* h_detector_hit_outputfile = new TFile("./h_detector_hit.root","RECREATE");
+   // h_detector_hit_outputfile ->cd();
+  //  h_detector_hit->Write();
+
+
+// THIS NEEDED
+    outputfile ->mkdir("Delta_impact_circle");
+    outputfile ->cd("Delta_impact_circle");
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        vec_tp_Delta_vs_impact_circle[i_det]   ->Write();
+        vec_TH2D_Delta_vs_impact_circle[i_det] ->Write();
+    }
+
+	    printf("All data written \n");
+
+}

@@ -177,6 +177,10 @@ private:
     TProfile* tp_efficiency_all_vs_pT;
     vector<TH2D*> vec_h2D_delta_pT_all_vs_pT;
 
+	vector<TProfile*> vec_tp_Delta_vs_impact_circle;
+    vector<TH2D*> vec_TH2D_Delta_vs_impact_circle;
+	vector< vector<TVector3*> >   vec_TV3_TRD_center;
+
 
 public:
     Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, Int_t graphics);
@@ -219,8 +223,8 @@ public:
     void set_input_dir(TString input_dir_in) {input_dir = input_dir_in;}
     Float_t Calc_nuclev_bitmap(vector<Int_t> vec_idx_kalman_tracks_nuclev_in);
     void Write();
-
-
+	void Calibrate();
+	void Draw_n_Save_Calibration();
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
 //----------------------------------------------------------------------------------------
