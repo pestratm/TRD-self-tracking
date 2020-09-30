@@ -158,6 +158,7 @@ private:
 
     vector<vector<Double_t>> mHelices_kalman; // Kalman helix parameters, based on AliHelix
     vector<vector<Double_t>> mHelices_TPC; // Kalman helix parameters, based on AliHelix
+    vector<vector<Double_t>> PID_params_TPC;
     Double_t aliHelix_params[6];
     vector<Ali_Helix*> vec_helices;
     vector<Ali_Helix*> vec_helices_TRD;
