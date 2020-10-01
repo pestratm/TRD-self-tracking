@@ -3088,7 +3088,7 @@ void Ali_TRD_ST_Analyze::Calibrate()
 			detector				 	 = vec_kalman_TRD_trackets[i_track][i_layer] -> get_TRD_det();
 			
 			set_single_helix_params(mHelices_kalman[i_track]);
-            fHelixAtoPointdca(vec_TV3_tracklet_vectors, vec_helices_TRD[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
+            fHelixAtoPointdca(TV3_tracklet_off_vector, vec_helices_TRD[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
   			Evaluate(pathA_dca,track_posA);
             Evaluate(pathA_dca+0.1,track_posB);
 			
