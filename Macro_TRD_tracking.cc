@@ -67,9 +67,6 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     Int_t draw_secondary_vertices   = 1; // Draws tracks and secondary vertices
     //------------------------------------
 
-    TH1F *histo = new TH1F("histogram","efficiency Kalman Trackfinder",20,0,1.2);
-    TH1F *histo2 = new TH1F("histogram","purity Kalman Trackfinder",20,0,1.2);
-
     printf("TRD_ST_Analyze_tracklets started \n");
     Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,out_file_name,graphics);
     TRD_ST_Analyze ->set_input_dir(input_dir);
@@ -95,7 +92,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     // pi0 event: 378
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
 	//for(Long64_t event = 0; event < (Int_t) N_Events; event++) // 2,3
-    for(Long64_t event = 0; event < 2000; event++) // 2,3
+    for(Long64_t event = 0; event < 1; event++) // 2,3
     //for(Long64_t event = 0; event < 1; event++) // 2,3
     //for(Long64_t event = 0; event < N_Events; event++) // 2,3
 //    for(Long64_t event = 0; event < 5000; event++) // 2,3
@@ -167,8 +164,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
         //------------------------------------------------------------
 
  */      
-		TRD_ST_Analyze ->Calibrate();
-        
+        TRD_ST_Analyze ->Calibrate();
         TRD_ST_Analyze ->Calc_Kalman_efficiency();
 
 
@@ -183,8 +179,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
 
     }
 	
-	TRD_ST_Analyze ->Draw_n_Save_Calibration();
-
+    //TRD_ST_Analyze ->Draw_n_Save_Calibration();
     TRD_ST_Analyze ->Write();
 
 }

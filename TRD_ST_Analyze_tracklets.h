@@ -101,6 +101,7 @@ private:
     Double_t EventVertexY = -999.0;
     Double_t EventVertexZ = -999.0;
     Long64_t Global_Event = -999;
+    Int_t    Global_RunID = -999;
     TVector3 TV3_EventVertex;
 
     vector<TVector3> vec_TV3_secondary_vertices;
