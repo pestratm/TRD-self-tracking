@@ -6,8 +6,8 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 // Environment variables
-//#define ENV_PI
-#define ENV_ALEX
+#define ENV_PI
+//#define ENV_ALEX
 //#define ENV_PI_SVEN
 
 void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
@@ -36,6 +36,10 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     // Define output file name and directory
     TString out_file_name = input_list;
     out_file_name += "_out.root";
+
+    TString out_file_name_calib = input_list;
+    out_file_name_calib += "_out_calib.root";
+
     TString input_dir  = "./Data/";
     TString output_dir = "./";
 #if defined(ENV_PI)
@@ -56,7 +60,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     Int_t KF_tracker                = 1; // Kalman filter tracker
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 1; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 1; // Draw all TRD tracks
@@ -92,10 +96,10 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     // pi0 event: 378
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
 	//for(Long64_t event = 0; event < (Int_t) N_Events; event++) // 2,3
-    for(Long64_t event = 0; event < 1; event++) // 2,3
     //for(Long64_t event = 0; event < 1; event++) // 2,3
-    //for(Long64_t event = 0; event < N_Events; event++) // 2,3
-//    for(Long64_t event = 0; event < 5000; event++) // 2,3
+    //for(Long64_t event = 0; event < 1; event++) // 2,3
+    for(Long64_t event = 0; event < N_Events; event++) // 2,3
+    //for(Long64_t event = 0; event < 50; event++) // 2,3
     //Int_t event_plot = 555; // 168
     //for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
     {
@@ -179,7 +183,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
 
     }
 	
-    //TRD_ST_Analyze ->Draw_n_Save_Calibration();
+    TRD_ST_Analyze ->Draw_n_Save_Calibration(output_dir,out_file_name_calib);
     TRD_ST_Analyze ->Write();
 
 }

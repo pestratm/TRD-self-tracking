@@ -1,5 +1,5 @@
 
-#define USEEVE
+//#define USEEVE
 
 using namespace std;
 #include <cmath>
@@ -225,8 +225,8 @@ public:
     void set_input_dir(TString input_dir_in) {input_dir = input_dir_in;}
     Float_t Calc_nuclev_bitmap(vector<Int_t> vec_idx_kalman_tracks_nuclev_in);
     void Write();
-	void Calibrate();
-	void Draw_n_Save_Calibration();
+    void Calibrate();
+    void Draw_n_Save_Calibration(TString out_dir, TString out_file_name_calib);
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
 //----------------------------------------------------------------------------------------

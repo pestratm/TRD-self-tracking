@@ -3074,17 +3074,20 @@ void Ali_TRD_ST_Analyze::Calibrate()
     Double_t track_posA[3], track_posB[3];
     Int_t detector[6] = {0};
 
-    printf("RunID: %d \n",Global_RunID);
+    //printf("RunID: %d \n",Global_RunID);
 
-    for (Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
+    for(Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
     {
-        printf("i_track: %d \n",i_track);
+        //printf("i_track: %d \n",i_track);
         Double_t arr_path_layer[6] = {-999.0};
         Double_t arr_dca_layer[6]  = {-999.0};
         Double_t N_good_tracklets = 0.0;
         Double_t average_dca = 0.0;
 
         set_single_helix_params(mHelices_kalman[i_track]);
+        Double_t pT_KF = mHelices_kalman[i_track][6]; // pT
+
+        if(pT_KF < 1.2) continue;
 
         for(Int_t i_layer = 0; i_layer < 6; i_layer++)
         {
@@ -3104,11 +3107,11 @@ void Ali_TRD_ST_Analyze::Calibrate()
         }
 
         if(N_good_tracklets > 0.0) average_dca /= N_good_tracklets;
-        //if(average_dca > 1.0) continue;
+        if(average_dca > 3.0) continue;
 
         for(Int_t i_layer = 0; i_layer < 6; i_layer++)
         {
-            printf("i_layer: %d, i_det: %d, dca: %4.3f \n",i_layer,detector[i_layer],arr_dca_layer[i_layer]);
+            //printf("i_layer: %d, i_det: %d, dca: %4.3f \n",i_layer,detector[i_layer],arr_dca_layer[i_layer]);
 
             if(vec_kalman_TRD_trackets[i_track][i_layer] == NULL ) continue;
 
@@ -3144,7 +3147,7 @@ void Ali_TRD_ST_Analyze::Calibrate()
 
             Double_t Delta_angle_circle  = sign_angle_circle*vec_dir_vec_circle.Angle(vec_TV3_tracklet_vectors);
 
-            printf("   ---> vec_KF: {%4.3f, %4.3f, %4.3f}, vec_trkl: {%4.3f, %4.3f, %4.3f} \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y(),vec_dir_vec_circle.Z(),vec_TV3_tracklet_vectors.X(),vec_TV3_tracklet_vectors.Y(),vec_TV3_tracklet_vectors.Z());
+            //printf("   ---> vec_KF: {%4.3f, %4.3f, %4.3f}, vec_trkl: {%4.3f, %4.3f, %4.3f} \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y(),vec_dir_vec_circle.Z(),vec_TV3_tracklet_vectors.X(),vec_TV3_tracklet_vectors.Y(),vec_TV3_tracklet_vectors.Z());
 
             if(Delta_angle_circle > TMath::Pi()*0.5)  Delta_angle_circle -= TMath::Pi();
             if(Delta_angle_circle < -TMath::Pi()*0.5) Delta_angle_circle += TMath::Pi();
@@ -3161,7 +3164,7 @@ void Ali_TRD_ST_Analyze::Calibrate()
 
 //----------------------------------------------------------------------------------------
 
-void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration()
+void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration(TString out_dir, TString out_file_name_calib)
 {
     vector<TCanvas*> vec_can_Delta_vs_impact_circle;
     char NoP[50];
@@ -3188,6 +3191,7 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration()
     h_dummy_Delta_vs_impact_circle->GetXaxis()->SetRangeUser(70,110);
     h_dummy_Delta_vs_impact_circle->GetYaxis()->SetRangeUser(-24,24);
 
+    /*
     Int_t arr_color_layer[6] = {kBlack,kRed,kBlue,kGreen,kMagenta,kCyan};
 
     for(Int_t i_sec_block = 0; i_sec_block < 6; i_sec_block++)
@@ -3231,14 +3235,17 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration()
             }
         }
     }
+    */
 
-    TFile* outputfile_hist = new TFile("delta_vs_impact.root","RECREATE");
+    HistName = out_dir;
+    HistName += "/";
+    HistName += out_file_name_calib;
+    TFile* outputfile_hist = new TFile(HistName.Data(),"RECREATE");
 
     printf("Write data to output file \n");
     //TFile* h_detector_hit_outputfile = new TFile("./h_detector_hit.root","RECREATE");
     // h_detector_hit_outputfile ->cd();
     //  h_detector_hit->Write();
-    printf("test 0 \n");
 
     // THIS NEEDED
     outputfile_hist ->cd();
