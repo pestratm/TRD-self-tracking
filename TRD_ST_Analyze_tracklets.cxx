@@ -3362,3 +3362,16 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration(TString out_dir, TString out_fi
     printf("All data written \n");
 
 }
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+
+Float_t Ali_TRD_ST_Analyze::primary_vertex_dca(Int_t i_track)
+{
+	TVector3 zero;
+	Float_t pathA_dca, dcaAB_dca;
+    fHelixAtoPointdca(zero,vec_helices_TRD[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
+    return dcaAB_dca;
+}	

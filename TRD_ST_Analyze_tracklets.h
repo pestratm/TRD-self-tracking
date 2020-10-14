@@ -227,6 +227,7 @@ public:
     void Write();
     void Calibrate();
     void Draw_n_Save_Calibration(TString out_dir, TString out_file_name_calib);
+	Float_t primary_vertex_dca(Int_t i_track);
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
 //----------------------------------------------------------------------------------------
