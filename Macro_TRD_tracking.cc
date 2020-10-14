@@ -6,8 +6,8 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 // Environment variables
-#define ENV_PI
-//#define ENV_ALEX
+//#define ENV_PI
+#define ENV_ALEX
 //#define ENV_PI_SVEN
 
 void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
@@ -56,19 +56,20 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     input_dir  = "./Data/";
     output_dir = "./ST_out/";
 #endif
-    Int_t use_prim_vertex           = 0; // 0 = no primary vertex, 1 = primary vertex used
+    Int_t use_prim_vertex           = 1; // 0 = no primary vertex, 1 = primary vertex used
     Int_t KF_tracker                = 1; // Kalman filter tracker
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 1; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 1; // Draw all TRD tracks
-    Int_t draw_all_tracklets        = 1; // Draw all TRD tracklets
+    Int_t draw_all_tracklets        = 0; // Draw all TRD tracklets
     Int_t draw_found_tracklets      = 1; // Draws tracklets found by tracker
-    Int_t draw_matched_TPC_track    = 1; // Draw TPC to TRD matched TPC track
-    Int_t draw_matched_TRD_track    = 1; // Draw TPC to TRD matched Kalman/TF track
-    Int_t draw_secondary_vertices   = 1; // Draws tracks and secondary vertices
+    Int_t draw_matched_TPC_track    = 0; // Draw TPC to TRD matched TPC track
+    Int_t draw_matched_TRD_track    = 0; // Draw TPC to TRD matched Kalman/TF track
+    Int_t draw_secondary_vertices   = 0; // Draws tracks and secondary vertices
+
     //------------------------------------
 
     printf("TRD_ST_Analyze_tracklets started \n");
@@ -97,8 +98,8 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
 	//for(Long64_t event = 0; event < (Int_t) N_Events; event++) // 2,3
     //for(Long64_t event = 0; event < 1; event++) // 2,3
-    //for(Long64_t event = 0; event < 1; event++) // 2,3
-    for(Long64_t event = 0; event < N_Events; event++) // 2,3
+    for(Long64_t event = 0; event < 1; event++) // 2,3
+    //for(Long64_t event = 0; event < N_Events; event++) // 2,3
     //for(Long64_t event = 0; event < 50; event++) // 2,3
     //Int_t event_plot = 555; // 168
     //for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192

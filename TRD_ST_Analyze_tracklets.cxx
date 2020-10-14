@@ -2122,11 +2122,62 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Do
         i_track_start = n_track;
         i_track_stop  = n_track + 1;
     }
+
+    #if 1 // for calib tracks
+
+        TVector3 vec_TV3_tracklet_vectors, TV3_tracklet_off_vector, vec_dir_vec_circle;
+    Float_t pathA_dca, dcaAB_dca;
+    Double_t track_posA[3], track_posB[3];
+    Int_t detector[6] = {0};
+    #endif 
+
+
     for(Int_t i_track = i_track_start; i_track < i_track_stop; i_track++)
     {
+        
+
+#if 1 //for calib tracks
+        Double_t arr_path_layer[6] = {-999.0};
+        Double_t arr_dca_layer[6]  = {-999.0};
+        Double_t N_good_tracklets = 0.0;
+        Double_t average_dca = 0.0;
+
+        set_single_helix_params(mHelices_kalman[i_track]);
+        Double_t pT_KF = mHelices_kalman[i_track][6]; // pT
+
+        if(pT_KF < 1.2) continue;
+
+        for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+        {
+            //printf("i_layer: %d \n",i_layer);
+
+            if(vec_kalman_TRD_trackets[i_track][i_layer] == NULL ) continue;
+
+            TV3_tracklet_off_vector      = vec_kalman_TRD_trackets[i_track][i_layer] ->get_TV3_offset();
+            detector[i_layer]        = vec_kalman_TRD_trackets[i_track][i_layer] ->get_TRD_det();
+
+            fHelixAtoPointdca(TV3_tracklet_off_vector,vec_helices_TRD[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
+            arr_path_layer[i_layer] = pathA_dca;
+            arr_dca_layer[i_layer]  = dcaAB_dca;
+            //printf("   ---> pos trkl: {%4.3f, %4.3f, %4.3f}, pathA_dca: %4.3f, dcaAB_dca: %4.3f \n",TV3_tracklet_off_vector.X(),TV3_tracklet_off_vector.Y(),TV3_tracklet_off_vector.Z(),pathA_dca,dcaAB_dca);
+            average_dca += dcaAB_dca;
+            N_good_tracklets += 1.0;
+        }
+
+        if(N_good_tracklets > 0.0) average_dca /= N_good_tracklets;
+        if(average_dca > 3.0) continue;
+
+#endif
+
+
+        #if 0
+        //-------old part
         set_single_helix_params(mHelices_kalman[i_track]);
         Double_t pT_kalman   = mHelices_kalman[i_track][6]; // pT
         //if(pT_kalman < 0.5) continue;
+        //-----------------
+        #endif
+
         Double_t track_pos[3];
 
 #if defined(USEEVE)
@@ -3073,6 +3124,12 @@ void Ali_TRD_ST_Analyze::Calibrate()
     Float_t pathA_dca, dcaAB_dca;
     Double_t track_posA[3], track_posB[3];
     Int_t detector[6] = {0};
+    Int_t counter = 0;
+
+#if defined(USEEVE)
+           vector< vector<TEveLine*> > TEveLine_vec_dir_vec_circle;
+           TEveLine_vec_dir_vec_circle.resize((Int_t)mHelices_kalman.size());
+#endif
 
     //printf("RunID: %d \n",Global_RunID);
 
@@ -3109,11 +3166,18 @@ void Ali_TRD_ST_Analyze::Calibrate()
         if(N_good_tracklets > 0.0) average_dca /= N_good_tracklets;
         if(average_dca > 3.0) continue;
 
+        counter++;
+        printf("counter = %d",counter);
+
         for(Int_t i_layer = 0; i_layer < 6; i_layer++)
         {
             //printf("i_layer: %d, i_det: %d, dca: %4.3f \n",i_layer,detector[i_layer],arr_dca_layer[i_layer]);
 
             if(vec_kalman_TRD_trackets[i_track][i_layer] == NULL ) continue;
+
+#if defined(USEEVE)
+        TEveLine_vec_dir_vec_circle[i_track].resize(6);
+#endif
 
             vec_TV3_tracklet_vectors 	 = vec_kalman_TRD_trackets[i_track][i_layer] ->get_TV3_dir();
             vec_TV3_tracklet_vectors[2]  = 0.0;
@@ -3127,6 +3191,8 @@ void Ali_TRD_ST_Analyze::Calibrate()
             vec_dir_vec_circle[1]   = track_posB[1] - track_posA[1];
             vec_dir_vec_circle[2]   = 0.0;
             vec_dir_vec_circle	   *= 1/vec_dir_vec_circle.Mag();
+
+            //printf("\n   ---> vec_dir_vec_circle[0] = %4.3f, vec_dir_vec_circle[1] = %4.3f \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y());
 
             Double_t delta_x_local_global_circle 	= vec_dir_vec_circle.Dot((*vec_TV3_TRD_center[detector[i_layer]][0]));
             // vec_dir_vec_circle[i_layer] - this is a tangent to the circle track
@@ -3147,13 +3213,49 @@ void Ali_TRD_ST_Analyze::Calibrate()
 
             Double_t Delta_angle_circle  = sign_angle_circle*vec_dir_vec_circle.Angle(vec_TV3_tracklet_vectors);
 
-            //printf("   ---> vec_KF: {%4.3f, %4.3f, %4.3f}, vec_trkl: {%4.3f, %4.3f, %4.3f} \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y(),vec_dir_vec_circle.Z(),vec_TV3_tracklet_vectors.X(),vec_TV3_tracklet_vectors.Y(),vec_TV3_tracklet_vectors.Z());
+            printf("   ---> vec_KF: {%4.3f, %4.3f, %4.3f}, vec_trkl: {%4.3f, %4.3f, %4.3f} \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y(),vec_dir_vec_circle.Z(),vec_TV3_tracklet_vectors.X(),vec_TV3_tracklet_vectors.Y(),vec_TV3_tracklet_vectors.Z());
 
             if(Delta_angle_circle > TMath::Pi()*0.5)  Delta_angle_circle -= TMath::Pi();
             if(Delta_angle_circle < -TMath::Pi()*0.5) Delta_angle_circle += TMath::Pi();
 
             vec_tp_Delta_vs_impact_circle[detector[i_layer]]   ->Fill(impact_angle_circle*TMath::RadToDeg(),Delta_angle_circle*TMath::RadToDeg());
             vec_TH2D_Delta_vs_impact_circle[detector[i_layer]] ->Fill(impact_angle_circle*TMath::RadToDeg(),Delta_angle_circle*TMath::RadToDeg());
+
+            //draw here -----------------------------------------
+
+#if defined(USEEVE)
+            TEveLine_vec_dir_vec_circle[i_track][i_layer]=new TEveLine();
+            TEveLine_vec_dir_vec_circle[i_track][i_layer]->SetNextPoint(vec_kalman_TRD_trackets[i_track][i_layer] ->get_TV3_offset()[0],vec_kalman_TRD_trackets[i_track][i_layer] ->get_TV3_offset()[1],vec_kalman_TRD_trackets[i_track][i_layer] ->get_TV3_offset()[2]);
+            TEveLine_vec_dir_vec_circle[i_track][i_layer]->SetNextPoint(vec_kalman_TRD_trackets[i_track][i_layer] ->get_TV3_offset()[0] + scale_length_vec*vec_dir_vec_circle.X(),vec_kalman_TRD_trackets[i_track][i_layer] ->get_TV3_offset()[1] + scale_length_vec*vec_dir_vec_circle.Y(),vec_kalman_TRD_trackets[i_track][i_layer] ->get_TV3_offset()[2]);
+#endif
+
+            //detector[i_layer]        = vec_kalman_TRD_trackets[i_track][i_layer] ->get_TRD_det();
+            //Int_t i_sector = (Int_t)(detector/30);
+            //Int_t i_stack  = (Int_t)(detector%30/6);
+            //Int_t i_layer  = i_det%6;
+
+
+#if defined(USEEVE)
+            HistName = "vec_dir_vec_circle_";
+            HistName += i_track;
+            HistName += "_";
+            //HistName += i_sector;
+            //HistName += "_";
+            //HistName += i_stack;
+            //HistName += "_";
+            HistName += i_layer;
+
+            TEveLine_vec_dir_vec_circle[i_track][i_layer]   ->SetName(HistName.Data());
+            TEveLine_vec_dir_vec_circle[i_track][i_layer]   ->SetLineStyle(1);
+            TEveLine_vec_dir_vec_circle[i_track][i_layer]   ->SetLineWidth(6);
+            TEveLine_vec_dir_vec_circle[i_track][i_layer]   ->SetMainColor(kMagenta);
+            gEve->AddElement(TEveLine_vec_dir_vec_circle[i_track][i_layer]);
+ 
+#endif
+#if defined(USEEVE)
+            gEve->Redraw3D(kTRUE);
+#endif
+            //--------------------------------------------------- 
         }
     }
 }
