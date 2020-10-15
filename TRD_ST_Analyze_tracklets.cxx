@@ -2123,7 +2123,7 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Do
         i_track_stop  = n_track + 1;
     }
 
-    #if 1 // for calib tracks
+    #if 0 // for calib tracks
 
         TVector3 vec_TV3_tracklet_vectors, TV3_tracklet_off_vector, vec_dir_vec_circle;
     Float_t pathA_dca, dcaAB_dca;
@@ -2136,7 +2136,7 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Do
     {
         
 
-#if 1 //for calib tracks
+#if 0 //for calib tracks
         Double_t arr_path_layer[6] = {-999.0};
         Double_t arr_dca_layer[6]  = {-999.0};
         Double_t N_good_tracklets = 0.0;
@@ -3166,8 +3166,15 @@ void Ali_TRD_ST_Analyze::Calibrate()
         if(N_good_tracklets > 0.0) average_dca /= N_good_tracklets;
         if(average_dca > 3.0) continue;
 
+        Float_t dist_to_zero = primary_vertex_dca(i_track); //select only tracks that started at primary vertex
+        //if(dist_to_zero > 3.0) continue;
+
         counter++;
-        printf("counter = %d",counter);
+        //printf("counter = %d",counter);
+
+        #if defined(USEEVE) //Draw tracks used in calibration
+        Draw_Kalman_Helix_Tracks(i_track,kGreen,3.0,500.0); 
+        #endif
 
         for(Int_t i_layer = 0; i_layer < 6; i_layer++)
         {
@@ -3213,7 +3220,7 @@ void Ali_TRD_ST_Analyze::Calibrate()
 
             Double_t Delta_angle_circle  = sign_angle_circle*vec_dir_vec_circle.Angle(vec_TV3_tracklet_vectors);
 
-            printf("   ---> vec_KF: {%4.3f, %4.3f, %4.3f}, vec_trkl: {%4.3f, %4.3f, %4.3f} \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y(),vec_dir_vec_circle.Z(),vec_TV3_tracklet_vectors.X(),vec_TV3_tracklet_vectors.Y(),vec_TV3_tracklet_vectors.Z());
+            //printf("   ---> vec_KF: {%4.3f, %4.3f, %4.3f}, vec_trkl: {%4.3f, %4.3f, %4.3f} \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y(),vec_dir_vec_circle.Z(),vec_TV3_tracklet_vectors.X(),vec_TV3_tracklet_vectors.Y(),vec_TV3_tracklet_vectors.Z());
 
             if(Delta_angle_circle > TMath::Pi()*0.5)  Delta_angle_circle -= TMath::Pi();
             if(Delta_angle_circle < -TMath::Pi()*0.5) Delta_angle_circle += TMath::Pi();
@@ -3293,7 +3300,7 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration(TString out_dir, TString out_fi
     h_dummy_Delta_vs_impact_circle->GetXaxis()->SetRangeUser(70,110);
     h_dummy_Delta_vs_impact_circle->GetYaxis()->SetRangeUser(-24,24);
 
-    /*
+    #if 0
     Int_t arr_color_layer[6] = {kBlack,kRed,kBlue,kGreen,kMagenta,kCyan};
 
     for(Int_t i_sec_block = 0; i_sec_block < 6; i_sec_block++)
@@ -3337,7 +3344,8 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration(TString out_dir, TString out_fi
             }
         }
     }
-    */
+    #endif
+    
 
     HistName = out_dir;
     HistName += "/";
