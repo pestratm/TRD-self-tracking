@@ -11,6 +11,10 @@ using namespace std;
 
 #include "TObject.h"
 
+#include "TFitter.h"
+#include "TVirtualFitter.h"
+#include "TFitResult.h"
+#include "Math/Functor.h"
 
 #include<TMath.h>
 
@@ -60,6 +64,8 @@ ClassImp(Ali_TRD_ST_Event)
 #define KCYN  "\x1B[36m"
 #define KWHT  "\x1B[37m"
 
+static vector< vector<Double_t> > vec_Dt_digit_pos_cluster;
+
 //----------------------------------------------------------------------------------------
 class Ali_TRD_ST_Analyze
 {
@@ -107,6 +113,9 @@ private:
     vector<TVector3> vec_TV3_secondary_vertices;
     TNtuple* NT_secondary_vertices;
     TNtuple* NT_secondary_vertex_cluster;
+
+    //static vector< vector< vector<Double_t> > > vec_Dt_digit_pos_cluster;    // layer, merged time bin. xyzADC for circle fits in Calibrate()
+    //vector< vector<Double_t> > vec_Dt_digit_pos_cluster;
 
 
 #if defined(USEEVE)
@@ -179,7 +188,9 @@ private:
     TProfile* tp_efficiency_all_vs_pT;
     vector<TH2D*> vec_h2D_delta_pT_all_vs_pT;
 
-	vector<TProfile*> vec_tp_Delta_vs_impact_circle;
+	vector<TProfile*> vec_tp_Delta_vs_impact;
+    vector<TH2D*> vec_TH2D_Delta_vs_impact;
+    vector<TProfile*> vec_tp_Delta_vs_impact_circle;
     vector<TH2D*> vec_TH2D_Delta_vs_impact_circle;
 	vector< vector<TVector3*> >   vec_TV3_TRD_center;
 
@@ -225,9 +236,12 @@ public:
     void set_input_dir(TString input_dir_in) {input_dir = input_dir_in;}
     Float_t Calc_nuclev_bitmap(vector<Int_t> vec_idx_kalman_tracks_nuclev_in);
     void Write();
-    void Calibrate();
+    void Calibrate(Int_t graphics);
     void Draw_n_Save_Calibration(TString out_dir, TString out_file_name_calib);
-	Float_t primary_vertex_dca(Int_t i_track);
+    Float_t primary_vertex_dca(Int_t i_track);
+    //static Double_t distance_circ_point_2D(Double_t x,Double_t y,Double_t *p);
+    //static void sum_distance_circ_point_2D(Int_t &, Double_t *, Double_t & sum, Double_t * par, Int_t );
+
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
 //----------------------------------------------------------------------------------------
