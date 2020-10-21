@@ -20,6 +20,8 @@ static void sum_distance_circ_point_2D(Int_t &, Double_t *, Double_t & sum, Doub
 
     for (Int_t i_layer = 0; i_layer < 6; ++i_layer)
     {
+        //printf("i_layer: %d, vec_Dt_digit_pos_cluster[0]: %4.3f, vec_Dt_digit_pos_cluster[1]: %4.3f \n",i_layer,vec_Dt_digit_pos_cluster[i_layer][0],vec_Dt_digit_pos_cluster[i_layer][1]);
+        
         if(vec_Dt_digit_pos_cluster[i_layer][0] == -999.9) continue;
         Double_t d = 100*distance_circ_point_2D(vec_Dt_digit_pos_cluster[i_layer][0],vec_Dt_digit_pos_cluster[i_layer][1],par);
         sum += d;
@@ -3157,19 +3159,24 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
     Double_t track_posA[3], track_posB[3];
     Int_t detector[6] = {0};
     Int_t counter = 0;
+    Int_t counter_circ = 0;
 
 
 #if defined(USEEVE)
            vector< vector<TEveLine*> > TEveLine_vec_dir_vec_circle;
            TEveLine_vec_dir_vec_circle.resize((Int_t)mHelices_kalman.size());
 
-            vector< vector<TEveLine*> > TEveLine_vec_dir_vec_circle_circle;
+           vector< vector<TEveLine*> > TEveLine_vec_dir_vec_circle_circle;
            TEveLine_vec_dir_vec_circle_circle.resize((Int_t)mHelices_kalman.size());
+
+           vector<TEveLine*> TEveLine_circle;
+           TEveLine_circle.resize((Int_t)mHelices_kalman.size());
 #endif
 
     //printf("RunID: %d \n",Global_RunID);
 
     for(Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
+    //for(Int_t i_track = 17; i_track < 18; i_track++)
     {
         //printf("i_track: %d \n",i_track);
         Double_t arr_path_layer[6] = {-999.0};
@@ -3226,7 +3233,7 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
         //if(dist_to_zero > 3.0) continue;
 
         counter++;
-        //printf("counter = %d",counter);
+        //printf("counter = %d \n",counter);
 
 #if defined(USEEVE) //Draw tracks used in calibration
         if(graphics)
@@ -3264,6 +3271,8 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
             //printf("\n   ---> vec_dir_vec_circle[0] = %4.3f, vec_dir_vec_circle[1] = %4.3f \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y());
 
             Double_t delta_x_local_global_circle 	= vec_dir_vec_circle.Dot((*vec_TV3_TRD_center[detector[i_layer]][0]));
+            //printf("delta_x_local_global_circle = %4.3f \n",delta_x_local_global_circle);
+
             // vec_dir_vec_circle[i_layer] - this is a tangent to the circle track
             // vec_TV3_TRD_center this is a vector from {0,0,0} to the middle of a chamber - from TRD geometry
             // but all related to the circle track that you probably dont need
@@ -3378,6 +3387,7 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
         //min->ExecuteCommand("SET PRIntout",arglist_A,1); // http://www.fresco.org.uk/minuit/cern/node18.html
         //min->ExecuteCommand("SHOw FCNvalue",arglist_A,1);
         min->ExecuteCommand("SET PRINT",arglist_C,1);
+        //min->ExecuteCommand("SET PRINT",arglist_B,1);
         min->ExecuteCommand("SET NOWarnings",arglist_B,1);
 
         //ROOT::Math::Functor f(&Ali_TRD_ST_Analyze::sum_distance_circ_point_2D,1);
@@ -3405,13 +3415,21 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
         // Double_t y2 = vec_TV2_points[1].Y();
         // Double_t x3 = vec_TV2_points[2].X();
         // Double_t y3 = vec_TV2_points[2].Y();
+        vector <Int_t> notempty;
+        for (Int_t i_layerB = 0; i_layerB < 6; i_layerB++)
+        {
+            if (vec_TV2_points[i_layerB].X()!=-999.9) notempty.push_back(i_layerB);
+        }
 
-        Double_t x1 = vec_TV2_points[0].X();
-        Double_t y1 = vec_TV2_points[0].Y();
-        Double_t x2 = vec_TV2_points[vec_TV2_points.size()-2].X();
-        Double_t y2 = vec_TV2_points[vec_TV2_points.size()-2].Y();
-        Double_t x3 = vec_TV2_points[vec_TV2_points.size()-1].X();
-        Double_t y3 = vec_TV2_points[vec_TV2_points.size()-1].Y();
+        Double_t x1 = vec_TV2_points[notempty[0]].X();
+        Double_t y1 = vec_TV2_points[notempty[0]].Y();
+        Double_t x2 = vec_TV2_points[notempty[notempty.size()-2]].X();
+        Double_t y2 = vec_TV2_points[notempty[notempty.size()-2]].Y();
+        Double_t x3 = vec_TV2_points[notempty[notempty.size()-1]].X();
+        Double_t y3 = vec_TV2_points[notempty[notempty.size()-1]].Y();
+
+        notempty.clear();
+        
         //maybe implement 3rd point = 0,0,0?
 
 
@@ -3522,12 +3540,87 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
         }
 
         #if defined(USEEVE)
+        if(graphics)
+        {
+            TEveLine_vec_dir_vec_circle_circle[i_track].resize(6);
+        }
+        #endif
+
+        #if defined(USEEVE) // Draw circle track ----------------------
+        if(graphics)
+        {
+            TEveLine_circle[i_track]=new TEveLine();
+
+            Double_t delta_i_y = par_circle[2]/200.0;
+
+            Double_t radius_circle = 0.0;
+
+            for(Double_t i_sign = -1.0; i_sign <= +1.0; i_sign += 2.0)
+            {
+                for(Double_t i_y = ((par_circle[1] - par_circle[2]) + delta_i_y); i_y < ((par_circle[1] + par_circle[2]) - delta_i_y); (i_y += delta_i_y))
+                {
+                    Double_t i_x = i_sign*TMath::Sqrt(TMath::Power(par_circle[2],2.0) - TMath::Power(i_y - par_circle[1],2.0)) + par_circle[0];
+                    //radius_circle = TMath::Sqrt( TMath::Power(i_x,2) + TMath::Power(i_y,2) );
+                    //if(isnan(radius_circle)) continue;
+                    //if(radius_circle > 500.0) continue; // 500.0
+                    //if(radius_circle < 280.0) continue; // 280.0
+                    if(i_x > 500.0 || i_y > 500.0) continue; // 500.0
+                    if(i_x < -500.0 || i_y < -500.0) continue; // 500.0
+                    //if(i_x < 280.0) continue; // 280.0
+                    //if(i_y > 500.0) continue; // 500.0
+                    //if(i_y < 280.0) continue; // 280.0
+                    Int_t non_null = 0;
+                    for (Int_t i_layerB = 0; i_layerB < 6; i_layerB++)
+                    {
+                        if (vec_kalman_TRD_trackets[i_track][i_layerB]!=NULL) 
+                            {
+                                non_null = i_layerB;
+                                break;
+                            }
+                    }
+                    TEveLine_circle[i_track] ->SetNextPoint(i_x,i_y,vec_kalman_TRD_trackets[i_track][non_null] ->get_TV3_offset()[2]);
+                    //if(fabs(track_pos[2]) > 430.0) break;
+                    //if(isnan(radius_circle)) break;
+                    //if(radius_circle > 500.0) break; // 500.0
+                    //if(radius_circle < 280.0) break; // 280.0
+                    if(i_x > 500.0 || i_y > 500.0) break; // 500.0
+                    if(i_x < -500.0 || i_y < -500.0) break; // 500.0
+                    //if(i_x < 280.0) break; // 280.0
+                    //if(i_y > 500.0) break; // 500.0
+                    //if(i_y < 280.0) break; // 280.0
+                    //printf("circle point: {%4.3f, %4.3f} \n",i_x,i_y);
+
+                }
+            }
+
+            HistName = "track_circle_";
+            HistName += i_track;
+            HistName += "_";
+
+            TEveLine_circle[i_track]   ->SetName(HistName.Data());
+            TEveLine_circle[i_track]   ->SetLineStyle(1);
+            // TEveLine_circle[i_track] ->SetLineWidth(3);
+            TEveLine_circle[i_track]   ->SetLineWidth(1);
+            //TEveLine_circle[i_track] ->SetLineColor(kTeal+2);
+            TEveLine_circle[i_track]   ->SetLineColor(kOrange);
+            //TEveLine_circle[i_track]   ->DrawClone("l");
+            //printf("test 1 \n");
+
+            gEve->AddElement(TEveLine_circle[i_track]);
+            //printf("test 2 \n");
+
+        }
+
+#if defined(USEEVE)
             if(graphics)
             {
-                TEveLine_vec_dir_vec_circle_circle[i_track].resize(6);
+                gEve->Redraw3D(kTRUE);
             }
 #endif
 
+        counter_circ++;
+        //printf("counter_circ = %d \n",counter_circ);
+        #endif //------------------------------------------------------
         
         for(Int_t i_layer = 0; i_layer < 6; i_layer++)
         //for(Int_t i_point = 0; i_point < 6; i_point++)
@@ -3564,6 +3657,7 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
                         //printf("\n   ---> vec_dir_vec_circle[0] = %4.3f, vec_dir_vec_circle[1] = %4.3f \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y());
             
             Double_t delta_x_local_global_circle_circle    = vec_dir_vec_circle_circle[i_layer].Dot((*vec_TV3_TRD_center[detector[i_layer]][0]));
+            //printf("delta_x_local_global_circle_circle = %4.3f \n",delta_x_local_global_circle_circle);
             // vec_dir_vec_circle[i_layer] - this is a tangent to the circle track
             // vec_TV3_TRD_center this is a vector from {0,0,0} to the middle of a chamber - from TRD geometry
             // but all related to the circle track that you probably dont need
@@ -3588,7 +3682,7 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
             if(Delta_angle_circle_circle < -TMath::Pi()*0.5) Delta_angle_circle_circle += TMath::Pi();
 
             vec_TH2D_Delta_vs_impact_circle[detector[i_layer]]   ->Fill(impact_angle_circle_circle*TMath::RadToDeg(),Delta_angle_circle_circle*TMath::RadToDeg());
-            vec_tp_Delta_vs_impact_circle[detector[i_layer]] ->Fill(impact_angle_circle_circle*TMath::RadToDeg(),Delta_angle_circle_circle*TMath::RadToDeg());
+            vec_tp_Delta_vs_impact_circle[detector[i_layer]]     ->Fill(impact_angle_circle_circle*TMath::RadToDeg(),Delta_angle_circle_circle*TMath::RadToDeg());
 
             //draw here -----------------------------------------
 

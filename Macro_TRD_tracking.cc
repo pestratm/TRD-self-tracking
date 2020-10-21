@@ -60,7 +60,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     Int_t KF_tracker                = 1; // Kalman filter tracker
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 0; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
@@ -97,9 +97,9 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     // pi0 event: 378
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
 	//for(Long64_t event = 0; event < (Int_t) N_Events; event++) // 2,3
+    for(Long64_t event = 0; event < 1; event++) // 2,3
     //for(Long64_t event = 0; event < 1; event++) // 2,3
-    //for(Long64_t event = 0; event < 20; event++) // 2,3
-    for(Long64_t event = 0; event < N_Events; event++) // 2,3
+    //for(Long64_t event = 0; event < N_Events; event++) // 2,3
     //for(Long64_t event = 0; event < 2; event++) // 2,3
     //Int_t event_plot = 555; // 168
     //for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
