@@ -3176,7 +3176,7 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
     //printf("RunID: %d \n",Global_RunID);
 
     for(Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
-    //for(Int_t i_track = 17; i_track < 18; i_track++)
+    //for(Int_t i_track = 0; i_track < 1; i_track++)
     {
         //printf("i_track: %d \n",i_track);
         Double_t arr_path_layer[6] = {-999.0};
@@ -3266,9 +3266,14 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
             vec_dir_vec_circle[0]   = track_posB[0] - track_posA[0];
             vec_dir_vec_circle[1]   = track_posB[1] - track_posA[1];
             vec_dir_vec_circle[2]   = 0.0;
+
+            //printf("Kalman: vec_dir_vec_circle[0] = %4.3f, vec_dir_vec_circle[1] = %4.3f \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y());
+
             vec_dir_vec_circle	   *= 1/vec_dir_vec_circle.Mag();
 
-            //printf("\n   ---> vec_dir_vec_circle[0] = %4.3f, vec_dir_vec_circle[1] = %4.3f \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y());
+            //printf("Kalman: track_posAX = %4.3f, track_posBX = %4.3f, track_posAY = %4.3f, track_posBY = %4.3f\n",track_posA[0],track_posB[0],track_posA[1],track_posB[1]);
+
+        //printf("Kalman: vec_dir_vec_circle[0] = %4.3f, vec_dir_vec_circle[1] = %4.3f \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y());
 
             Double_t delta_x_local_global_circle 	= vec_dir_vec_circle.Dot((*vec_TV3_TRD_center[detector[i_layer]][0]));
             //printf("delta_x_local_global_circle = %4.3f \n",delta_x_local_global_circle);
@@ -3290,6 +3295,8 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
             if(delta_x_local_tracklet < delta_x_local_global_circle) sign_angle_circle = -1.0;
 
             Double_t Delta_angle_circle  = sign_angle_circle*vec_dir_vec_circle.Angle(vec_TV3_tracklet_vectors);
+        //if(impact_angle_circle*TMath::RadToDeg() > 85.0 && impact_angle_circle*TMath::RadToDeg() < 90.0) printf("delta_x_local_tracklet = %4.3f, sign_angle_circle: %4.3f, Delta_angle_circle: %4.3f \n",delta_x_local_tracklet,sign_angle_circle,Delta_angle_circle*TMath::RadToDeg());
+
 
             //printf("   ---> vec_KF: {%4.3f, %4.3f, %4.3f}, vec_trkl: {%4.3f, %4.3f, %4.3f} \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y(),vec_dir_vec_circle.Z(),vec_TV3_tracklet_vectors.X(),vec_TV3_tracklet_vectors.Y(),vec_TV3_tracklet_vectors.Z());
 
@@ -3298,6 +3305,7 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
 
             vec_TH2D_Delta_vs_impact[detector[i_layer]]   ->Fill(impact_angle_circle*TMath::RadToDeg(),Delta_angle_circle*TMath::RadToDeg());
             vec_tp_Delta_vs_impact[detector[i_layer]] ->Fill(impact_angle_circle*TMath::RadToDeg(),Delta_angle_circle*TMath::RadToDeg());
+        //if(impact_angle_circle*TMath::RadToDeg() > 85.0 && impact_angle_circle*TMath::RadToDeg() < 90.0) printf("--> i_track: %d, i_layer: %d \nimpact angle: %4.3f, delta angle: %4.3f \n",i_track,i_layer,impact_angle_circle*TMath::RadToDeg(),Delta_angle_circle*TMath::RadToDeg());
 
 
             //draw here -----------------------------------------
@@ -3509,6 +3517,7 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
         TVector2 circle_center_vector;
         circle_center_vector.SetX(parFit_circ[0]);
         circle_center_vector.SetY(parFit_circ[1]);
+        vector <Int_t> notempt;
 
         for(Int_t i_layer = 0; i_layer < 6; i_layer++)
         {
@@ -3524,11 +3533,12 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
 
             //vec_phi.push_back(phi_val);
             vec_phi[i_layer] = phi_val;
+            notempt.push_back(i_layer);
 
             //printf("i_point: %d, vec_phi[i_point]: %4.3f, \n",i_point,vec_phi[i_point]);
         }
 
-        Double_t delta_phi = -(vec_phi[1] - vec_phi[0])/1000.0;
+        Double_t delta_phi = -(vec_phi[notempt[1]] - vec_phi[notempt[0]])/1000.0;
 
         //printf("delta_phi: %4.3f, vec_phi[1]: %4.3f, vec_phi[0]: %4.3f  \n",delta_phi,vec_phi[1],vec_phi[0]);
 
@@ -3627,6 +3637,10 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
         {
             if(vec_kalman_TRD_trackets[i_track][i_layer] == NULL ) continue;
             //printf("from here \n");
+
+            vec_TV3_tracklet_vectors     = vec_kalman_TRD_trackets[i_track][i_layer] ->get_TV3_dir();
+            vec_TV3_tracklet_vectors[2]  = 0.0;
+            vec_TV3_tracklet_vectors    *= 1/ vec_TV3_tracklet_vectors.Mag();
             Double_t phi_val = vec_phi[i_layer];
 
             Double_t x_val   =  parFit_circ[0] + parFit_circ[2] * TMath::Cos(phi_val);
@@ -3634,9 +3648,13 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
 
             Double_t x_valB  =  parFit_circ[0] + parFit_circ[2] * TMath::Cos(phi_val + delta_phi);
             Double_t y_valB  =  parFit_circ[1] + parFit_circ[2] * TMath::Sin(phi_val + delta_phi);
-            //printf("x_val: %4.3f, x_valB: %4.3f, y_val: %4.3f, y_valB: %4.3f \n",x_val,x_valB,y_val,y_valB);
 
-
+            if ((y_valB*y_valB + x_valB*x_valB) < (y_val*y_val + x_val*x_val))
+            {
+                x_valB  =  parFit_circ[0] + parFit_circ[2] * TMath::Cos(phi_val - delta_phi);
+                y_valB  =  parFit_circ[1] + parFit_circ[2] * TMath::Sin(phi_val - delta_phi);
+            }
+            
             //TVector3 dir_vec_circle;               //maybe i can use this one
 
             vec_dir_vec_circle_circle[i_layer].SetX(x_valB - x_val);
@@ -3644,17 +3662,19 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
             vec_dir_vec_circle_circle[i_layer].SetZ(0.0);
 
             //printf("vec_dir_vec_circle_notempty[i_point].X: %4.3f, vec_dir_vec_circle_notempty[i_point].Y: %4.3f, vec_dir_vec_circle_notempty[i_point].Z: %4.3f \n",vec_dir_vec_circle_notempty[i_point].X(),vec_dir_vec_circle_notempty[i_point].Y(),vec_dir_vec_circle_notempty[i_point].Z());
-            //printf("to here; what happened?? \n");
+            //printf("y_valB*y_valB + x_valB*x_valB = %4.3f,  y_val*y_val + x_val*x_val = %4.3f \n",y_valB*y_valB + x_valB*x_valB,y_val*y_val + x_val*x_val);
 
 
-            //printf("x_val: %4.3f, x_valB: %4.3f, y_val: %4.3f, y_valB: %4.3f \n",x_val,x_valB,y_val,y_valB);  probably correct
+            //printf("x_val: %4.3f, x_valB: %4.3f, y_val: %4.3f, y_valB: %4.3f \n",x_val,x_valB,y_val,y_valB); //  probably correct
+            //printf("vec_dir_vec_circle_circle[0] = %4.3f, vec_dir_vec_circle_circle[1] = %4.3f \n",vec_dir_vec_circle_circle[i_layer].X(),vec_dir_vec_circle_circle[i_layer].Y());
 
-            if(vec_dir_vec_circle_circle[i_layer].Mag() > 0.0)
-            {
+
+            //if(vec_dir_vec_circle_circle[i_layer].Mag() > 0.0)
+            //{
                 vec_dir_vec_circle_circle[i_layer] *= 1.0/vec_dir_vec_circle_circle[i_layer].Mag();
-            }
+            //}
 
-                        //printf("\n   ---> vec_dir_vec_circle[0] = %4.3f, vec_dir_vec_circle[1] = %4.3f \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y());
+            //printf("vec_dir_vec_circle_circle[0] = %4.3f, vec_dir_vec_circle_circle[1] = %4.3f \n",vec_dir_vec_circle_circle[i_layer].X(),vec_dir_vec_circle_circle[i_layer].Y());
             
             Double_t delta_x_local_global_circle_circle    = vec_dir_vec_circle_circle[i_layer].Dot((*vec_TV3_TRD_center[detector[i_layer]][0]));
             //printf("delta_x_local_global_circle_circle = %4.3f \n",delta_x_local_global_circle_circle);
@@ -3669,17 +3689,20 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
             impact_angle_circle_circle = 0.5*TMath::Pi() - sign_direction_impact_circle_circle*impact_angle_circle_circle;
 
 
-            Double_t delta_x_local_tracklet_circle = vec_TV3_tracklet_vectors.Dot((*vec_TV3_TRD_center[detector[i_layer]][0]));
+            Double_t delta_x_local_tracklet_circle_circle = vec_TV3_tracklet_vectors.Dot((*vec_TV3_TRD_center[detector[i_layer]][0]));
 
             Double_t sign_angle_circle_circle = 1.0;
-            if(delta_x_local_tracklet_circle < delta_x_local_global_circle_circle) sign_angle_circle_circle = -1.0;
+            if(delta_x_local_tracklet_circle_circle < delta_x_local_global_circle_circle) sign_angle_circle_circle = -1.0;
 
             Double_t Delta_angle_circle_circle  = sign_angle_circle_circle*vec_dir_vec_circle_circle[i_layer].Angle(vec_TV3_tracklet_vectors);
 
             //printf("   ---> vec_KF: {%4.3f, %4.3f, %4.3f}, vec_trkl: {%4.3f, %4.3f, %4.3f} \n",vec_dir_vec_circle.X(),vec_dir_vec_circle.Y(),vec_dir_vec_circle.Z(),vec_TV3_tracklet_vectors.X(),vec_TV3_tracklet_vectors.Y(),vec_TV3_tracklet_vectors.Z());
+        //if(impact_angle_circle_circle*TMath::RadToDeg() > 85.0 && impact_angle_circle_circle*TMath::RadToDeg() < 90.0) printf("delta_x_local_tracklet_circle_circle = %4.3f, sign_angle_circle_circle: %4.3f, Delta_angle_circle_circle: %4.3f \n",delta_x_local_tracklet_circle_circle,sign_angle_circle_circle,Delta_angle_circle_circle*TMath::RadToDeg());
 
             if(Delta_angle_circle_circle > TMath::Pi()*0.5)  Delta_angle_circle_circle -= TMath::Pi();
             if(Delta_angle_circle_circle < -TMath::Pi()*0.5) Delta_angle_circle_circle += TMath::Pi();
+
+        //if(impact_angle_circle_circle*TMath::RadToDeg() > 85.0 && impact_angle_circle_circle*TMath::RadToDeg() < 90.0) printf("i_layer: %d, impact angle circle: %4.3f, delta angle circle: %4.3f \n",i_layer,impact_angle_circle_circle*TMath::RadToDeg(),Delta_angle_circle_circle*TMath::RadToDeg());
 
             vec_TH2D_Delta_vs_impact_circle[detector[i_layer]]   ->Fill(impact_angle_circle_circle*TMath::RadToDeg(),Delta_angle_circle_circle*TMath::RadToDeg());
             vec_tp_Delta_vs_impact_circle[detector[i_layer]]     ->Fill(impact_angle_circle_circle*TMath::RadToDeg(),Delta_angle_circle_circle*TMath::RadToDeg());
