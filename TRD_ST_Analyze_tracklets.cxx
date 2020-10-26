@@ -38,7 +38,10 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
 {
     //layer_radii_file = TFile::Open("./TRD_layer_radii.root");
     //h_layer_radii_det = (TH1D*)layer_radii_file ->Get("h_layer_radii_det");
-
+	
+	vec_tp_pvdca_vs_sector = new TProfile("vec_th1d_pvdca_vs_sector","vec_th1d_pvdca_vs_sector",90,0,89);
+    vec_TH2D_pvdca_vs_sector = new TH2D("vec_th2d_pvdca_vs_sector","vec_th2d_pvdca_vs_sector",90,0,89,100,0,50);
+ 
     TPC_single_helix = new Ali_Helix();
     vec_h2D_pT_vs_TPC_TRD_residuals.resize(540);
     for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -320,6 +323,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
             //vec_TV3_TRD_center[i_det][i_xyz] = file_TRD_geometry ->GetObject(Form("TVector3;%d",i_vec), TVector3);
         }
     }
+	       
 }
 //----------------------------------------------------------------------------------------
 
@@ -3969,3 +3973,154 @@ Float_t Ali_TRD_ST_Analyze::primary_vertex_dca(Int_t i_track)
 //----------------------------------------------------------------------------------------
 
 
+
+//----------------------------------------------------------------------------------------
+
+void Ali_TRD_ST_Analyze::hists_pv_dca()
+{
+    //printf("Ali_TRD_ST_Analyze::Calibrate() \n");
+	//cout<<"the init variable is "<<inits_vec_tp_pvdca_vs_sector<<endl;
+    /*if(inits_vec_tp_pvdca_vs_sector == 0)
+    
+	//if(vec_tp_pvdca_vs_sector == NULL)
+    {	*/
+    /*    vec_tp_pvdca_vs_sector.resize(90);
+        vec_TH2D_pvdca_vs_sector.resize(90);
+        
+        for (Int_t i_det = 0; i_det < 90; i_det++)
+        {
+		vec_tp_pvdca_vs_sector = new TProfile("vec_th1d_pvdca_vs_sector","vec_th1d_pvdca_vs_sector_%d",90,0,89);
+    	vec_TH2D_pvdca_vs_sector = new TH2D("vec_th2d_pvdca_vs_sector","vec_th2d_pvdca_vs_sector_%d",90,0,89,100,0,50);
+          //#
+		//cout<<"initialized"<<endl;
+		inits_vec_tp_pvdca_vs_sector++;
+        //}	
+		
+   }*/
+	 	
+	Int_t detector;
+	Int_t sector;
+	Float_t dca;	
+	//cout<<"number of tracks "<<(Int_t)mHelices_kalman.size()<<endl;
+		
+	for(Int_t i_track = 0; i_track < (Int_t)mHelices_kalman.size(); i_track++)
+    {
+    
+		dca 		= primary_vertex_dca(i_track);
+		Int_t tracklet =0;
+		while( vec_kalman_TRD_trackets[i_track][tracklet] ==NULL) tracklet++;
+		//cout<<"we got here this many times "<<i_track<<endl;
+		
+		detector	= vec_kalman_TRD_trackets[i_track][tracklet] ->get_TRD_det();
+		sector 		= (Int_t) detector/6 ;
+		//cout<<"we got here this many times "<<i_track<<endl;
+		//cout<<"sector "<<sector<<" dca "<<dca<<endl;
+		vec_tp_pvdca_vs_sector ->Fill(sector,dca);
+		vec_TH2D_pvdca_vs_sector   ->Fill(sector,dca);
+		//cout<<"we got here this many times "<<i_track<<endl;
+		
+	}            
+	//cout<<"we got here!!"<<endl;
+}
+
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+
+void Ali_TRD_ST_Analyze::Draw_n_Save_hists_pv_dca(TString out_dir, TString out_file_name_calib)
+{
+	TCanvas* vec_can_pvdca_vs_sector;
+    char NoP[50];
+
+    //vec_can_Delta_vs_impact.resize(6); // 6 sector blocks with 3 sectors each (18)
+
+  /*  TH1D* h_dummy_Delta_vs_impact = new TH1D("h_dummy_Delta_vs_impact","h_dummy_Delta_vs_impact",90,50,140);
+    h_dummy_Delta_vs_impact->SetStats(0);
+    h_dummy_Delta_vs_impact->SetTitle("");
+    h_dummy_Delta_vs_impact->GetXaxis()->SetTitleOffset(0.85);
+    h_dummy_Delta_vs_impact->GetYaxis()->SetTitleOffset(0.78);
+    h_dummy_Delta_vs_impact->GetXaxis()->SetLabelOffset(0.0);
+    h_dummy_Delta_vs_impact->GetYaxis()->SetLabelOffset(0.01);
+    h_dummy_Delta_vs_impact->GetXaxis()->SetLabelSize(0.08);
+    h_dummy_Delta_vs_impact->GetYaxis()->SetLabelSize(0.08);
+    h_dummy_Delta_vs_impact->GetXaxis()->SetTitleSize(0.08);
+    h_dummy_Delta_vs_impact->GetYaxis()->SetTitleSize(0.08);
+    h_dummy_Delta_vs_impact->GetXaxis()->SetNdivisions(505,'N');
+    h_dummy_Delta_vs_impact->GetYaxis()->SetNdivisions(505,'N');
+    h_dummy_Delta_vs_impact->GetXaxis()->CenterTitle();
+    h_dummy_Delta_vs_impact->GetYaxis()->CenterTitle();
+    h_dummy_Delta_vs_impact->GetXaxis()->SetTitle("impact angle");
+    h_dummy_Delta_vs_impact->GetYaxis()->SetTitle("#Delta #alpha");
+    h_dummy_Delta_vs_impact->GetXaxis()->SetRangeUser(70,110);
+    h_dummy_Delta_vs_impact->GetYaxis()->SetRangeUser(-24,24);*/
+
+    //#if 1
+    Int_t arr_color_layer[6] = {kBlack,kRed,kBlue,kGreen,kMagenta,kCyan};
+
+    //for(Int_t i_sec_block = 0; i_sec_block < 1; i_sec_block++) //<6
+    //{
+        HistName = "h_dummy_pvdca_vs_sector";
+      //  HistName += i_sec_block;
+        vec_can_pvdca_vs_sector = new TCanvas(HistName.Data(),HistName.Data(),1600,1000);
+
+        //vec_can_Delta_vs_impact[i_sec_block] ->Divide(5,3); // x = stack, y = sector
+
+       /* for(Int_t i_sec_sub = 0; i_sec_sub < 3; i_sec_sub++)
+        {
+            Int_t i_sector = i_sec_block + 6*i_sec_sub;
+            for(Int_t i_stack = 0; i_stack < 5; i_stack++)
+            {
+                Int_t iPad = i_sec_sub*5 + i_stack + 1;*/
+                vec_can_pvdca_vs_sector ->SetTicks(1,1);
+                vec_can_pvdca_vs_sector ->SetGrid(0,0);
+                vec_can_pvdca_vs_sector ->SetFillColor(10);
+                vec_can_pvdca_vs_sector ->SetRightMargin(0.01);
+                vec_can_pvdca_vs_sector ->SetTopMargin(0.01);
+                vec_can_pvdca_vs_sector ->SetBottomMargin(0.2);
+                vec_can_pvdca_vs_sector ->SetLeftMargin(0.2);
+				
+              //  h_dummy_Delta_vs_impact->Draw();
+
+               // for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+               // {
+                 //   Int_t i_detector = i_layer + 6*i_stack + 30*i_sector;
+                    // printf("detector: %d \n",i_detector);
+                    vec_tp_pvdca_vs_sector ->SetLineColor(arr_color_layer[1]);
+                    vec_tp_pvdca_vs_sector ->SetLineWidth(2);
+                    vec_tp_pvdca_vs_sector ->SetLineStyle(1);
+                    vec_tp_pvdca_vs_sector ->Draw();
+					vec_tp_pvdca_vs_sector->GetXaxis()->SetTitle("Stack Nbr");
+    				vec_tp_pvdca_vs_sector->GetYaxis()->SetTitle("dca to primary vertex (cm)");
+    				vec_tp_pvdca_vs_sector->SetStats(0);
+   			 		vec_tp_pvdca_vs_sector->SetTitle("");
+
+
+             /*       HistName = "";
+                    sprintf(NoP,"%4.0f",(Double_t)i_detector);
+                    HistName += NoP;*/
+                    //plotTopLegend((char*)HistName.Data(),0.24,0.89-i_layer*0.07,0.045,arr_color_layer[i_layer],0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
+               // }
+            //}
+        //}
+    //}
+	HistName = out_dir;
+    HistName += "/";
+    HistName += out_file_name_calib;
+    TFile* outputfile_hist = new TFile(HistName.Data(),"RECREATE");
+
+    printf("Write data to output file \n");
+    //TFile* h_detector_hit_outputfile = new TFile("./h_detector_hit.root","RECREATE");
+    // h_detector_hit_outputfile ->cd();
+    //  h_detector_hit->Write();
+
+    // THIS NEEDED
+    outputfile_hist ->cd();
+    outputfile_hist ->mkdir("PV_dca");
+    outputfile_hist ->cd("PV_dca");
+	vec_tp_pvdca_vs_sector  ->Write();
+	//vec_TH2D_Delta_vs_impact[i_det] ->Write();
+    
+    printf("All data written \n");
+}
