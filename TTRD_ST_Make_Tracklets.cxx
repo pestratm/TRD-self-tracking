@@ -382,7 +382,7 @@ void TTRD_ST_Make_Tracklets::Init_tree(TString SEList)
 
     //------------------------------------------------
     printf("Create output file \n");
-    TString outfile_name = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/" + in_list_name + "_out.root";
+    TString outfile_name = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/" + in_list_name + "_out_V2.root";
     //outputfile = new TFile("./Data/TRD_Calib_ADC_X1.root","RECREATE");
     outputfile = new TFile(outfile_name.Data(),"RECREATE");
     outputfile ->cd();
@@ -651,6 +651,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
     //-------------------------------------------------------
     // Make clusters for each detector and time bin
+    // Individial digits -> clusters/time bin
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
         Int_t sector = (Int_t)(i_det/30);
@@ -669,7 +670,9 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
             //cout << "Sorting vector" << endl;
             // First order the vector from high to low ADC values
-            std::sort(vec_all_TRD_digits[i_det][i_time].begin(),vec_all_TRD_digits[i_det][i_time].end(),sortcol_first); // large values to small values, first column sorted via function sortcol
+
+            // vec_all_TRD_digits // 540 chambers, 24 time bins, (x,y,z,ADC)
+            std::sort(vec_all_TRD_digits[i_det][i_time].begin(),vec_all_TRD_digits[i_det][i_time].end(),sortcol_first); // large values to small values, last column sorted via function sortcol
 
             //for(Int_t i_digit = 0; i_digit < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit++)
             //{
@@ -694,6 +697,8 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 Double_t pos_ADC_max[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_max][0],vec_all_TRD_digits[i_det][i_time][i_digit_max][1],vec_all_TRD_digits[i_det][i_time][i_digit_max][2],vec_all_TRD_digits[i_det][i_time][i_digit_max][3]};
                 Double_t N_digits_added = pos_ADC_max[3]; // ADC as weight
                 Double_t pos_ADC_sum[4] = {pos_ADC_max[0]*pos_ADC_max[3],pos_ADC_max[1]*pos_ADC_max[3],pos_ADC_max[2]*pos_ADC_max[3],pos_ADC_max[3]}; // positions times ADC value [3]
+
+                //printf("i_time: %d, i_digit_max: %d, ADC: %4.3f \n",i_time,i_digit_max,pos_ADC_max[3]);
 
                 // Get all other digits within a certain radius
                 for(Int_t i_digit_sub = (i_digit_max + 1); i_digit_sub < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit_sub++)
@@ -748,6 +753,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
     //-------------------------------------------------------
     // Connect clusters within each chamber
+    // Clusters/time bin -> connect them time bin wise
     vec_self_tracklet_points.clear();
     vec_self_tracklet_points.resize(540);
 
@@ -785,10 +791,11 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 vec_self_tracklet_points[i_det][i_cls][i_time][i_xyzADC] = pos_ADC_max[i_xyzADC];
             }
 
-            Int_t i_time_start = 1;
+            Int_t    i_time_start    = 1;
             Double_t scale_fac_add   = 1.0;
             Int_t    missed_time_bin = 0;
-            Double_t radius_prev = 0.0;
+            Double_t radius_prev     = 0.0;
+
             for(Int_t i_time_sub = i_time_start; i_time_sub < 24; i_time_sub++)
             {
                 Double_t scale_fac = 1.0*scale_fac_add;
@@ -864,7 +871,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
 
     //-------------------------------------------------------
-    // Fit the connected clusters
+    // Fit the time bin wise connected clusters
 
     //ready to fit vec_self_tracklet_points[i_det][i_cls][i_time_sub][i_xyzADC]
 
@@ -944,7 +951,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
         //if(i_det == 0) printf("fitting detector %d  \n",i_det);
-        if(i_det % 40 == 0) printf("fitting detector %d  \n",i_det);
+        //if(i_det % 40 == 0) printf("fitting detector %d  \n",i_det);
 
         self_tracklets_min[i_det].resize(vec_self_tracklet_points[i_det].size());
 
@@ -1164,7 +1171,7 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
     Double_t ADC_val[24];
 
     for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
-    //for(Long64_t i_event = 0; i_event < 1; i_event++)
+    //for(Long64_t i_event = 0; i_event < 10; i_event++)
     {
         if(i_event % 5 == 0) printf("i_event: %lld out of %lld \n",i_event,file_entries_total);
         if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
@@ -1196,7 +1203,7 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
         TRD_ST_Event ->setcent_class_V0AEq( AS_Event->getcent_class_V0AEq() );
         TRD_ST_Event ->setcent_class_V0CEq( AS_Event->getcent_class_V0CEq() );
 
-        printf("Event information filled \n");
+        //printf("Event information filled \n");
         //------------------------------------------
 
 
@@ -1234,7 +1241,7 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
             TRD_ST_TPC_Track ->setHelix(helix_par[0],helix_par[1],helix_par[2],helix_par[3],helix_par[4],helix_par[5],helix_par[6],helix_par[7],helix_par[8]);
         }
 
-        printf("Track information filled \n");
+        //printf("Track information filled \n");
         //------------------------------------------
 
 
@@ -1279,11 +1286,11 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
             } // end tracklet loop
         } // end detector loop
 
-        printf("Tracklet information filled \n");
+        //printf("Tracklet information filled \n");
         //------------------------------------------
 
 
-        printf("Fill tree \n");
+        //printf("Fill tree \n");
         Tree_TRD_ST_Event ->Fill();
         printf("Tree filled for event %lld \n",i_event);
     }
