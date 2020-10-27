@@ -599,16 +599,20 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
     vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits;
 
     vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits_clusters;
-
+	
+	vector< vector< vector< vector<Int_t> > > > arr_used_clusters;
     //vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points;
 
 
     vec_all_TRD_digits.resize(540);
     vec_all_TRD_digits_clusters.resize(540);
+    vec_used_clusters.resize(540);
+        
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
         vec_all_TRD_digits[i_det].resize(24); // time bins
         vec_all_TRD_digits_clusters[i_det].resize(24); // time bins
+    	vec_used_clusters[i_det].resize(24); // time bins
     }
     vector<Double_t> vec_digit_data; // x,y,z,ADC
     vector<Double_t> vec_digit_cluster_data; // x,y,z,ADC
@@ -708,7 +712,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                     Double_t pos_ADC_sub[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_sub][0],vec_all_TRD_digits[i_det][i_time][i_digit_sub][1],vec_all_TRD_digits[i_det][i_time][i_digit_sub][2],vec_all_TRD_digits[i_det][i_time][i_digit_sub][3]};
                     Double_t dist_digits_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
                     Double_t dist_digits_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
-                    if(dist_digits_XY > 5.0)  continue;
+                    if(dist_digits_XY > 2.4)  continue;
                     if(dist_digits_Z  > 15.0) continue;
 
                     for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
@@ -737,6 +741,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 //printf("i_time: %d, cluster pos: {%4.3f, %4.3f, %4.3f} \n",i_time,vec_digit_cluster_data[0],vec_digit_cluster_data[1],vec_digit_cluster_data[2]);
 
                 vec_all_TRD_digits_clusters[i_det][i_time].push_back(vec_digit_cluster_data);
+				vec_used_clusters[i_det][i_time].push_back(0);
             }
         } // end of timebin loop
     }
@@ -756,112 +761,118 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
     // Clusters/time bin -> connect them time bin wise
     vec_self_tracklet_points.clear();
     vec_self_tracklet_points.resize(540);
-
+	Int_t min_nbr_cls = 15;
+	
     for(Int_t i_det = 0; i_det < 540; i_det++) // is done chamber wise
     {
-        Int_t i_time  = 0;
-        Int_t N_clusters = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time].size();
+		    
+        for(Int_t i_time = 0; i_time < 24 - min_nbr_cls; i_time++) // is done chamber wise
+    	{
+    		Int_t N_clusters = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time].size();
+			
 
-        //printf("i_det: %d, N_clusters: %d \n",i_det,N_clusters);
+			//printf("i_det: %d, N_clusters: %d \n",i_det,N_clusters);
 
-        vec_self_tracklet_points[i_det].resize(N_clusters);
+			vec_self_tracklet_points[i_det].resize(N_clusters);
 
-        for(Int_t i_cls = 0; i_cls < N_clusters; i_cls++) // loop over all clusters in one detector and for time bin 0
-        {
-            Int_t n_clusters_attached = 0;
-            Double_t pos_ADC_max[4] = {vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][3]};
+			for(Int_t i_cls = 0; i_cls < N_clusters; i_cls++) // loop over all clusters in one detector and for time bin 0
+			{	
+				if(vec_used_clusters[i_det][i_time][i_cls]) continue;
+				Int_t n_clusters_attached = 0;
+				Double_t pos_ADC_max[4] = {vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][3]};
 
-            Double_t radius = TMath::Sqrt(TMath::Power(vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],2) + TMath::Power(vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],2));
+				Double_t radius = TMath::Sqrt(TMath::Power(vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],2) + TMath::Power(vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],2));
 
-            //printf("---> i_cls: %d, time 0, pos: {%4.3f, %4.3f, %4.3f}, radius: %4.3f \n",i_cls,vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],radius);
+				//printf("---> i_cls: %d, time 0, pos: {%4.3f, %4.3f, %4.3f}, radius: %4.3f \n",i_cls,vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],radius);
 
-            vec_self_tracklet_points[i_det][i_cls].resize(24);
+				vec_self_tracklet_points[i_det][i_cls].resize(24);
 
-            for(Int_t i_timebin = 0; i_timebin < 24; i_timebin++)
-            {
-                vec_self_tracklet_points[i_det][i_cls][i_timebin].resize(4);
-                for (Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
-                {
-                    vec_self_tracklet_points[i_det][i_cls][i_timebin][i_xyzADC] = -999.0;
-                }
-            }
+				for(Int_t i_timebin = 0; i_timebin < 24; i_timebin++)
+				{
+					vec_self_tracklet_points[i_det][i_cls][i_timebin].resize(4);
+					for (Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+					{
+						vec_self_tracklet_points[i_det][i_cls][i_timebin][i_xyzADC] = -999.0;
+					}
+				}
 
-            for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
-            {
-                vec_self_tracklet_points[i_det][i_cls][i_time][i_xyzADC] = pos_ADC_max[i_xyzADC];
-            }
+				for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+				{
+					vec_self_tracklet_points[i_det][i_cls][i_time][i_xyzADC] = pos_ADC_max[i_xyzADC];
+				}
 
-            Int_t    i_time_start    = 1;
-            Double_t scale_fac_add   = 1.0;
-            Int_t    missed_time_bin = 0;
-            Double_t radius_prev     = 0.0;
+				Int_t    i_time_start    = 1;
+				Double_t scale_fac_add   = 1.0;
+				Int_t    missed_time_bin = 0;
+				Double_t radius_prev     = 0.0;
 
-            for(Int_t i_time_sub = i_time_start; i_time_sub < 24; i_time_sub++)
-            {
-                Double_t scale_fac = 1.0*scale_fac_add;
-                //printf("i_time_sub: %d, scale_fac: %4.3f \n",i_time_sub,scale_fac);
-                //if(i_time_sub == 0) scale_fac = factor_layer*scale_fac_add;
-                Int_t N_clusters_sub = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time_sub].size();
+				for(Int_t i_time_sub = i_time_start; i_time_sub < 24; i_time_sub++)
+				{
+					Double_t scale_fac = 1.0*scale_fac_add;
+					//printf("i_time_sub: %d, scale_fac: %4.3f \n",i_time_sub,scale_fac);
+					//if(i_time_sub == 0) scale_fac = factor_layer*scale_fac_add;
+					Int_t N_clusters_sub = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time_sub].size();
 
-                Int_t best_sub_cluster = -1;
-                Double_t best_cluster_quality = 1000000.0;
+					Int_t best_sub_cluster = -1;
+					Double_t best_cluster_quality = 1000000.0;
 
-                for(Int_t i_cls_sub = 0; i_cls_sub < N_clusters_sub; i_cls_sub++)
-                {
-                    Double_t pos_ADC_sub[4] = {vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][0],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][1],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][2],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][3]};
+					for(Int_t i_cls_sub = 0; i_cls_sub < N_clusters_sub; i_cls_sub++)
+					{
+						Double_t pos_ADC_sub[4] = {vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][0],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][1],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][2],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][3]};
 
-                    Double_t dist_clusters_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
-                    Double_t dist_clusters_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
+						Double_t dist_clusters_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
+						Double_t dist_clusters_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
 
-                    if(dist_clusters_XY > scale_fac*Delta_x)  continue;
-                    if(dist_clusters_Z  > Delta_z) continue;
-                    //if(dist_clusters_XY > scale_fac*3.0)  continue;
-                    //if(dist_clusters_Z  > 10.0) continue;
+						if(dist_clusters_XY > scale_fac*Delta_x)  continue;
+						if(dist_clusters_Z  > Delta_z) continue;
+						//if(dist_clusters_XY > scale_fac*3.0)  continue;
+						//if(dist_clusters_Z  > 10.0) continue;
 
-                    // Matching quality - chi2 like
-                    Double_t sub_cluster_quality = TMath::Power(dist_clusters_XY/0.7,2.0) + TMath::Power(dist_clusters_Z/7.5,2.0);
-
-
-                    if(sub_cluster_quality < best_cluster_quality)
-                    {
-                        best_cluster_quality = sub_cluster_quality;
-                        best_sub_cluster     = i_cls_sub;
-                    }
-                }
+						// Matching quality - chi2 like
+						Double_t sub_cluster_quality = TMath::Power(dist_clusters_XY/0.7,2.0) + TMath::Power(dist_clusters_Z/7.5,2.0);
 
 
-                //cout << "best_sub_cluster: " << best_sub_cluster << ", i_time_sub: " << i_time_sub << ", i_layer_sub: " << i_layer_sub << endl;
-                if(best_sub_cluster < 0)
-                {
-                    scale_fac_add *= factor_missing; // one time bin was missing, increase matching window
-                    missed_time_bin++;
-                    continue;
-                }
+						if(sub_cluster_quality < best_cluster_quality)
+						{
+							best_cluster_quality = sub_cluster_quality;
+							best_sub_cluster     = i_cls_sub;
+						}
+					}
 
-                if(missed_time_bin > 3) break;
-                scale_fac_add = 1.0; // reset additional matching window factor once a match was found
 
-                // Define new pos_ADC_max
-                for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
-                {
-                    pos_ADC_max[i_xyzADC] = vec_all_TRD_digits_clusters[i_det][i_time_sub][best_sub_cluster][i_xyzADC];
-                    vec_self_tracklet_points[i_det][i_cls][i_time_sub][i_xyzADC] = pos_ADC_max[i_xyzADC];
+					//cout << "best_sub_cluster: " << best_sub_cluster << ", i_time_sub: " << i_time_sub << ", i_layer_sub: " << i_layer_sub << endl;
+					if(best_sub_cluster < 0)
+					{
+						scale_fac_add *= factor_missing; // one time bin was missing, increase matching window
+						missed_time_bin++;
+						continue;
+					}
 
-                }
+					if(missed_time_bin > 3) break;
+					scale_fac_add = 1.0; // reset additional matching window factor once a match was found
 
-                Double_t radius_sub = TMath::Sqrt(TMath::Power(vec_self_tracklet_points[i_det][i_cls][i_time_sub][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_cls][i_time_sub][1],2));
-                
+					// Define new pos_ADC_max
+					for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+					{
+						pos_ADC_max[i_xyzADC] = vec_all_TRD_digits_clusters[i_det][i_time_sub][best_sub_cluster][i_xyzADC];
+						vec_self_tracklet_points[i_det][i_cls][i_time_sub][i_xyzADC] = pos_ADC_max[i_xyzADC];
 
-                // Already sometimes wrong radius-time ordering
-                //if(i_time_sub > 1 && radius_prev < radius_sub) printf("---> i_det: %d, i_cls: %d, time %d, pos: {%4.3f, %4.3f, %4.3f}, radius_sub: %4.3f, radius_prev: %4.3f \n",i_det,i_cls,i_time_sub,vec_self_tracklet_points[i_det][i_cls][i_time_sub][0],vec_self_tracklet_points[i_det][i_cls][i_time_sub][1],vec_self_tracklet_points[i_det][i_cls][i_time_sub][2],radius_sub,radius_prev);
-                radius_prev = radius_sub;
+					}
+					vec_used_clusters[i_det][i_time_sub][best_sub_cluster] = 1;
+					Double_t radius_sub = TMath::Sqrt(TMath::Power(vec_self_tracklet_points[i_det][i_cls][i_time_sub][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_cls][i_time_sub][1],2));
 
-                //vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetNextPoint((Float_t)pos_ADC_max[0],(Float_t)pos_ADC_max[1],(Float_t)pos_ADC_max[2]);
-                //vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetNextPoint((Float_t)pos_ADC_max[0],(Float_t)pos_ADC_max[1]);
 
-                n_clusters_attached++;
-            }
-        }
+					// Already sometimes wrong radius-time ordering
+					//if(i_time_sub > 1 && radius_prev < radius_sub) printf("---> i_det: %d, i_cls: %d, time %d, pos: {%4.3f, %4.3f, %4.3f}, radius_sub: %4.3f, radius_prev: %4.3f \n",i_det,i_cls,i_time_sub,vec_self_tracklet_points[i_det][i_cls][i_time_sub][0],vec_self_tracklet_points[i_det][i_cls][i_time_sub][1],vec_self_tracklet_points[i_det][i_cls][i_time_sub][2],radius_sub,radius_prev);
+					radius_prev = radius_sub;
+
+					//vec_TEveLine_cluster_tracks[(Int_t)vec_TEveLine_cluster_tracks.size()-1] ->SetNextPoint((Float_t)pos_ADC_max[0],(Float_t)pos_ADC_max[1],(Float_t)pos_ADC_max[2]);
+					//vec_TPL_cluster_tracks[i_sector][i_stack][(Int_t)vec_TPL_cluster_tracks[i_sector][i_stack].size()-1] ->SetNextPoint((Float_t)pos_ADC_max[0],(Float_t)pos_ADC_max[1]);
+
+					n_clusters_attached++;
+				}
+			}
+		}	
     }
 
     printf("connection of clusters within detector done \n");
@@ -971,11 +982,24 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 #endif
 
             Int_t i_time_merge_AB[2] = {-1,-1};
+			Int_t number_ok_clusters = 0;
             for(Int_t i_time_merge = 0; i_time_merge < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time_merge++)
             {
                 if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] == -999.0) continue;
-                else i_time_merge_AB[0] = i_time_merge;
+                else 
+				{
+					i_time_merge_AB[0] = i_time_merge;
+					number_ok_clusters++;
+				}
             }
+			/*for(Int_t i_time_merge = 0; i_time_merge < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time_merge++)
+            {
+                if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] != -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] != -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] != -999.0)
+                {
+					i_time_merge_AB[0] = i_time_merge; 
+				 	break;
+				}
+            }*/
 
             if(i_time_merge_AB[0] == -1) continue; // all values are 0
 
@@ -984,9 +1008,17 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] == -999.0) continue;
                 else i_time_merge_AB[1] = i_time_merge;
             }
+			/*for(Int_t i_time_merge = ((Int_t)vec_self_tracklet_points[i_det][i_trkl].size() - 1); i_time_merge >= 0; i_time_merge--)
+            {
+                if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] == -999.0)
+				{
+					i_time_merge_AB[1] = i_time_merge;
+					break;
+				}	
+            }*/
 
             if(i_time_merge_AB[0] == i_time_merge_AB[1]) continue; // no fit possible with just one point
-
+			if(number_ok_clusters < min_nbr_cls) continue;
             //printf("TTRD_ST_Make_Tracklets::get_tracklets_fit(%d), i_layer: %d \n",i_track,i_layer);
 
             TVirtualFitter *min = TVirtualFitter::Fitter(0,4);
