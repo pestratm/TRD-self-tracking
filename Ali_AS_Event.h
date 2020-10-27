@@ -2,6 +2,8 @@
 #define __ALI_AS_EVENT_H__
 
 #include "TObject.h"
+#include "TVector3.h"
+#include "TLorentzVector.h"
 #include "TClonesArray.h"
 
 //----------------------------------------------------------------------------------------
@@ -378,10 +380,11 @@ private:
     Short_t detector;
     TVector3 TV3_offset;
     TVector3 TV3_dir;
+    Double_t online_dy;
 
 public:
     Ali_AS_Tracklet() :
-	detector(0), TV3_offset(), TV3_dir()
+	detector(0), TV3_offset(), TV3_dir(), online_dy()
     {
     }
         ~Ali_AS_Tracklet()
@@ -392,11 +395,13 @@ public:
         void set_detector(Short_t s)                     { detector = s;         }
         void set_TV3_offset(TVector3 tv3)                { TV3_offset = tv3;     }
         void set_TV3_dir(TVector3 tv3)                   { TV3_dir = tv3;        }
+        void set_online_dy(Double_t dy)                   { online_dy = dy;        }
 
 	// getters
 	Short_t get_detector() const                     { return detector;         }
         TVector3 get_TV3_offset() const                  { return TV3_offset;       }
         TVector3 get_TV3_dir() const                     { return TV3_dir;          }
+        Double_t get_online_dy() const                   { return online_dy;        }
 
         ClassDef(Ali_AS_Tracklet,1);  // A simple track of a particle
 };
@@ -408,6 +413,7 @@ public:
 class Ali_AS_Event : public TObject
 {
 private:
+    Int_t eventNumber;
     Float_t x; // Event vertex x
     Float_t y; // Event vertex y
     Float_t z; // Event vertex z
@@ -443,7 +449,7 @@ private:
 
 public:
     Ali_AS_Event() :
-	x(-1),y(-1),z(-1),id(-1),N_tracks(0),N_TRD_tracklets(0),
+	eventNumber(-1),x(-1),y(-1),z(-1),id(-1),N_tracks(0),N_TRD_tracklets(0),
 	cent_class_ZNA(0),cent_class_ZNC(0),cent_class_V0A(0),cent_class_V0C(0),cent_class_V0M(0),cent_class_CL0(0),cent_class_CL1(0),
         cent_class_SPD(0),cent_class_V0MEq(0),cent_class_V0AEq(0),cent_class_V0CEq(0),BeamIntAA(-1),T0zVertex(-1),TriggerWord(),fNumTracks(0),fNumTracklets(0),fNumTRDdigits(0),
         ADC_sum_det()
@@ -461,6 +467,9 @@ public:
             delete fTRD_digits;
 	    fTRD_digits = NULL;
 	}
+
+        void       setEventNumber(Int_t e)          { eventNumber = e;                         }
+	Int_t    getEventNumber() const             { return eventNumber;                      }
 
 	void       setx(Float_t r)                    { x = r;                         }
 	Float_t    getx() const                       { return x;                      }
