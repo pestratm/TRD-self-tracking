@@ -600,7 +600,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
     vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits_clusters;
 	
-	vector< vector< vector< vector<Int_t> > > > vec_used_clusters;
+	vector< vector< vector<Int_t> > >  vec_used_clusters;
     //vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points;
 
 
