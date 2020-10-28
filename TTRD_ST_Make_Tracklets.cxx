@@ -1153,7 +1153,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             // Space point on straight line which is closes to first space point of fitted clusters
             //TVector3 TV3_base_fit_t0 = calculate_point_on_Straight_dca_to_Point(TV3_base_fit,TV3_dir_fit,TV3_t0_point);
 			TVector3 TV3_base_plane = vec_TV3_TRD_center_offset[i_det];
-			TVector3 TV3_norm_plane = vec_TV3_TRD_center[i_det][1];
+			TVector3 TV3_norm_plane = vec_TV3_TRD_center[i_det][2];
 			TVector3 TV3_base_fit_t0 = intersect_line_plane(TV3_base_fit,TV3_dir_fit,TV3_base_plane,TV3_norm_plane);
 
             TVector3 vec_AB[2];
