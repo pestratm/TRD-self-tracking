@@ -647,3 +647,16 @@ void SumDistance2_F_tr(Int_t &, Double_t *, Double_t & sum, Double_t * par, Int_
 }
 
 //------------------------------------------------------------------------------------
+
+TVector3 intersect_line_plane(TVector3 TV3_base_line, TVector3 TV3_dir_line, TVector3 TV3_base_plane, TVector3 TV3_norm_plane) {
+	
+	TVector3 TV3_base_diff 		= TV3_base_plane - TV3_base_line;
+	Double_t TV3_norm_dir_mult 	= TV3_dir_line.Dot(TV3_norm_plane);
+	Double_t TV3_norm_diff_mult = TV3_base_diff.Dot(TV3_norm_plane);
+		
+	Double_t x 					= TV3_norm_diff_mult / TV3_norm_dir_mult;
+	
+	TVector3 intersect_point 	= TV3_base_line + x * TV3_dir_line;
+	
+	return intersect_point;
+}	

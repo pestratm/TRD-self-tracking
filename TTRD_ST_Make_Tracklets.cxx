@@ -771,6 +771,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 		    
         for(Int_t i_time = 0; i_time < 24 - min_nbr_cls; i_time++) // is done chamber wise
     	{
+			
     		Int_t N_clusters = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time].size();
 			
 
@@ -804,7 +805,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 					vec_self_tracklet_points[i_det][i_cls][i_time][i_xyzADC] = pos_ADC_max[i_xyzADC];
 				}
 
-				Int_t    i_time_start    = 1;
+				Int_t    i_time_start    = i_time + 1;
 				Double_t scale_fac_add   = 1.0;
 				Int_t    missed_time_bin = 0;
 				Double_t radius_prev     = 0.0;
@@ -1146,10 +1147,14 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             if(dir_length > 0.0) TV3_dir_fit *= 1.0/dir_length;
 
             // First space point of fitted clusters
+			
             TVector3 TV3_t0_point(vec_self_tracklet_points[i_det][i_trkl][0][0],vec_self_tracklet_points[i_det][i_trkl][0][1],vec_self_tracklet_points[i_det][i_trkl][0][2]);
 
             // Space point on straight line which is closes to first space point of fitted clusters
-            TVector3 TV3_base_fit_t0 = calculate_point_on_Straight_dca_to_Point(TV3_base_fit,TV3_dir_fit,TV3_t0_point);
+            //TVector3 TV3_base_fit_t0 = calculate_point_on_Straight_dca_to_Point(TV3_base_fit,TV3_dir_fit,TV3_t0_point);
+			TVector3 TV3_base_plane = vec_TV3_TRD_center_offset[i_det];
+			TVector3 TV3_norm_plane = vec_TV3_TRD_center[i_det][0];
+			TVector3 TV3_base_fit_t0 = intersect_line_plane(TV3_base_fit,TV3_dir_fit,TV3_base_plane,TV3_norm_plane);
 
             TVector3 vec_AB[2];
             vec_AB[0] = TV3_base_fit_t0;
