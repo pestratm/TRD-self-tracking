@@ -1158,8 +1158,10 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 			if(TV3_base_fit_t0.Mag()> 342) 
 			{
 				cout<<"zu weit! Daten:"<<endl;
-				cout<<"TV3_base_fit:"<<TV3_base_fit<<endl;
-				cout<<"TV3_dir_fit:"<<TV3_dir_fit<<endl;
+				cout<<"TV3_base_fit:"<<endl;
+				TV3_base_fit.Print();
+				cout<<"TV3_dir_fit:"<<endl;
+				TV3_dir_fit.Print();
 				cout<<"Detector:"<<i_det<<endl;
 				
 			}		
