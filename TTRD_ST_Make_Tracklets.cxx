@@ -330,10 +330,12 @@ void TTRD_ST_Make_Tracklets::Init_tree(TString SEList)
 {
     cout << "Initialize tree" << endl;
     //TString pinputdir = "/misc/alidata120/alice_u/schmah/TRD_offline_calib/Data/";
-    TString inlistdir = "/home/ceres/schmah/ALICE/TRD_self_tracking/Lists/";
+    //TString inlistdir = "/home/ceres/schmah/ALICE/TRD_self_tracking/Lists/";
     TString pinputdir = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Data/";
     //TString pinputdir = "/home/ceres/berdnikova/TRD-Run3-Calibration/";
-
+	TString inlistdir = "/home/ceres/hoppner/ALICE/TRD_self_tracking/TRD-self-tracking/";
+    //TString pinputdir = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/TRD-self-tracking/Data/";
+    
     TString in_list_name = SEList;
     SEList = inlistdir + SEList;
 
