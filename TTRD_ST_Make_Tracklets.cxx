@@ -1155,7 +1155,14 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 			TVector3 TV3_base_plane = vec_TV3_TRD_center_offset[i_det];
 			TVector3 TV3_norm_plane = vec_TV3_TRD_center[i_det][2];
 			TVector3 TV3_base_fit_t0 = intersect_line_plane(TV3_base_fit,TV3_dir_fit,TV3_base_plane,TV3_norm_plane);
-
+			if(TV3_base_fit_t0.Mag()> 342) 
+			{
+				cout<<"zu weit! Daten:"<<endl;
+				cout<<"TV3_base_fit:"<<TV3_base_fit<<endl;
+				cout<<"TV3_dir_fit:"<<TV3_dir_fit<<endl;
+				cout<<"Detector:"<<i_det<<endl;
+				
+			}		
             TVector3 vec_AB[2];
             vec_AB[0] = TV3_base_fit_t0;
             vec_AB[1] = TV3_base_fit_t0 + TV3_dir_fit;
