@@ -962,7 +962,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
     self_tracklets_min.resize(540);
 
-
+	Int_t trkl_index=0;
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
         //if(i_det == 0) printf("fitting detector %d  \n",i_det);
@@ -1162,7 +1162,11 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 				TV3_base_fit.Print();
 				cout<<"TV3_dir_fit:"<<endl;
 				TV3_dir_fit.Print();
+				cout<<"TV3_base_fit_t0:"<<endl;
+				TV3_base_fit_t0.Print();
 				cout<<"Detector:"<<i_det<<endl;
+				cout<<"tracklet:"<<trkl_index<<endl;
+				cout<<endl;
 				
 			}		
             TVector3 vec_AB[2];
@@ -1200,6 +1204,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             //printf("   --> radius: %4.3f, point first cluster: {%4.3f, %4.3f, %4.3f}, point line: {%4.3f, %4.3f, %4.3f} \n",radius,TV3_t0_point[0],TV3_t0_point[1],TV3_t0_point[2],TV3_base_fit_t0[0],TV3_base_fit_t0[1],TV3_base_fit_t0[2]);
 
             delete min;
+			trkl_index++;
         }
     }
     //-------------------------------------------------------
