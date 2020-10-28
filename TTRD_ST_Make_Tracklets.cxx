@@ -384,7 +384,8 @@ void TTRD_ST_Make_Tracklets::Init_tree(TString SEList)
 
     //------------------------------------------------
     printf("Create output file \n");
-    TString outfile_name = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/" + in_list_name + "_out_V2.root";
+    //TString outfile_name = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/" + in_list_name + "_out_V2.root";
+    TString outfile_name = "/home/ceres/hoppner/ALICE/TRD_self_tracking/TRD-self-tracking/Calib_tracklets/" + in_list_name + "_out_V2.root";
     //outputfile = new TFile("./Data/TRD_Calib_ADC_X1.root","RECREATE");
     outputfile = new TFile(outfile_name.Data(),"RECREATE");
     outputfile ->cd();
