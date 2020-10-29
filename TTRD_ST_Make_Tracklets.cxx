@@ -1166,6 +1166,9 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 				TV3_base_fit_t0.Print();
 				cout<<"Detector:"<<i_det<<endl;
 				cout<<"tracklet:"<<trkl_index<<endl;
+				cout<<"angle:"<<TV3_dir_fit.Angle(TV3_norm_plane)*180/TMath::Pi()<<endl;
+				cout<<"radius:"<<TV3_base_fit_t0.Mag()<<endl;
+		
 				cout<<endl;
 				
 			}		
