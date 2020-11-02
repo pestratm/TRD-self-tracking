@@ -1388,10 +1388,10 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
 void plot_dem_histos()
 {
 	TCanvas *can_radii_digits_initial = new TCanvas("can_radii_digits_initial", "can_radii_digits_initial",10,10,500,500);
-    can_AP_plot->cd();
+    can_radii_digits_initial->cd();
     radii_digits_initial -> Draw();
 	TCanvas *can_radii_tracklets_final = new TCanvas("can_radii_tracklets_final", "can_radii_tracklets_final",10,10,500,500);
-    can_AP_plot->cd();
+    can_radii_digits_initial->cd();
     radii_tracklets_final -> Draw();
 	
 
