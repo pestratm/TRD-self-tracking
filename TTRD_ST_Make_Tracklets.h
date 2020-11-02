@@ -179,7 +179,8 @@ public:
     void Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
     Int_t Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
 	
-	void plot_dem_histos();
+	void plot_dem_histos1();
+	void plot_dem_histos2();
 
     ClassDef(TTRD_ST_Make_Tracklets, 1)
 };

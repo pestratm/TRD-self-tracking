@@ -17,5 +17,6 @@ void Macro_run_TTRD_ST_Make_Tracklets(TString In_list)
     Double_t factor_layer   = 6.0;
     Double_t factor_missing = 1.0;
     ST_Make_Tracklets ->Calibrate(Delta_x,Delta_z,factor_layer,factor_missing);
-	ST_Make_Tracklets -> plot_dem_histos();
+	ST_Make_Tracklets -> plot_dem_histos1();
+	ST_Make_Tracklets -> plot_dem_histos2();
 }

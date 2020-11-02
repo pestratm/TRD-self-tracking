@@ -651,8 +651,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             vec_all_TRD_digits[detector][i_time].push_back(vec_digit_data);
 
             Double_t radius = TMath::Sqrt(TMath::Power(digit_pos[0] ,2) + TMath::Power(digit_pos[1] ,2));
-            radii_digits_initial -> Fill(radius);
-			//if(i_time > 0 && radius_prev < radius) printf("det: %d, layer: %d, sector: %d, stack: %d, i_time: %d, radius: %4.3f \n",detector,layer,sector,stack,i_time,radius);
+            //if(i_time > 0 && radius_prev < radius) printf("det: %d, layer: %d, sector: %d, stack: %d, i_time: %d, radius: %4.3f \n",detector,layer,sector,stack,i_time,radius);
             radius_prev = radius;
         }
     }
@@ -867,8 +866,9 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 					}
 					vec_used_clusters[i_det][i_time_sub][best_sub_cluster] = 1;
 					Double_t radius_sub = TMath::Sqrt(TMath::Power(vec_self_tracklet_points[i_det][i_cls][i_time_sub][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_cls][i_time_sub][1],2));
-					radii_tracklets_final -> Fill(radius_sub);
-
+					//radii_tracklets_final -> Fill(radius_sub);
+					radii_digits_initial -> Fill(radius_sub);
+			
 					// Already sometimes wrong radius-time ordering
 					//if(i_time_sub > 1 && radius_prev < radius_sub) printf("---> i_det: %d, i_cls: %d, time %d, pos: {%4.3f, %4.3f, %4.3f}, radius_sub: %4.3f, radius_prev: %4.3f \n",i_det,i_cls,i_time_sub,vec_self_tracklet_points[i_det][i_cls][i_time_sub][0],vec_self_tracklet_points[i_det][i_cls][i_time_sub][1],vec_self_tracklet_points[i_det][i_cls][i_time_sub][2],radius_sub,radius_prev);
 					radius_prev = radius_sub;
@@ -1151,14 +1151,24 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
             // First space point of fitted clusters
 			
-            TVector3 TV3_t0_point(vec_self_tracklet_points[i_det][i_trkl][0][0],vec_self_tracklet_points[i_det][i_trkl][0][1],vec_self_tracklet_points[i_det][i_trkl][0][2]);
+            //TVector3 TV3_t0_point(vec_self_tracklet_points[i_det][i_trkl][0][0],vec_self_tracklet_points[i_det][i_trkl][0][1],vec_self_tracklet_points[i_det][i_trkl][0][2]);
 
             // Space point on straight line which is closes to first space point of fitted clusters
             //TVector3 TV3_base_fit_t0 = calculate_point_on_Straight_dca_to_Point(TV3_base_fit,TV3_dir_fit,TV3_t0_point);
 			TVector3 TV3_base_plane = vec_TV3_TRD_center_offset[i_det];
 			TVector3 TV3_norm_plane = vec_TV3_TRD_center[i_det][2];
 			TVector3 TV3_base_fit_t0 = intersect_line_plane(TV3_base_fit,TV3_dir_fit,TV3_base_plane,TV3_norm_plane);
-			if(TV3_base_fit_t0.Mag()> 342) 
+			
+			for(Int_t a=0;a<vec_self_tracklet_points[i_det][i_trkl].size();a++)
+			{
+				Double_t radius_sub = TMath::Sqrt(TMath::Power(vec_self_tracklet_points[i_det][i_trkl][a][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_trkl][a][1],2));
+					//radii_tracklets_final -> Fill(radius_sub);
+				radii_tracklets_final -> Fill(radius_sub);
+			
+				
+			}	
+			Double_t TV3_base_fit_t0_radius = TMath::Sqrt(TMath::Power(TV3_base_fit_t0_radius[0],2) + TMath::Power(TV3_base_fit_t0_radius[1],2));
+			if(TV3_base_fit_t0_radius > 370) 
 			{
 				cout<<"zu weit! Daten:"<<endl;
 				cout<<"TV3_base_fit:"<<endl;
@@ -1385,7 +1395,7 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
 
 
 
-void TTRD_ST_Make_Tracklets::plot_dem_histos()
+void TTRD_ST_Make_Tracklets::plot_dem_histos1()
 {
 	TCanvas *can_radii_digits_initial = new TCanvas("can_radii_digits_initial", "can_radii_digits_initial",10,10,500,500);
     can_radii_digits_initial->cd();
@@ -1393,7 +1403,19 @@ void TTRD_ST_Make_Tracklets::plot_dem_histos()
 	
 	//TCanvas *can_radii_tracklets_final = new TCanvas("can_radii_tracklets_final", "can_radii_tracklets_final",10,10,500,500);
     //can_radii_digits_initial->cd();
-    radii_tracklets_final -> Draw("same");
+    //radii_tracklets_final -> Draw("same");
+	
+
+}	
+void TTRD_ST_Make_Tracklets::plot_dem_histos2()
+{
+	//TCanvas *can_radii_digits_initial = new TCanvas("can_radii_digits_initial", "can_radii_digits_initial",10,10,500,500);
+    //can_radii_digits_initial->cd();
+    //radii_digits_initial -> Draw();
+	
+	TCanvas *can_radii_tracklets_final = new TCanvas("can_radii_tracklets_final", "can_radii_tracklets_final",10,10,500,500);
+    can_radii_digits_initial->cd();
+    radii_tracklets_final -> Draw();
 	
 
 }	
