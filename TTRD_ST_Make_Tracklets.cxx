@@ -1168,7 +1168,14 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 				cout<<"tracklet:"<<trkl_index<<endl;
 				cout<<"angle:"<<TV3_dir_fit.Angle(TV3_norm_plane)*180/TMath::Pi()<<endl;
 				cout<<"radius:"<<TV3_base_fit_t0.Mag()<<endl;
-		
+				for(Int_t a=0;a<vec_self_tracklet_points[i_det][i_trkl].size();a++)
+					if (vec_self_tracklet_points[i_det][i_trkl][a][0]!=-999.0)
+					{
+						printf("first filled digit: %d coords {%4.3f, %4.3f, %4.3f} \n",a,vec_self_tracklet_points[i_det][i_trkl][a][0],vec_self_tracklet_points[i_det][i_trkl][a][1],vec_self_tracklet_points[i_det][i_trkl][a][2]);
+            
+						//cout<<"first filled digit:"<<a<<" coords
+						break;	
+					}
 				cout<<endl;
 				
 			}		
