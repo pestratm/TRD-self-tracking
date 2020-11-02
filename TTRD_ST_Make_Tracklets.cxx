@@ -1167,7 +1167,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 			
 				
 			}	
-			Double_t TV3_base_fit_t0_radius = TMath::Sqrt(TMath::Power(TV3_base_fit_t0_radius[0],2) + TMath::Power(TV3_base_fit_t0_radius[1],2));
+			Double_t TV3_base_fit_t0_radius = TMath::Sqrt(TMath::Power(TV3_base_fit_t0[0],2) + TMath::Power(TV3_base_fit_t0[1],2));
 			if(TV3_base_fit_t0_radius > 370) 
 			{
 				cout<<"zu weit! Daten:"<<endl;
@@ -1414,7 +1414,7 @@ void TTRD_ST_Make_Tracklets::plot_dem_histos2()
     //radii_digits_initial -> Draw();
 	
 	TCanvas *can_radii_tracklets_final = new TCanvas("can_radii_tracklets_final", "can_radii_tracklets_final",10,10,500,500);
-    can_radii_digits_initial->cd();
+    can_radii_tracklets_final->cd();
     radii_tracklets_final -> Draw();
 	
 
