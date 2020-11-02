@@ -215,6 +215,8 @@ TTRD_ST_Make_Tracklets::TTRD_ST_Make_Tracklets()
 
     vec_ADC_val.clear();
     vec_ADC_val.resize(540);
+	radii_digits_initial = new TH1D("radii_digits_initial","radii_digits_initial",200,500,300); 
+	radii_tracklets_final = new TH1D("radii_tracklets_final","radii_tracklets_final",200,500,300);
 
 }
 //----------------------------------------------------------------------------------------
@@ -649,7 +651,8 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             vec_all_TRD_digits[detector][i_time].push_back(vec_digit_data);
 
             Double_t radius = TMath::Sqrt(TMath::Power(digit_pos[0] ,2) + TMath::Power(digit_pos[1] ,2));
-            //if(i_time > 0 && radius_prev < radius) printf("det: %d, layer: %d, sector: %d, stack: %d, i_time: %d, radius: %4.3f \n",detector,layer,sector,stack,i_time,radius);
+            radii_digits_initial -> Fill(radius);
+			//if(i_time > 0 && radius_prev < radius) printf("det: %d, layer: %d, sector: %d, stack: %d, i_time: %d, radius: %4.3f \n",detector,layer,sector,stack,i_time,radius);
             radius_prev = radius;
         }
     }
@@ -864,7 +867,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 					}
 					vec_used_clusters[i_det][i_time_sub][best_sub_cluster] = 1;
 					Double_t radius_sub = TMath::Sqrt(TMath::Power(vec_self_tracklet_points[i_det][i_cls][i_time_sub][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_cls][i_time_sub][1],2));
-
+					radii_tracklets_final -> Fill(radius_sub);
 
 					// Already sometimes wrong radius-time ordering
 					//if(i_time_sub > 1 && radius_prev < radius_sub) printf("---> i_det: %d, i_cls: %d, time %d, pos: {%4.3f, %4.3f, %4.3f}, radius_sub: %4.3f, radius_prev: %4.3f \n",i_det,i_cls,i_time_sub,vec_self_tracklet_points[i_det][i_cls][i_time_sub][0],vec_self_tracklet_points[i_det][i_cls][i_time_sub][1],vec_self_tracklet_points[i_det][i_cls][i_time_sub][2],radius_sub,radius_prev);
@@ -1217,7 +1220,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 			trkl_index++;
         }
     }
-    //-------------------------------------------------------
+    //-------------------------------------------------------	
 
 }
 
@@ -1380,3 +1383,16 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
 }
 //----------------------------------------------------------------------------------------
 
+
+
+void plot_dem_histos()
+{
+	TCanvas *can_radii_digits_initial = new TCanvas("can_radii_digits_initial", "can_radii_digits_initial",10,10,500,500);
+    can_AP_plot->cd();
+    radii_digits_initial -> Draw();
+	TCanvas *can_radii_tracklets_final = new TCanvas("can_radii_tracklets_final", "can_radii_tracklets_final",10,10,500,500);
+    can_AP_plot->cd();
+    radii_tracklets_final -> Draw();
+	
+
+}	

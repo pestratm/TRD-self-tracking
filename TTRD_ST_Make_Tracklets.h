@@ -158,7 +158,8 @@ private:
     vector<TH2D*> vec_TH2D_Delta_vs_impact;
 
     vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
-
+	TH1D* radii_digits_initial; 
+	TH1D* radii_tracklets_final;
 public:
     TTRD_ST_Make_Tracklets();
     ~TTRD_ST_Make_Tracklets();
@@ -177,6 +178,8 @@ public:
     Int_t Loop_event(Long64_t event);
     void Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
     Int_t Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
+	
+	void plot_dem_histos();
 
     ClassDef(TTRD_ST_Make_Tracklets, 1)
 };
