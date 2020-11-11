@@ -1,6 +1,8 @@
 #ifndef __TTRD_MAKE_TRACKLETS_H__
 #define __TTRD_MAKE_TRACKLETS_H__
 
+#define USEEVE
+
 using namespace std;
 #include <iostream>
 #include <fstream>
@@ -16,6 +18,13 @@ using namespace std;
 #include "Ali_TRD_ST.h"
 #include "Ali_TRD_ST_LinkDef.h"
 #include "Ana_Digits_functions.h"
+
+#if defined(USEEVE)
+#include "TEveBox.h"
+#include <TEveManager.h>
+#include "TEveLine.h"
+#include "TEvePointSet.h"
+#endif
 
 
 ClassImp(Ali_AS_TRD_digit)
@@ -89,6 +98,8 @@ private:
     // TVector3 vec_datapoints;
     vector <TCanvas*> ADC_vs_time;
 
+    TH1I* h_good_bad_TRD_chambers;
+
     vector<TVector3> vec_TV3_TRD_center_offset; // 540 chambers
     vector< vector<TVector3> >     vec_TV3_TRD_center; // 540 chambers, 3 axes
 
@@ -158,10 +169,45 @@ private:
     vector<TH2D*> vec_TH2D_Delta_vs_impact;
 
     vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
-	TH1D* radii_digits_initial; 
-	TH1D* radii_tracklets_final;
+    TH1D* radii_digits_initial;
+    TH1D* radii_tracklets_final;
+
+    TFile* layer_radii_file;
+    TH1D* h_layer_radii_det;
+    TFile* file_TRD_geometry;
+    TH2D* h2D_TRD_det_coordinates;
+
+#if defined(USEEVE)
+    TEveLine* TEveLine_beam_axis = NULL;
+    TEveLine* TPL3D_helix = NULL;
+    vector<TEveLine*> vec_TPL3D_helix;
+    vector<TEveLine*> vec_TPL3D_helix_inner;
+    vector<TEveLine*> vec_TPL3D_helix_hull;
+
+    vector<TEveLine*> vec_TPL3D_helix_kalman;
+    vector<TEveLine*> vec_TPL3D_helix_kalman_inner;
+    vector<TEveLine*> vec_TPL3D_helix_kalman_hull;
+
+    vector< vector<TEveLine*> > vec_TEveLine_tracklets;
+    vector< vector<TEveLine*> > vec_TEveLine_tracklets_match;
+    vector< vector<TEveLine*> > vec_TEveLine_self_matched_tracklets;
+    TEvePointSet* TEveP_TRD_det_origin;
+    TEvePointSet* TEveP_offset_points;
+    TEvePointSet* TEveP_TPC_at_offset_points;
+    vector<TEveBox*> vec_eve_TRD_detector_box;
+    TEvePointSet* TEveP_sec_vertices;
+    TEvePointSet* TEveP_close_TPC_photon;
+    TEvePointSet* TEveP_nucl_int_vertices;
+    TEvePointSet* TEveP_primary_vertex;
+    TEvePointSet* TEveP_first_point_helix;
+    TEvePointSet* TEveP_second_point_helix;
+    vector<TEveLine*> TEveLine_mother;
+#endif
+
+
+
 public:
-    TTRD_ST_Make_Tracklets();
+    TTRD_ST_Make_Tracklets(Int_t graphics);
     ~TTRD_ST_Make_Tracklets();
 
     void Init_QA();
