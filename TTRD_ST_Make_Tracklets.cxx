@@ -215,8 +215,8 @@ TTRD_ST_Make_Tracklets::TTRD_ST_Make_Tracklets()
 
     vec_ADC_val.clear();
     vec_ADC_val.resize(540);
-	radii_digits_initial = new TH1D("radii_digits_initial","radii_digits_initial",200,500,300); 
-	radii_tracklets_final = new TH1D("radii_tracklets_final","radii_tracklets_final",200,500,300);
+	radii_digits_initial = new TH1D("radii_digits_initial","radii_digits_initial",2000,0,2000);
+	radii_tracklets_final = new TH1D("radii_tracklets_final","radii_tracklets_final",2000,0,2000);
 
 }
 //----------------------------------------------------------------------------------------
@@ -823,7 +823,9 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 					Double_t best_cluster_quality = 1000000.0;
 
 					for(Int_t i_cls_sub = 0; i_cls_sub < N_clusters_sub; i_cls_sub++)
-					{
+                                        {
+                                                if(vec_used_clusters[i_det][i_time_sub][i_cls_sub]) continue;
+			       
 						Double_t pos_ADC_sub[4] = {vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][0],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][1],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][2],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][3]};
 
 						Double_t dist_clusters_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
