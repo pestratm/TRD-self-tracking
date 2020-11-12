@@ -1,6 +1,7 @@
 #ifndef __TTRD_MAKE_TRACKLETS_H__
 #define __TTRD_MAKE_TRACKLETS_H__
 
+
 #define USEEVE
 
 using namespace std;
@@ -11,8 +12,6 @@ using namespace std;
 
 #include "TObject.h"
 
-#include "AliHelix.h"
-#include "AliTRDpadPlane.h"
 #include "Ali_AS_Event.h"
 #include "Ali_AS_EventLinkDef.h"
 #include "Ali_TRD_ST.h"
@@ -42,6 +41,7 @@ ClassImp(Ali_TRD_ST_Event)
 class TTRD_ST_Make_Tracklets
 {
 private:
+
 
     Ali_AS_Event*     AS_Event;
     Ali_AS_Track*     AS_Track;
@@ -88,8 +88,6 @@ private:
     vector<TVector3> vec_TV3_local_pos;
 
 
-    AliHelix aliHelix;
-
 
     TString HistName;
     char NoP[50];
@@ -117,7 +115,6 @@ private:
 
 
 
-    AliTRDgeometry* fGeo;
     TGeoManager     *geom;
     TGeoMaterial    *vacuum;
     TGeoMedium      *Air;
@@ -177,6 +174,7 @@ private:
     TFile* file_TRD_geometry;
     TH2D* h2D_TRD_det_coordinates;
 
+
 #if defined(USEEVE)
     TEveLine* TEveLine_beam_axis = NULL;
     TEveLine* TPL3D_helix = NULL;
@@ -202,6 +200,13 @@ private:
     TEvePointSet* TEveP_first_point_helix;
     TEvePointSet* TEveP_second_point_helix;
     vector<TEveLine*> TEveLine_mother;
+
+    vector<TEvePointSet*> TEveP_digits;
+    Double_t arr_ADC_color_digits[8] = {0,10.0,20.0,30.0,40.0,50.0,60.0,200.0};
+    Int_t arr_color_ADC_digits[7] = {kGray,kGreen,kCyan,kBlue,kYellow,kOrange,kRed};
+
+    TEvePointSet* TEve_clusters;
+
 #endif
 
 
@@ -209,6 +214,7 @@ private:
 public:
     TTRD_ST_Make_Tracklets(Int_t graphics);
     ~TTRD_ST_Make_Tracklets();
+
 
     void Init_QA();
 
@@ -222,11 +228,12 @@ public:
 
     void Init_tree(TString SEList);
     Int_t Loop_event(Long64_t event);
-    void Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
-    Int_t Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t factor_layer, Double_t factor_missing);
+    void Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_missing, Int_t graphics);
+    Int_t Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t factor_missing, Int_t graphics);
 	
-	void plot_dem_histos1();
-	void plot_dem_histos2();
+    void plot_dem_histos1();
+    void plot_dem_histos2();
+
 
     ClassDef(TTRD_ST_Make_Tracklets, 1)
 };

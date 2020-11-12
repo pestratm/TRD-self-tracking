@@ -138,7 +138,6 @@ using namespace std;
 #include "TDatime.h"
 #include "TArrow.h"
 
-#include "AliTRDgeometry.h"
 
 #include <sys/types.h>
 #include <dirent.h>
