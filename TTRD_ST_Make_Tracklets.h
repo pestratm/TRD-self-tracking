@@ -17,6 +17,8 @@ using namespace std;
 #include "Ali_TRD_ST.h"
 #include "Ali_TRD_ST_LinkDef.h"
 #include "Ana_Digits_functions.h"
+#include "TDecompSVD.h"
+#include "TMatrixD.h"
 
 #if defined(USEEVE)
 #include "TEveBox.h"
@@ -174,6 +176,9 @@ private:
     TFile* file_TRD_geometry;
     TH2D* h2D_TRD_det_coordinates;
 
+    TVector3 TV3_SVD_tracklet_offset;
+    TVector3 TV3_SVD_tracklet_dir;
+
 
 #if defined(USEEVE)
     TEveLine* TEveLine_beam_axis = NULL;
@@ -206,6 +211,9 @@ private:
     Int_t arr_color_ADC_digits[7] = {kGray,kGreen,kCyan,kBlue,kYellow,kOrange,kRed};
 
     TEvePointSet* TEve_clusters;
+    TEvePointSet* TEve_connected_clusters;
+    vector< vector<TEveLine*> > TEveLine_fitted_tracklets;
+    Double_t scale_length_vec = -10.0;
 
 #endif
 
@@ -228,6 +236,7 @@ public:
 
     void Init_tree(TString SEList);
     Int_t Loop_event(Long64_t event);
+    void Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl);
     void Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_missing, Int_t graphics);
     Int_t Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t factor_missing, Int_t graphics);
 	
