@@ -729,6 +729,8 @@ void TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
     vector<TVector3> arr_TV3_points;
     vector<TVector3> arr_TV3_points_mean;
 
+    SVD_chi2 = 0.0;  //chi2 of the tracklet
+
     Int_t number_ok_clusters = 0;
     for(Int_t i_time = 0; i_time < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time++)
     {
@@ -778,6 +780,23 @@ void TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
 
     TV3_SVD_tracklet_offset = TV3_mean;
     TV3_SVD_tracklet_dir    = TV3_fit_dir;
+
+    for(Int_t i_point = 0; i_point < number_ok_clusters; i_point++)
+    {
+        Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir,arr_TV3_points[i_point]);
+        //SVD_chi2 += abs(dist);
+
+        TVector3 testpoint = calculate_point_on_Straight_dca_to_Point(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir, arr_TV3_points[i_point]);
+
+        Double_t dist_DCA_XY = TMath::Sqrt(TMath::Power(arr_TV3_points[i_point][0] - testpoint[0],2) + TMath::Power(arr_TV3_points[i_point][1] - testpoint[1],2));
+        Double_t dist_DCA_Z  = fabs(arr_TV3_points[i_point][2] - testpoint[2]);
+        Double_t dist_weighted = TMath::Sqrt(TMath::Power(dist_DCA_XY/0.7,2.0) + TMath::Power(dist_DCA_Z/7.5,2.0));
+        SVD_chi2 += abs(dist_weighted);
+    }
+
+    //SVD_chi2 = SVD_chi2/number_ok_clusters;
+    //printf("SVD_chi2 = %4.3f \n",SVD_chi2);
+
 }
 //----------------------------------------------------------------------------------------
 
@@ -1021,7 +1040,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             for(Int_t i_cls = 0; i_cls < N_clusters; i_cls++) // loop over all clusters in one detector and for time bin 0
             {
                 vec_single_trkl_cls.push_back(i_cls);
-                //if(vec_used_clusters[i_det][i_time][i_cls]) continue;
+                if(vec_used_clusters[i_det][i_time][i_cls]) continue;
                 Int_t n_clusters_attached = 0;
                 Double_t pos_ADC_max[4] = {vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][3]};
                 Int_t N_digits_used = vec_all_TRD_digits_clusters[i_det][i_time][i_cls][4];
@@ -1113,6 +1132,9 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                     if(missed_time_bin > 3) break;
                     scale_fac_add = 1.0; // reset additional matching window factor once a match was found
 
+                    //if(missed_time_bin > 3) break;
+                    //scale_fac_add = 1.0; 
+
                     // Define new pos_ADC_max
                     for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
                     {
@@ -1126,10 +1148,10 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 #if defined(USEEVE)
                     if(graphics)
                     {
-                        //if(i_det == 244 && i_cls == 4)
+                        //if(i_det == 37 && i_cls == 0)
                         {
                             TEve_connected_clusters ->SetNextPoint(pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
-                            //printf(" i_cls: %d, TEve pos: {%4.3f, %4.3f, %4.3f} \n",i_cls,pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
+                            //if (i_det == 37)printf(" i_ det = %d, i_cls: %d, TEve pos: {%4.3f, %4.3f, %4.3f} \n",i_det,i_cls,pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
                         }
                     }
 #endif
@@ -1263,6 +1285,10 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
             //------------------------------
             Calc_SVD_tracklet(i_det,i_trkl);
+
+            //printf("i_det = %d, i_trkl = %d, SVD_chi2 = %4.3f \n",i_det,i_trkl,SVD_chi2);
+            if (SVD_chi2 > 7.0) continue;
+
 #if defined(USEEVE)
             if(graphics)
             {
@@ -1874,5 +1900,7 @@ void TTRD_ST_Make_Tracklets::plot_dem_histos2()
 	
 
 }	
+
+
 
 

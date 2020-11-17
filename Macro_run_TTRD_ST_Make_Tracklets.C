@@ -19,7 +19,7 @@ void Macro_run_TTRD_ST_Make_Tracklets(TString In_list)
     ST_Make_Tracklets ->Loop_event(0);
 
 
-    Double_t Delta_x        = 3.0;
+    Double_t Delta_x        = 1.5; //3.0;
     Double_t Delta_z        = 10.0;
     Double_t factor_missing = 1.0;
     ST_Make_Tracklets ->Calibrate(Delta_x,Delta_z,factor_missing,graphics);

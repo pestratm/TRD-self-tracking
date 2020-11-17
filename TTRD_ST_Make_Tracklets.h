@@ -178,6 +178,7 @@ private:
 
     TVector3 TV3_SVD_tracklet_offset;
     TVector3 TV3_SVD_tracklet_dir;
+    Double_t SVD_chi2;
 
 
 #if defined(USEEVE)
