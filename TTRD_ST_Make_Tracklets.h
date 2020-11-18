@@ -178,7 +178,7 @@ private:
 
     TVector3 TV3_SVD_tracklet_offset;
     TVector3 TV3_SVD_tracklet_dir;
-    Double_t SVD_chi2;
+    //Double_t SVD_chi2;
 
 
 #if defined(USEEVE)
@@ -233,11 +233,14 @@ public:
                                                      TVector3 &point);
     TVector3 calculateDCA_vec_StraightToPoint(TVector3 &base, TVector3 &dir, TVector3 &point);
     TVector3 calculate_point_on_Straight_dca_to_Point(TVector3 &base, TVector3 &dir, TVector3 &point);
+    TVector3 calculate_point_on_Straight_dca_to_Point_2D(TVector3 &base, TVector3 &dir, TVector3 &point);
+
     void Reset();
 
     void Init_tree(TString SEList);
     Int_t Loop_event(Long64_t event);
-    void Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl);
+    //void Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl);
+    Double_t Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl);
     void Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_missing, Int_t graphics);
     Int_t Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t factor_missing, Int_t graphics);
 	

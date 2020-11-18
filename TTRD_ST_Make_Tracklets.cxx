@@ -383,6 +383,12 @@ Double_t TTRD_ST_Make_Tracklets::calculateMinimumDistanceStraightToPoint(TVector
     {
       return -1000000.;
     }
+
+    #if 0 //try 2D
+base.SetXYZ(base.X(),base.Y(),0.0);
+point.SetXYZ(point.X(),point.Y(),0.0);
+
+    #endif
   
   TVector3 diff = base-point;
 
@@ -418,6 +424,29 @@ TVector3 TTRD_ST_Make_Tracklets::calculateDCA_vec_StraightToPoint(TVector3 &base
 TVector3 TTRD_ST_Make_Tracklets::calculate_point_on_Straight_dca_to_Point(TVector3 &base, TVector3 &dir, TVector3 &point)
 {
   // calculates the TVector3 on the straight line which is closest to point
+
+    TVector3 diff = point - base;
+    TVector3 dir_norm = dir;
+    dir_norm *= (1.0/dir.Mag());
+    Double_t proj_val = diff.Dot(dir_norm);
+    TVector3 proj_dir = dir_norm;
+    proj_dir *= proj_val;
+
+    TVector3 dist_vec = proj_dir + base;
+
+    return dist_vec;
+}
+//----------------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------------
+TVector3 TTRD_ST_Make_Tracklets::calculate_point_on_Straight_dca_to_Point_2D(TVector3 &base, TVector3 &dir, TVector3 &point)
+{
+  // calculates the TVector3 on the straight line which is closest to point
+
+    
+    point.SetXYZ(point[0],point[1],0.0);
+    base.SetXYZ(base[0],base[1],0.0);
+    dir.SetXYZ(dir[0],dir[1],0.0);
 
     TVector3 diff = point - base;
     TVector3 dir_norm = dir;
@@ -720,7 +749,8 @@ Int_t TTRD_ST_Make_Tracklets::Loop_event(Long64_t event)
 
 
 //----------------------------------------------------------------------------------------
-void TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
+//void TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
+Double_t TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
 {
     // https://www.codefull.net/2015/06/3d-line-fitting/ -> MATLAB code
 
@@ -729,7 +759,7 @@ void TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
     vector<TVector3> arr_TV3_points;
     vector<TVector3> arr_TV3_points_mean;
 
-    SVD_chi2 = 0.0;  //chi2 of the tracklet
+    Double_t SVD_chi2 = 0.0;  //chi2 of the tracklet
 
     Int_t number_ok_clusters = 0;
     for(Int_t i_time = 0; i_time < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time++)
@@ -783,18 +813,32 @@ void TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
 
     for(Int_t i_point = 0; i_point < number_ok_clusters; i_point++)
     {
-        //Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir,arr_TV3_points[i_point]);
+        Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir,arr_TV3_points[i_point]);
         //SVD_chi2 += abs(dist);
 
-        TVector3 testpoint = calculate_point_on_Straight_dca_to_Point(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir, arr_TV3_points[i_point]);
+        TVector3 testpoint = calculate_point_on_Straight_dca_to_Point_2D(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir, arr_TV3_points[i_point]);
 
         Double_t dist_DCA_XY = TMath::Sqrt(TMath::Power(arr_TV3_points[i_point][0] - testpoint[0],2) + TMath::Power(arr_TV3_points[i_point][1] - testpoint[1],2));
-        Double_t dist_DCA_Z  = fabs(arr_TV3_points[i_point][2] - testpoint[2]);
-        Double_t dist_weighted = TMath::Sqrt(TMath::Power(dist_DCA_XY/0.7,2.0) + TMath::Power(dist_DCA_Z/7.5,2.0));
+        //Double_t dist_DCA_Z  = fabs(arr_TV3_points[i_point][2] - testpoint[2]);
+        Double_t dist_weighted = TMath::Sqrt(TMath::Power(dist_DCA_XY/0.7,2.0));// + TMath::Power(dist_DCA_Z/7.5,2.0));
         SVD_chi2 += abs(dist_weighted);
+
+        #if 0
+        if (i_det == 185 && (i_trkl == 1 || i_trkl == 4))
+        {
+            printf("datapoint: {%4.3f, %4.3f, %4.3f}, testpoint: {%4.3f, %4.3f, %4.3f} \n",arr_TV3_points[i_point][0],arr_TV3_points[i_point][1],arr_TV3_points[i_point][2],testpoint[0],testpoint[1],testpoint[2]);
+            printf("TV3_SVD_tracklet_offset: {%4.3f, %4.3f, %4.3f}, TV3_SVD_tracklet_dir: {%4.3f, %4.3f, %4.3f} \n",TV3_SVD_tracklet_offset[0],TV3_SVD_tracklet_offset[1],TV3_SVD_tracklet_offset[2],TV3_SVD_tracklet_dir[0],TV3_SVD_tracklet_dir[1],TV3_SVD_tracklet_dir[2]);
+            //printf("offset point: {%4.3f, %4.3f, %4.3f}");
+            printf("dist_DCA_XY: %4.3f, dist_DCA_Z: %4.3f, dist_weighted: %4.3f, dist: %4.3f \n",dist_DCA_XY,dist_DCA_Z,dist_weighted,dist);
+            printf("SVD_chi2: %4.3f \n",SVD_chi2);
+        }
+
+        testpoint.Delete();
+        #endif
     }
 
-    //SVD_chi2 = SVD_chi2/number_ok_clusters;
+    SVD_chi2 = SVD_chi2/number_ok_clusters;
+    return SVD_chi2;
     //printf("SVD_chi2 = %4.3f \n",SVD_chi2);
 
 }
@@ -1049,7 +1093,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 #if defined(USEEVE)
                     if(graphics)
                     {
-                        //if(i_det == 244 && i_cls == 4)
+                        //if(i_det == 185 && i_cls == 4)
                         {
                             TEve_connected_clusters ->SetNextPoint(pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
                             //printf(" i_cls: %d, TEve pos: {%4.3f, %4.3f, %4.3f} \n",i_cls,pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
@@ -1148,7 +1192,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 #if defined(USEEVE)
                     if(graphics)
                     {
-                        //if(i_det == 37 && i_cls == 0)
+                        //if(i_det == 185)// && i_cls == 0)
                         {
                             TEve_connected_clusters ->SetNextPoint(pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
                             //if (i_det == 37)printf(" i_ det = %d, i_cls: %d, TEve pos: {%4.3f, %4.3f, %4.3f} \n",i_det,i_cls,pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
@@ -1284,10 +1328,10 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
 
             //------------------------------
-            Calc_SVD_tracklet(i_det,i_trkl);
+            Double_t SVD_chi2 = Calc_SVD_tracklet(i_det,i_trkl);
 
-            //printf("i_det = %d, i_trkl = %d, SVD_chi2 = %4.3f \n",i_det,i_trkl,SVD_chi2);
-            if(SVD_chi2 > 7.0) continue;
+            if (i_det == 136) printf("i_det = %d, i_trkl = %d, SVD_chi2 = %4.3f \n",i_det,i_trkl,SVD_chi2);
+            if(SVD_chi2 > 0.5) continue;
 
 #if defined(USEEVE)
             if(graphics)
@@ -1296,6 +1340,10 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]] = new TEveLine();
                 TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]]->SetNextPoint(TV3_SVD_tracklet_offset[0],TV3_SVD_tracklet_offset[1],TV3_SVD_tracklet_offset[2]);
                 TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]]->SetNextPoint(TV3_SVD_tracklet_offset[0] + scale_length_vec*TV3_SVD_tracklet_dir[0],TV3_SVD_tracklet_offset[1] + scale_length_vec*TV3_SVD_tracklet_dir[1],TV3_SVD_tracklet_offset[2] + scale_length_vec*TV3_SVD_tracklet_dir[2]);
+
+                //if (i_det == 185 && i_trkl==1 )printf("tracklets start: {%4.3f, %4.3f, %4.3f}, tracklets stop: {%4.3f, %4.3f, %4.3f}", TV3_SVD_tracklet_offset[0],TV3_SVD_tracklet_offset[1],TV3_SVD_tracklet_offset[2],
+                    //TV3_SVD_tracklet_offset[0] + scale_length_vec*TV3_SVD_tracklet_dir[0],TV3_SVD_tracklet_offset[1] + scale_length_vec*TV3_SVD_tracklet_dir[1],TV3_SVD_tracklet_offset[2] + scale_length_vec*TV3_SVD_tracklet_dir[2]);
+
 
                 HistName = "trkl ";
                 HistName += trkl_index_layer[i_layer];
@@ -1465,10 +1513,10 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
             min->GetStats(amin,edm,errdef,nvpar,nparx);
 
-            if(Det == 418 && Trkl == 0)
-            {
-                min->PrintResults(1,amin);
-            }
+            //if(Det == 418 && Trkl == 0)
+            //{
+            //    min->PrintResults(1,amin);
+            //}
 
             // get fit parameters
             for(int i = 0; i < 4; ++i)
