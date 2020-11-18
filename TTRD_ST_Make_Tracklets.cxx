@@ -444,18 +444,22 @@ TVector3 TTRD_ST_Make_Tracklets::calculate_point_on_Straight_dca_to_Point_2D(TVe
   // calculates the TVector3 on the straight line which is closest to point
 
     
-    point.SetXYZ(point[0],point[1],0.0);
-    base.SetXYZ(base[0],base[1],0.0);
-    dir.SetXYZ(dir[0],dir[1],0.0);
+    TVector3 point2d;
+    TVector3 base2d;
+    TVector3 dir2d;
 
-    TVector3 diff = point - base;
-    TVector3 dir_norm = dir;
-    dir_norm *= (1.0/dir.Mag());
+    point2d.SetXYZ(point[0],point[1],0.0);
+    base2d.SetXYZ(base[0],base[1],0.0);
+    dir2d.SetXYZ(dir[0],dir[1],0.0);
+
+    TVector3 diff = point2d - base2d;
+    TVector3 dir_norm = dir2d;
+    dir_norm *= (1.0/dir2d.Mag());
     Double_t proj_val = diff.Dot(dir_norm);
     TVector3 proj_dir = dir_norm;
     proj_dir *= proj_val;
 
-    TVector3 dist_vec = proj_dir + base;
+    TVector3 dist_vec = proj_dir + base2d;
 
     return dist_vec;
 }
@@ -1341,7 +1345,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]]->SetNextPoint(TV3_SVD_tracklet_offset[0],TV3_SVD_tracklet_offset[1],TV3_SVD_tracklet_offset[2]);
                 TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]]->SetNextPoint(TV3_SVD_tracklet_offset[0] + scale_length_vec*TV3_SVD_tracklet_dir[0],TV3_SVD_tracklet_offset[1] + scale_length_vec*TV3_SVD_tracklet_dir[1],TV3_SVD_tracklet_offset[2] + scale_length_vec*TV3_SVD_tracklet_dir[2]);
 
-                //if (i_det == 185 && i_trkl==1 )printf("tracklets start: {%4.3f, %4.3f, %4.3f}, tracklets stop: {%4.3f, %4.3f, %4.3f}", TV3_SVD_tracklet_offset[0],TV3_SVD_tracklet_offset[1],TV3_SVD_tracklet_offset[2],
+                //printf("tracklets start: {%4.3f, %4.3f, %4.3f}, tracklets stop: {%4.3f, %4.3f, %4.3f} \n", TV3_SVD_tracklet_offset[0],TV3_SVD_tracklet_offset[1],TV3_SVD_tracklet_offset[2],
                     //TV3_SVD_tracklet_offset[0] + scale_length_vec*TV3_SVD_tracklet_dir[0],TV3_SVD_tracklet_offset[1] + scale_length_vec*TV3_SVD_tracklet_dir[1],TV3_SVD_tracklet_offset[2] + scale_length_vec*TV3_SVD_tracklet_dir[2]);
 
 
