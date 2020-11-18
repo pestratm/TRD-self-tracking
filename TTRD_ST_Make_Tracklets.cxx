@@ -198,6 +198,7 @@ TTRD_ST_Make_Tracklets::TTRD_ST_Make_Tracklets(Int_t graphics)
     {
         TEveP_digits[i_ADC] = new TEvePointSet();
     }
+    TEveP_digits_flagged = new TEvePointSet();
     TEveLine_fitted_tracklets.resize(6); // layers
 #endif
 
@@ -970,6 +971,57 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 arr_used_digits[i_digit_max] = 0;
             }
 
+
+            //-------------------------------
+            // Pre cleaning procedure -> flag digits which are alone, no other digits around in same time window
+
+            // Start from the maximum ADC value(s)
+            for(Int_t i_digit_max = 0; i_digit_max < ((Int_t)vec_all_TRD_digits[i_det][i_time].size() - 1); i_digit_max++)
+            {
+                //if(arr_used_digits[i_digit_max]) continue;
+                //arr_used_digits[i_digit_max] = 1;
+
+                Double_t pos_ADC_max[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_max][0],vec_all_TRD_digits[i_det][i_time][i_digit_max][1],vec_all_TRD_digits[i_det][i_time][i_digit_max][2],vec_all_TRD_digits[i_det][i_time][i_digit_max][3]};
+                Int_t N_digits_added = 1;
+
+                // Get all other digits within a certain radius
+                for(Int_t i_digit_sub = 0; i_digit_sub < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit_sub++)
+                {
+                    if(i_digit_sub == i_digit_max) continue;
+                    //if(arr_used_digits[i_digit_sub]) continue;
+
+                    Double_t pos_ADC_sub[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_sub][0],vec_all_TRD_digits[i_det][i_time][i_digit_sub][1],vec_all_TRD_digits[i_det][i_time][i_digit_sub][2],vec_all_TRD_digits[i_det][i_time][i_digit_sub][3]};
+                    Double_t dist_digits_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
+                    Double_t dist_digits_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
+                    if(dist_digits_XY < 1.0 && dist_digits_Z  < 5.0)
+                    {
+                        N_digits_added++;
+                        break;
+                    }
+
+                }
+
+                if(N_digits_added == 1) arr_used_digits[i_digit_max] = 1;
+
+                //if(i_det == 390 && i_time == 0 && pos_ADC_max[0] < -44.0)  printf("i_digit_max: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_digit_max,pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
+
+#if defined(USEEVE)
+                if(graphics)
+                {
+                    if(N_digits_added == 1)
+                    {
+                        //if(i_det == 390 && i_time == 0)
+                        {
+                            TEveP_digits_flagged ->SetNextPoint(pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
+                            //printf("  --> flagged, i_digit_max: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_digit_max,pos_ADC_max[0],pos_ADC_max[1],pos_ADC_max[2]);
+                        }
+                    }
+                }
+#endif
+            } // end of digit max loop
+            //-------------------------------
+
+
             // Start from the maximum ADC value(s)
             for(Int_t i_digit_max = 0; i_digit_max < ((Int_t)vec_all_TRD_digits[i_det][i_time].size() - 1); i_digit_max++)
             {
@@ -991,7 +1043,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                     Double_t pos_ADC_sub[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_sub][0],vec_all_TRD_digits[i_det][i_time][i_digit_sub][1],vec_all_TRD_digits[i_det][i_time][i_digit_sub][2],vec_all_TRD_digits[i_det][i_time][i_digit_sub][3]};
                     Double_t dist_digits_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
                     Double_t dist_digits_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
-                    if(dist_digits_XY > 1.8)  continue; // 2.5
+                    if(dist_digits_XY > 2.2)  continue; // 2.5
                     if(dist_digits_Z  > 10.0) continue; // 15.0
 
                     for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
@@ -1036,7 +1088,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
                 vec_all_TRD_digits_clusters[i_det][i_time].push_back(vec_digit_cluster_data);
                 vec_used_clusters[i_det][i_time].push_back(0);
-            }
+            } // end of digit max loop
         } // end of timebin loop
     }
     printf("arrangement of clusters done \n");
@@ -1736,6 +1788,10 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             gEve->AddElement(TEveP_digits[i_ADC]);
         }
 
+        TEveP_digits_flagged  ->SetMarkerSize(1.5);
+        TEveP_digits_flagged  ->SetMarkerStyle(20);
+        TEveP_digits_flagged  ->SetMarkerColor(kOrange+7);
+        gEve->AddElement(TEveP_digits_flagged);
 
         TEve_clusters  ->SetMarkerSize(1.0);
         TEve_clusters  ->SetMarkerStyle(20);

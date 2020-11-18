@@ -208,6 +208,7 @@ private:
     vector<TEveLine*> TEveLine_mother;
 
     vector<TEvePointSet*> TEveP_digits;
+    TEvePointSet* TEveP_digits_flagged;
     Double_t arr_ADC_color_digits[8] = {0,10.0,20.0,30.0,40.0,50.0,60.0,200.0};
     Int_t arr_color_ADC_digits[7] = {kGray,kGreen,kCyan,kBlue,kYellow,kOrange,kRed};
 
