@@ -783,7 +783,7 @@ void TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
 
     for(Int_t i_point = 0; i_point < number_ok_clusters; i_point++)
     {
-        Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir,arr_TV3_points[i_point]);
+        //Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir,arr_TV3_points[i_point]);
         //SVD_chi2 += abs(dist);
 
         TVector3 testpoint = calculate_point_on_Straight_dca_to_Point(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir, arr_TV3_points[i_point]);
@@ -943,8 +943,8 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                     Double_t pos_ADC_sub[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_sub][0],vec_all_TRD_digits[i_det][i_time][i_digit_sub][1],vec_all_TRD_digits[i_det][i_time][i_digit_sub][2],vec_all_TRD_digits[i_det][i_time][i_digit_sub][3]};
                     Double_t dist_digits_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
                     Double_t dist_digits_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
-                    if(dist_digits_XY > 2.5)  continue; // 2.4
-                    if(dist_digits_Z  > 15.0) continue; // 15.0
+                    if(dist_digits_XY > 1.8)  continue; // 2.5
+                    if(dist_digits_Z  > 10.0) continue; // 15.0
 
                     for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
                     {
@@ -1287,7 +1287,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             Calc_SVD_tracklet(i_det,i_trkl);
 
             //printf("i_det = %d, i_trkl = %d, SVD_chi2 = %4.3f \n",i_det,i_trkl,SVD_chi2);
-            if (SVD_chi2 > 7.0) continue;
+            if(SVD_chi2 > 7.0) continue;
 
 #if defined(USEEVE)
             if(graphics)
