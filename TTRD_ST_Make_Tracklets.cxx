@@ -976,7 +976,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             // Pre cleaning procedure -> flag digits which are alone, no other digits around in same time window
 
             // Start from the maximum ADC value(s)
-            for(Int_t i_digit_max = 0; i_digit_max < ((Int_t)vec_all_TRD_digits[i_det][i_time].size() - 1); i_digit_max++)
+            for(Int_t i_digit_max = 0; i_digit_max < ((Int_t)vec_all_TRD_digits[i_det][i_time].size()); i_digit_max++)
             {
                 //if(arr_used_digits[i_digit_max]) continue;
                 //arr_used_digits[i_digit_max] = 1;
@@ -1043,7 +1043,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                     Double_t pos_ADC_sub[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_sub][0],vec_all_TRD_digits[i_det][i_time][i_digit_sub][1],vec_all_TRD_digits[i_det][i_time][i_digit_sub][2],vec_all_TRD_digits[i_det][i_time][i_digit_sub][3]};
                     Double_t dist_digits_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
                     Double_t dist_digits_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
-                    if(dist_digits_XY > 2.2)  continue; // 2.5
+                    if(dist_digits_XY > 2.5)  continue; // 2.5
                     if(dist_digits_Z  > 10.0) continue; // 15.0
 
                     for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
