@@ -9,7 +9,7 @@ void Macro_run_TTRD_ST_Make_Tracklets(TString In_list)
     gSystem ->Load("TTRD_ST_Make_Tracklets_cxx.so");
     //std::this_thread::sleep_for(std::chrono::milliseconds(20000));
     //Macro_run_TBase(In_list);
-    Int_t graphics = 1;
+    Int_t graphics = 0; // Set event loop in calibrate to the event you want to plot
     TTRD_ST_Make_Tracklets* ST_Make_Tracklets = new TTRD_ST_Make_Tracklets(graphics);
 
 
@@ -19,7 +19,7 @@ void Macro_run_TTRD_ST_Make_Tracklets(TString In_list)
     ST_Make_Tracklets ->Loop_event(0);
 
 
-    Double_t Delta_x        = 1.5; //3.0;
+    Double_t Delta_x        = 1.8; // 1.8;
     Double_t Delta_z        = 10.0;
     Double_t factor_missing = 1.0;
     ST_Make_Tracklets ->Calibrate(Delta_x,Delta_z,factor_missing,graphics);

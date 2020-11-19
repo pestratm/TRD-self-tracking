@@ -192,14 +192,17 @@ TTRD_ST_Make_Tracklets::TTRD_ST_Make_Tracklets(Int_t graphics)
     //h_layer_radii_det = new TH1D("h_layer_radii_det","h_layer_radii_det",540,0,540);
 
 #if defined(USEEVE)
-    TEveP_TRD_det_origin = new TEvePointSet();
-    TEveP_digits.resize(7); // ADC value -> color
-    for(Int_t i_ADC = 0; i_ADC < 7; i_ADC++)
+    if(graphics)
     {
-        TEveP_digits[i_ADC] = new TEvePointSet();
+        TEveP_TRD_det_origin = new TEvePointSet();
+        TEveP_digits.resize(7); // ADC value -> color
+        for(Int_t i_ADC = 0; i_ADC < 7; i_ADC++)
+        {
+            TEveP_digits[i_ADC] = new TEvePointSet();
+        }
+        TEveP_digits_flagged = new TEvePointSet();
+        TEveLine_fitted_tracklets.resize(6); // layers
     }
-    TEveP_digits_flagged = new TEvePointSet();
-    TEveLine_fitted_tracklets.resize(6); // layers
 #endif
 
     /*
@@ -253,7 +256,10 @@ TTRD_ST_Make_Tracklets::TTRD_ST_Make_Tracklets(Int_t graphics)
 
 
 #if defined(USEEVE)
-    vec_eve_TRD_detector_box.resize(540);
+    if(graphics)
+    {
+        vec_eve_TRD_detector_box.resize(540);
+    }
 #endif
     Int_t color_flag_QC[32];
     for(Int_t i_QC_flag = 0; i_QC_flag < 32; i_QC_flag++)
@@ -854,16 +860,13 @@ Double_t TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
 //----------------------------------------------------------------------------------------
 void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_x, Double_t Delta_z, Double_t factor_missing, Int_t graphics)
 {
-    printf("TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit() \n");
+    //printf("TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit() \n");
 
     //Reset();
-    //printf("test 1 \n");
 
     vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits;
-
     vector< vector< vector< vector<Double_t> > > > vec_all_TRD_digits_clusters;
-	
-	vector< vector< vector<Int_t> > >  vec_used_clusters;
+    vector< vector< vector<Int_t> > >              vec_used_clusters;
     //vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points;
 
 
@@ -884,6 +887,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
     // Fill all the information in the hierachy of detectors and time bins
     Int_t    N_TRD_digits  = AS_Event ->getNumTRD_digits();
+    printf(" --> N_TRD_digits: %d \n",N_TRD_digits);
     for(Int_t i_digit = 0; i_digit < N_TRD_digits; i_digit++)
     {
         AS_Digit              = AS_Event ->getTRD_digit(i_digit);
@@ -1091,7 +1095,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             } // end of digit max loop
         } // end of timebin loop
     }
-    printf("arrangement of clusters done \n");
+    //printf("arrangement of clusters done \n");
     //-------------------------------------------------------
 
 
@@ -1103,9 +1107,6 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
 
     //-------------------------------------------------------
-    // Nastia
-    // vec_used_clusters was a problem is comment at the moment
-
     // Connect clusters within each chamber
     // Clusters/time bin -> connect them time bin wise
     vec_self_tracklet_points.clear(); // defined in Ana_Digits_functions.h as static
@@ -1195,7 +1196,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
                     for(Int_t i_cls_sub = 0; i_cls_sub < N_clusters_sub; i_cls_sub++)
                     {
-                        //if(vec_used_clusters[i_det][i_time_sub][i_cls_sub]) continue;
+                        if(vec_used_clusters[i_det][i_time_sub][i_cls_sub]) continue;
 
                         Double_t pos_ADC_sub[4] = {vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][0],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][1],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][2],vec_all_TRD_digits_clusters[i_det][i_time_sub][i_cls_sub][3]};
 
@@ -1278,10 +1279,8 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
         }
     }
 
-    printf("connection of clusters within detector done \n");
-    printf("tracklets fit starts now \n");
-
-    // End of Nastia
+    //printf("connection of clusters within detector done \n");
+    //printf("tracklets fit starts now \n");
     //-------------------------------------------------------
 
 
@@ -1319,50 +1318,6 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
     }
 
 
-    Double_t p0[4] = {10,20,1,2};
-    //Int_t i_layer_notempty = 0;
-
-    //declare things that will be needed later
-    Double_t arglist[10];
-    Double_t a0[3] = {0,0,0};
-    Double_t a1[3] = {0,0,0};
-
-    TVector3 vec_a0;
-    TVector3 vec_a1;
-    TVector3 vec_u;
-    TVector3 vec_x0;
-    TVector3 vec_u_perp;
-    TVector3 vec_x1;
-
-    Double_t pStart[4]; //= {1,1,1,1};
-
-    int nvpar,nparx;
-    Double_t amin,edm, errdef;
-
-    Double_t parFit[4];
-
-    Int_t    n;
-    Double_t t0;
-    Double_t dt;
-    TVector3 TV3_line_point;
-    Double_t i_point;
-
-
-    //loop over layers
-    Double_t layer_dist_min_max[6][2] =
-    {
-        {280.0,290.0},
-        {290.0,300.0},
-        {300.0,310.0},
-        {310.0,320.0},
-        {320.0,330.0},
-        {330.0,340.0},
-    };
-
-    //Double_t delta_layer = 12.5;
-
-    self_tracklets_min.resize(540);
-
     Int_t trkl_index_layer[6] = {0};
     Int_t trkl_index=0;
     for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -1372,7 +1327,6 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
         Int_t i_layer  = i_det%6;
 
-        self_tracklets_min[i_det].resize(vec_self_tracklet_points[i_det].size());
 
         //printf("i_det: %d, N_tracklets: %d \n",i_det,(Int_t)vec_self_tracklet_points[i_det].size());
 
@@ -1382,15 +1336,15 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             if(vec_N_clusters_self_tracklet_points[i_det][i_trkl] < 23) continue;
 
 
-
             //------------------------------
             Double_t SVD_chi2 = Calc_SVD_tracklet(i_det,i_trkl);
 
-            if (i_det == 136) printf("i_det = %d, i_trkl = %d, SVD_chi2 = %4.3f \n",i_det,i_trkl,SVD_chi2);
             if(SVD_chi2 > 0.5) continue;
 
+            vec_ADC_val[i_det][i_trkl].resize((Int_t)vec_self_tracklet_points[i_det][i_trkl].size());
+
 #if defined(USEEVE)
-            if(graphics)
+            if(graphics && 1 == 0) // use for test purposes to check SVD calculation directly
             {
                 TEveLine_fitted_tracklets[i_layer].resize(trkl_index_layer[i_layer]+1);
                 TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]] = new TEveLine();
@@ -1415,267 +1369,13 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             //------------------------------
 
 
-
-            self_tracklets_min[i_det][i_trkl] = -1.0;
-
-            vec_ADC_val[i_det][i_trkl].resize((Int_t)vec_self_tracklet_points[i_det][i_trkl].size());
-
-#if 0
-            for(Int_t i_time_merge = 0; i_time_merge < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time_merge++)
-            {
-                //printf("layer: %d, i_time_merge: %d, point: {%4.3f, %4.3f, %4.3f} \n",i_layer,i_time_merge,vec_Dt_digit_pos_cluster[i_layer][i_time_merge][0],vec_Dt_digit_pos_cluster[i_layer][i_time_merge][1],vec_Dt_digit_pos_cluster[i_layer][i_time_merge][2]);
-            }
-#endif
-
-            Int_t i_time_merge_AB[2] = {-1,-1};
-            Int_t number_ok_clusters = 0;
-            for(Int_t i_time_merge = 0; i_time_merge < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time_merge++)
-            {
-                if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] == -999.0) continue;
-                else
-                {
-                    i_time_merge_AB[0] = i_time_merge;
-                    number_ok_clusters++;
-                }
-            }
-            //for(Int_t i_time_merge = 0; i_time_merge < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time_merge++)
-            // {
-            // if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] != -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] != -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] != -999.0)
-            // {
-            // i_time_merge_AB[0] = i_time_merge;
-            // break;
-            // }
-            // }
-
-            if(i_time_merge_AB[0] == -1) continue; // all values are 0
-
-            for(Int_t i_time_merge = ((Int_t)vec_self_tracklet_points[i_det][i_trkl].size() - 1); i_time_merge >= 0; i_time_merge--)
-            {
-                if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] == -999.0) continue;
-                else i_time_merge_AB[1] = i_time_merge;
-            }
-            //for(Int_t i_time_merge = ((Int_t)vec_self_tracklet_points[i_det][i_trkl].size() - 1); i_time_merge >= 0; i_time_merge--)
-            //{
-            //    if(vec_self_tracklet_points[i_det][i_trkl][i_time_merge][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time_merge][2] == -999.0)
-            //    		{
-            //    			i_time_merge_AB[1] = i_time_merge;
-            //    			break;
-            //    		}
-            //}
-
-            if(i_time_merge_AB[0] == i_time_merge_AB[1]) continue; // no fit possible with just one point
-            if(number_ok_clusters < min_nbr_cls) continue;
-            //printf("TTRD_ST_Make_Tracklets::get_tracklets_fit(%d), i_layer: %d \n",i_track,i_layer);
-
-            TVirtualFitter *min = TVirtualFitter::Fitter(0,4);
-            //min->SetObjectFit(tracklets_gr);
-
-            arglist[0] = 3;
-            //min->ExecuteCommand("SET PRINT",arglist,1);
-            Double_t arglist_B[1] = {-1};
-            min->ExecuteCommand("SET PRIntout",arglist_B,1);
-            min->ExecuteCommand("SET NOWarnings",arglist_B,1);
-
-            for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
-            {
-                a0[i_xyz] = vec_self_tracklet_points[i_det][i_trkl][i_time_merge_AB[0]][i_xyz];
-                a1[i_xyz] = vec_self_tracklet_points[i_det][i_trkl][i_time_merge_AB[1]][i_xyz];
-            }
-
-            Det  = i_det;
-            Trkl = i_trkl;
-
-            //printf("point start: {%4.3f, %4.3f, %4.3f} \n",a0[0],a0[1],a0[2]);
-            //printf("point end: {%4.3f, %4.3f, %4.3f} \n",a1[0],a1[1],a1[2]);
-
-            Int_t flag_XZ = 1;
-            if(fabs(a0[0] - a1[0]) > fabs(a0[2] - a1[2]))
-            {
-                flag_XZ = 0; // x is used
-            }
-
-            vec_a0.SetXYZ(a0[0],a0[1],a0[2]);
-            vec_a1.SetXYZ(a1[0],a1[1],a1[2]);
-            vec_u = vec_a1 - vec_a0;
-            if(flag_XZ == 0)
-            {
-                min->SetFCN(SumDistance2_self_X_tr);
-                vec_x0 = vec_a0 - vec_u*(vec_a0.X()/vec_u.X());
-                vec_u_perp.SetXYZ(vec_u[0],vec_u[1],vec_u[2]);
-                vec_u_perp *= 1.0/vec_u[0];
-                //printf("X_tr \n");
-            }
-            else
-            {
-                min->SetFCN(SumDistance2_self_tr);
-                vec_x0 = vec_a0 - vec_u*(vec_a0.Z()/vec_u.Z());
-                vec_u_perp.SetXYZ(vec_u[0],vec_u[1],vec_u[2]);
-                vec_u_perp *= 1.0/vec_u[2];
-                //printf("tr \n");
-            }
-            vec_x1 = vec_x0 + vec_u_perp;
-
-            //TVector3 u = a1-a0;
-            //x0 = a0  (a0z/uz)*u;
-            //x1 = x0 + u / uz;
-
-            if(flag_XZ == 0)
-            {
-                pStart[0] = vec_x0.Z();
-                pStart[1] = vec_x1.Z() - pStart[0];
-                pStart[2] = vec_x0.Y();
-                pStart[3] = vec_x1.Y() - pStart[2];
-            }
-            else
-            {
-                pStart[0] = vec_x0.X();
-                pStart[1] = vec_x1.X() - pStart[0];
-                pStart[2] = vec_x0.Y();
-                pStart[3] = vec_x1.Y() - pStart[2];
-            }
-
-            //cout << "pStart[0]" << pStart[0] << endl;
-            //cout << "pStart[1]" << pStart[1] << endl;
-            //cout << "pStart[2]" << pStart[2] << endl;
-            //cout << "pStart[3]" << pStart[3] << endl;
-
-            min->SetParameter(0,"x0",pStart[0],0.01,0,0);
-            min->SetParameter(1,"Ax",pStart[1],0.01,0,0);
-            min->SetParameter(2,"y0",pStart[2],0.01,0,0);
-            min->SetParameter(3,"Ay",pStart[3],0.01,0,0);
-
-            //min->SetParameter(0,"x0",pStart[0],0.1,0.5*pStart[0],1.5*pStart[0]);
-            //min->SetParameter(1,"Ax",pStart[1],0.1,0.5*pStart[1],1.5*pStart[1]);
-            //min->SetParameter(2,"y0",pStart[2],0.1,0.5*pStart[2],1.5*pStart[2]);
-            //min->SetParameter(3,"Ay",pStart[3],0.1,0.5*pStart[3],1.5*pStart[3]);
-
-            //printf("test 5.7 \n");
-
-            arglist[0] = 10000; // number of function calls
-            arglist[1] = 0.0001; // tolerance
-
-            //printf("test 5.71 \n");
-            // https://root.cern.ch/root/htmldoc/guides/minuit2/Minuit2.html#which-minimizer-to-use
-            // -> 6.1
-            //printf("     ------------------ MIGRAD ------------------ \n");
-            //min->ExecuteCommand("MINIMIZE",arglist,2);
-            min->ExecuteCommand("SIMPLEX",arglist,2);
-            //min->ExecuteCommand("MIGRAD",arglist,2);
-            //min->ExecuteCommand("MINOS",arglist,2);
-            //printf("     ------------------ END ------------------ \n");
-            //printf("-------------------------> test 5.72 \n");
-
-            //if (minos) min->ExecuteCommand("MINOS",arglist,0);
-
-            min->GetStats(amin,edm,errdef,nvpar,nparx);
-
-            //if(Det == 418 && Trkl == 0)
-            //{
-            //    min->PrintResults(1,amin);
-            //}
-
-            // get fit parameters
-            for(int i = 0; i < 4; ++i)
-            {
-                parFit[i] = min->GetParameter(i);
-                //parFit[i] = pStart[i];
-            }
-
-            self_tracklets_min[i_det][i_trkl] = amin;
-            //-------------------------------------------------------
-
-#if 0
-            //-------------------------------------------------------
-            // GSL minimizer
-            vector<TString> vec_min_algo;
-            vec_min_algo.push_back("ROOT::Math::kVectorBFGS");
-            vec_min_algo.push_back("ROOT::Math::kConjugateFR");
-            vec_min_algo.push_back("ROOT::Math::kConjugatePR");
-            vec_min_algo.push_back("ROOT::Math::kSteepestDescent");
-            vec_min_algo.push_back("ROOT::Math::kVectorBFGS2");
-
-            ROOT::Math::GSLMinimizer GSLmin( vec_min_algo[1].Data() );
-
-            GSLmin.SetMaxFunctionCalls(10000000);
-            GSLmin.SetMaxIterations(1000000);
-            GSLmin.SetTolerance(0.00001);
-
-
-            ROOT::Math::Functor functor_min_X(&SumDistance2_self_X_tr_GSL,4);
-            ROOT::Math::Functor functor_min(&SumDistance2_self_tr_GSL,4);
-
-            if(flag_XZ == 0)
-            {
-                GSLmin.SetFunction(functor_min_X);
-                vec_x0 = vec_a0 - vec_u*(vec_a0.X()/vec_u.X());
-                vec_u_perp.SetXYZ(vec_u[0],vec_u[1],vec_u[2]);
-                vec_u_perp *= 1.0/vec_u[0];
-                //printf("X_tr \n");
-            }
-            else
-            {
-                GSLmin.SetFunction(functor_min);
-                vec_x0 = vec_a0 - vec_u*(vec_a0.Z()/vec_u.Z());
-                vec_u_perp.SetXYZ(vec_u[0],vec_u[1],vec_u[2]);
-                vec_u_perp *= 1.0/vec_u[2];
-                //printf("tr \n");
-            }
-
-
-            Double_t step[4]     = {0.2,0.2,0.2,0.2};
-
-            // Set the free pStarts to be minimized!
-            GSLmin.SetVariable(0,"par a",pStart[0], step[0]);
-            GSLmin.SetVariable(1,"par b",pStart[1], step[1]);
-            GSLmin.SetVariable(2,"par c",pStart[2], step[2]);
-            GSLmin.SetVariable(3,"par d",pStart[3], step[3]);
-
-            //GSLmin.SetVariableLimits(0,0.9*pStart[0],1.1*pStart[0]);
-            //GSLmin.SetVariableLimits(1,0.9*pStart[1],1.1*pStart[1]);
-            //GSLmin.SetVariableLimits(2,0.9*pStart[2],1.1*pStart[2]);
-            //GSLmin.SetVariableLimits(3,0.9*pStart[3],1.1*pStart[3]);
-
-            // start minimization
-            global_best_chi2 = 9999999.0;
-            GSLmin.Minimize();
-
-            // get fit parameters
-            for(int i = 0; i < 4; ++i)
-            {
-                parFit[i] = optimal_par[i];
-            }
-            //-------------------------------------------------------
-#endif
-
-
-
             //-------------------------------------------------------
             // Calculate tracklet base and direction vectors
 
-            // Arbitrary space point on fitted line
-            Double_t x_A, y_A, z_A;
-            if(flag_XZ == 0) line_X(0.0,parFit,x_A,y_A,z_A);
-            else line(0.0,parFit,x_A,y_A,z_A);
-            TVector3 TV3_base_fit(x_A,y_A,z_A);
-
-            // normalized direction vector of fitted line
-            if(flag_XZ == 0) line_X(1.0,parFit,x_A,y_A,z_A);
-            else line(1.0,parFit,x_A,y_A,z_A);
-            TVector3 TV3_dir_fit(x_A,y_A,z_A);
-
-            TV3_dir_fit -= TV3_base_fit;
-            Double_t dir_length = TV3_dir_fit.Mag();
-            if(dir_length > 0.0) TV3_dir_fit *= 1.0/dir_length;
-
-            // First space point of fitted clusters
-
-            //TVector3 TV3_t0_point(vec_self_tracklet_points[i_det][i_trkl][0][0],vec_self_tracklet_points[i_det][i_trkl][0][1],vec_self_tracklet_points[i_det][i_trkl][0][2]);
-
             // Space point on straight line which is closes to first space point of fitted clusters
-            //TVector3 TV3_base_fit_t0 = calculate_point_on_Straight_dca_to_Point(TV3_base_fit,TV3_dir_fit,TV3_t0_point);
             TVector3 TV3_base_plane = vec_TV3_TRD_center_offset[i_det];
             TVector3 TV3_norm_plane = vec_TV3_TRD_center[i_det][2];
-            TVector3 TV3_base_fit_t0 = intersect_line_plane(TV3_base_fit,TV3_dir_fit,TV3_base_plane,TV3_norm_plane);
+            TVector3 TV3_base_fit_t0 = intersect_line_plane(TV3_SVD_tracklet_offset,TV3_SVD_tracklet_dir,TV3_base_plane,TV3_norm_plane);
 
             for(Int_t a=0;a<(Int_t)vec_self_tracklet_points[i_det][i_trkl].size();a++)
             {
@@ -1686,40 +1386,16 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
             }
             Double_t TV3_base_fit_t0_radius = TMath::Sqrt(TMath::Power(TV3_base_fit_t0[0],2) + TMath::Power(TV3_base_fit_t0[1],2));
-            if(TV3_base_fit_t0_radius > 370)
-            {
-                /*
-                cout<<"zu weit! Daten:"<<endl;
-                cout<<"TV3_base_fit:"<<endl;
-                TV3_base_fit.Print();
-                cout<<"TV3_dir_fit:"<<endl;
-                TV3_dir_fit.Print();
-                cout<<"TV3_base_fit_t0:"<<endl;
-                TV3_base_fit_t0.Print();
-                cout<<"Detector:"<<i_det<<endl;
-                cout<<"tracklet:"<<trkl_index<<endl;
-                cout<<"angle:"<<TV3_dir_fit.Angle(TV3_norm_plane)*180/TMath::Pi()<<endl;
-                cout<<"radius:"<<TV3_base_fit_t0.Mag()<<endl;
-                */
-                for(Int_t a=0;a<(Int_t)vec_self_tracklet_points[i_det][i_trkl].size();a++)
-                    if (vec_self_tracklet_points[i_det][i_trkl][a][0]!=-999.0)
-                    {
-                        //printf("first filled digit: %d coords {%4.3f, %4.3f, %4.3f} \n",a,vec_self_tracklet_points[i_det][i_trkl][a][0],vec_self_tracklet_points[i_det][i_trkl][a][1],vec_self_tracklet_points[i_det][i_trkl][a][2]);
 
-                        //cout<<"first filled digit:"<<a<<" coords
-                        break;
-                    }
-                cout<<endl;
 
-            }
             TVector3 vec_AB[2];
             vec_AB[0] = TV3_base_fit_t0;
-            vec_AB[1] = TV3_base_fit_t0 + TV3_dir_fit;
+            vec_AB[1] = TV3_base_fit_t0 + TV3_SVD_tracklet_dir;
             //if(vec_AB[1].Mag() > vec_AB[0].Mag())  // changed sign -> correct physical direction, pointing inwards
-            if(vec_AB[1].Mag() < vec_AB[0].Mag())  // changed sign -> "uncorrect" direction, pointing outwards
+            if(vec_AB[1].Perp() < vec_AB[0].Perp())  // changed sign -> "uncorrect" direction, pointing outwards
             {
-                TV3_dir_fit *= -1.0;
-                vec_AB[1] = TV3_base_fit_t0 + TV3_dir_fit;
+                TV3_SVD_tracklet_dir *= -1.0;
+                vec_AB[1] = TV3_base_fit_t0 + TV3_SVD_tracklet_dir;
             }
 
             for(Int_t i_AB = 0; i_AB < 2; i_AB++)
@@ -1730,6 +1406,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 }
             }
 
+
             // fill ADC val vector
             Int_t tbn_max = (Int_t)vec_self_tracklet_points[i_det][i_trkl].size();
             //Double_t radius_in  = TMath::Sqrt( TMath::Power(vec_self_tracklet_points[i_det][i_trkl][tbn_max-1][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_trkl][tbn_max-1][1],2) );
@@ -1737,6 +1414,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
             for(Int_t i_timebin = 0; i_timebin < tbn_max; i_timebin++)
             {
+                //printf("i_timebin: %d, value: %4.3f \n",i_timebin,vec_self_tracklet_points[i_det][i_trkl][i_timebin][3]);
                 vec_ADC_val[i_det][i_trkl][i_timebin] = vec_self_tracklet_points[i_det][i_trkl][i_timebin][3];
             }
 
@@ -1748,13 +1426,16 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
 
 #if defined(USEEVE)
-            /*
             if(graphics)
             {
                 TEveLine_fitted_tracklets[i_layer].resize(trkl_index_layer[i_layer]+1);
                 TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]] = new TEveLine();
                 TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]]->SetNextPoint(TV3_base_fit_t0[0],TV3_base_fit_t0[1],TV3_base_fit_t0[2]);
-                TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]]->SetNextPoint(TV3_base_fit_t0[0] + scale_length_vec*TV3_dir_fit[0],TV3_base_fit_t0[1] + scale_length_vec*TV3_dir_fit[1],TV3_base_fit_t0[2] + scale_length_vec*TV3_dir_fit[2]);
+                TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]]->SetNextPoint(TV3_base_fit_t0[0] + scale_length_vec*TV3_SVD_tracklet_dir[0],TV3_base_fit_t0[1] + scale_length_vec*TV3_SVD_tracklet_dir[1],TV3_base_fit_t0[2] + scale_length_vec*TV3_SVD_tracklet_dir[2]);
+
+                //printf("tracklets start: {%4.3f, %4.3f, %4.3f}, tracklets stop: {%4.3f, %4.3f, %4.3f} \n", TV3_base_fit_t0[0],TV3_base_fit_t0[1],TV3_base_fit_t0[2],
+                    //TV3_base_fit_t0[0] + scale_length_vec*TV3_SVD_tracklet_dir[0],TV3_base_fit_t0[1] + scale_length_vec*TV3_SVD_tracklet_dir[1],TV3_base_fit_t0[2] + scale_length_vec*TV3_SVD_tracklet_dir[2]);
+
 
                 HistName = "trkl ";
                 HistName += trkl_index_layer[i_layer];
@@ -1765,12 +1446,9 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 HistName += " layer ";
                 HistName += i_layer;
                 TEveLine_fitted_tracklets[i_layer][trkl_index_layer[i_layer]]    ->SetName(HistName.Data());
-                }
-                */
+            }
 #endif
 
-
-            delete min;
             trkl_index_layer[i_layer]++;
             trkl_index++;
         }
@@ -1829,17 +1507,16 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 //----------------------------------------------------------------------------------------
 Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Double_t factor_missing, Int_t graphics)
 {
-    printf("TTRD_ST_Make_Tracklets::Loop_full_self_tracking() \n");
+    //printf("TTRD_ST_Make_Tracklets::Loop_full_self_tracking() \n");
 
     TVector3 TV3_trkl_offset;
     TVector3 TV3_trkl_dir;
     Float_t  helix_par[9];
     Double_t ADC_val[24];
 
-    //for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
-    for(Long64_t i_event = 0; i_event < 1; i_event++)
+    for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
+    //for(Long64_t i_event = 19; i_event < 20; i_event++)
     {
-        if(i_event % 5 == 0) printf("i_event: %lld out of %lld \n",i_event,file_entries_total);
         if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
 
@@ -1877,6 +1554,8 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
         //------------------------------------------
         // Loop over all tracks
         UShort_t NumTracks = AS_Event ->getNumTracks(); // number of tracks in this event
+
+        if(i_event % 1 == 0) printf("i_event: %lld out of %lld, NumTracks: %d \n",i_event,file_entries_total,NumTracks);
         for(UShort_t i_track = 0; i_track < NumTracks; ++i_track) // loop over all tracks of the actual event
         {
             TRD_ST_TPC_Track = TRD_ST_Event ->createTrack(); // TPC track
@@ -1958,7 +1637,7 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
 
         //printf("Fill tree \n");
         Tree_TRD_ST_Event ->Fill();
-        printf("Tree filled for event %lld \n",i_event);
+        //printf("Tree filled for event %lld \n",i_event);
     }
 
     printf("Write data to file \n");
