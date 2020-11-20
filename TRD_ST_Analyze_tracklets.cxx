@@ -77,7 +77,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
         h_layer_radii_det ->SetBinContent(i_det+1,radius_align);
 
 #if defined(USEEVE)
-        TEveP_TRD_det_origin ->SetPoint(i_det,x_val,y_val,z_val);
+        //TEveP_TRD_det_origin ->SetPoint(i_det,x_val,y_val,z_val);
 #endif
     }
 
@@ -2282,6 +2282,9 @@ void Ali_TRD_ST_Analyze::Init_tree(TString SEList)
 {
     printf("Ali_TRD_ST_Analyze::Init_tree \n");
     TString pinputdir = input_dir;
+
+    TString in_list_name = SEList;
+    SEList = input_dir_lists + SEList;
 
     TRD_ST_Tracklet   = new Ali_TRD_ST_Tracklets();
     TRD_ST_TPC_Track  = new Ali_TRD_ST_TPC_Track();

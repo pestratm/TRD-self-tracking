@@ -6,11 +6,11 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 // Environment variables
-//#define ENV_PI
-#define ENV_ALEX
+#define ENV_PI
+//#define ENV_ALEX
 //#define ENV_PI_SVEN
 
-void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
+void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3.txt")
 {
 
     // First compile type root and then:
@@ -29,7 +29,6 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
 
 
     gSystem ->Load("TRD_Kalman_Tracking_cxx.so");
-
     gSystem ->Load("TRD_ST_Analyze_tracklets_cxx.so");
 
     //------------------------------------
@@ -42,25 +41,29 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
 
     TString input_dir  = "./Data/";
     TString output_dir = "./";
+    TString inlists_dir = "./Lists_tracklets/";
 #if defined(ENV_PI)
-    input_dir  = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/";
-    output_dir = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/ST_out/";
+    inlists_dir = "/home/ceres/schmah/ALICE/TRD_self_tracking/Lists_tracklets/";
+    input_dir   = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/";
+    output_dir  = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/ST_out/";
 #endif
 
 #if defined(ENV_PI_SVEN)
-    input_dir  = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/";
-    output_dir = "/misc/alidata120/alice_u/hoppner/TRD_self_tracking/ST_out/";
+    inlists_dir = "/home/ceres/schmah/ALICE/TRD_self_tracking/Lists_tracklets/";
+    input_dir   = "/misc/alidata120/alice_u/schmah/TRD_self_tracking/Calib_tracklets/";
+    output_dir  = "/misc/alidata120/alice_u/hoppner/TRD_self_tracking/ST_out/";
 #endif
 
 #if defined(ENV_ALEX)
+    inlists_dir = "./Lists_tracklets/";
     input_dir  = "./Data/";
     output_dir = "./ST_out/";
 #endif
-    Int_t use_prim_vertex           = 1; // 0 = no primary vertex, 1 = primary vertex used
+    Int_t use_prim_vertex           = 0; // 0 = no primary vertex, 1 = primary vertex used
     Int_t KF_tracker                = 1; // Kalman filter tracker
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 0; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
@@ -74,6 +77,7 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
 
     printf("TRD_ST_Analyze_tracklets started \n");
     Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,out_file_name,graphics);
+    TRD_ST_Analyze ->set_input_lists(inlists_dir);
     TRD_ST_Analyze ->set_input_dir(input_dir);
     TRD_ST_Analyze ->Init_tree(input_list.Data());
 
@@ -96,11 +100,8 @@ void Macro_TRD_tracking(TString input_list = "List_data_ADC.txt")
     // photon events thermal shield: 47,
     // pi0 event: 378
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
-	//for(Long64_t event = 0; event < (Int_t) N_Events; event++) // 2,3
-    for(Long64_t event = 0; event < 1; event++) // 2,3
+    for(Long64_t event = 0; event < (Int_t) N_Events; event++) // 2,3
     //for(Long64_t event = 0; event < 1; event++) // 2,3
-    //for(Long64_t event = 0; event < N_Events; event++) // 2,3
-    //for(Long64_t event = 0; event < 2; event++) // 2,3
     //Int_t event_plot = 555; // 168
     //for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
     {
