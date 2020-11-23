@@ -209,11 +209,12 @@ private:
 
     vector<TEvePointSet*> TEveP_digits;
     TEvePointSet* TEveP_digits_flagged;
-    Double_t arr_ADC_color_digits[8] = {0,10.0,20.0,30.0,40.0,50.0,60.0,200.0};
+    Double_t arr_ADC_color_digits[8] = {0,10.0,20.0,30.0,40.0,50.0,60.0,200000.0};
     Int_t arr_color_ADC_digits[7] = {kGray,kGreen,kCyan,kBlue,kYellow,kOrange,kRed};
 
     TEvePointSet* TEve_clusters;
     TEvePointSet* TEve_connected_clusters;
+    vector<TEvePointSet*> vec_TEve_connected_clusters;
     vector< vector<TEveLine*> > TEveLine_fitted_tracklets;
     Double_t scale_length_vec = -10.0;
 

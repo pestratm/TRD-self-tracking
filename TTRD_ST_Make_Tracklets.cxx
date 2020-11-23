@@ -773,12 +773,14 @@ Double_t TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
     Double_t SVD_chi2 = 0.0;  //chi2 of the tracklet
 
     Int_t number_ok_clusters = 0;
-    for(Int_t i_time = 0; i_time < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time++)
+    for(Int_t i_time = 0; i_time < (Int_t)vec_connected_clusters[i_det][i_trkl].size(); i_time++)
+    //for(Int_t i_time = 0; i_time < (Int_t)vec_self_tracklet_points[i_det][i_trkl].size(); i_time++)
     {
-        if(vec_self_tracklet_points[i_det][i_trkl][i_time][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time][2] == -999.0) continue;
-        else
+        //if(vec_self_tracklet_points[i_det][i_trkl][i_time][0] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time][1] == -999.0 && vec_self_tracklet_points[i_det][i_trkl][i_time][2] == -999.0) continue;
+        //else
         {
-            TV3_point.SetXYZ(vec_self_tracklet_points[i_det][i_trkl][i_time][0],vec_self_tracklet_points[i_det][i_trkl][i_time][1],vec_self_tracklet_points[i_det][i_trkl][i_time][2]);
+            //TV3_point.SetXYZ(vec_self_tracklet_points[i_det][i_trkl][i_time][0],vec_self_tracklet_points[i_det][i_trkl][i_time][1],vec_self_tracklet_points[i_det][i_trkl][i_time][2]);
+            TV3_point.SetXYZ(vec_connected_clusters[i_det][i_trkl][i_time][0],vec_connected_clusters[i_det][i_trkl][i_time][1],vec_connected_clusters[i_det][i_trkl][i_time][2]);
             TV3_mean += TV3_point;
             arr_TV3_points.push_back(TV3_point);
             number_ok_clusters++;
@@ -790,6 +792,7 @@ Double_t TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
         }
     }
 
+    //printf("number_ok_clusters: %d \n",number_ok_clusters);
     TArrayD arr_data_points(number_ok_clusters*3);
 
     // Calculate mean and subtract it
@@ -824,7 +827,7 @@ Double_t TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
 
     for(Int_t i_point = 0; i_point < number_ok_clusters; i_point++)
     {
-        Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir,arr_TV3_points[i_point]);
+        //Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir,arr_TV3_points[i_point]);
         //SVD_chi2 += abs(dist);
 
         TVector3 testpoint = calculate_point_on_Straight_dca_to_Point_2D(TV3_SVD_tracklet_offset, TV3_SVD_tracklet_dir, arr_TV3_points[i_point]);
@@ -834,7 +837,7 @@ Double_t TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
         Double_t dist_weighted = TMath::Sqrt(TMath::Power(dist_DCA_XY/0.7,2.0));// + TMath::Power(dist_DCA_Z/7.5,2.0));
         SVD_chi2 += abs(dist_weighted);
 
-        #if 0
+#if 0
         if (i_det == 185 && (i_trkl == 1 || i_trkl == 4))
         {
             printf("datapoint: {%4.3f, %4.3f, %4.3f}, testpoint: {%4.3f, %4.3f, %4.3f} \n",arr_TV3_points[i_point][0],arr_TV3_points[i_point][1],arr_TV3_points[i_point][2],testpoint[0],testpoint[1],testpoint[2]);
@@ -845,7 +848,7 @@ Double_t TTRD_ST_Make_Tracklets::Calc_SVD_tracklet(Int_t i_det, Int_t i_trkl)
         }
 
         testpoint.Delete();
-        #endif
+#endif
     }
 
     SVD_chi2 = SVD_chi2/number_ok_clusters;
@@ -1027,14 +1030,16 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
 
             // Start from the maximum ADC value(s)
+            Double_t baseline = 10.0;
             for(Int_t i_digit_max = 0; i_digit_max < ((Int_t)vec_all_TRD_digits[i_det][i_time].size() - 1); i_digit_max++)
             {
                 if(arr_used_digits[i_digit_max]) continue;
                 arr_used_digits[i_digit_max] = 1;
 
-                Double_t pos_ADC_max[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_max][0],vec_all_TRD_digits[i_det][i_time][i_digit_max][1],vec_all_TRD_digits[i_det][i_time][i_digit_max][2],vec_all_TRD_digits[i_det][i_time][i_digit_max][3]};
+                Double_t pos_ADC_max[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_max][0],vec_all_TRD_digits[i_det][i_time][i_digit_max][1],vec_all_TRD_digits[i_det][i_time][i_digit_max][2],vec_all_TRD_digits[i_det][i_time][i_digit_max][3] - baseline};
                 Int_t N_digits_added = 1;
                 Double_t Sum_ADC_weight = pos_ADC_max[3]; // ADC as weight
+                if(Sum_ADC_weight < 0.0) continue;
                 Double_t pos_ADC_sum[4] = {pos_ADC_max[0]*pos_ADC_max[3],pos_ADC_max[1]*pos_ADC_max[3],pos_ADC_max[2]*pos_ADC_max[3],pos_ADC_max[3]}; // positions times ADC value [3]
 
                 //printf("i_time: %d, i_digit_max: %d, ADC: %4.3f \n",i_time,i_digit_max,pos_ADC_max[3]);
@@ -1044,7 +1049,11 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 {
                     if(arr_used_digits[i_digit_sub]) continue;
 
-                    Double_t pos_ADC_sub[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_sub][0],vec_all_TRD_digits[i_det][i_time][i_digit_sub][1],vec_all_TRD_digits[i_det][i_time][i_digit_sub][2],vec_all_TRD_digits[i_det][i_time][i_digit_sub][3]};
+                    Double_t pos_ADC_sub[4] = {vec_all_TRD_digits[i_det][i_time][i_digit_sub][0],vec_all_TRD_digits[i_det][i_time][i_digit_sub][1],vec_all_TRD_digits[i_det][i_time][i_digit_sub][2],vec_all_TRD_digits[i_det][i_time][i_digit_sub][3] - baseline};
+
+                    Double_t ADC_sub = pos_ADC_sub[3];
+                    if(ADC_sub < 0.0) continue;
+
                     Double_t dist_digits_XY = TMath::Sqrt(TMath::Power(pos_ADC_max[0] - pos_ADC_sub[0],2) + TMath::Power(pos_ADC_max[1] - pos_ADC_sub[1],2));
                     Double_t dist_digits_Z  = fabs(pos_ADC_max[2] - pos_ADC_sub[2]);
                     if(dist_digits_XY > 2.5)  continue; // 2.5
@@ -1052,12 +1061,12 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
                     for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
                     {
-                        pos_ADC_sum[i_xyz] += pos_ADC_sub[3]*pos_ADC_sub[i_xyz];
+                        pos_ADC_sum[i_xyz] += ADC_sub*pos_ADC_sub[i_xyz];
                     }
                     pos_ADC_sum[3] += pos_ADC_sub[3];
 
                     arr_used_digits[i_digit_sub] = 1;
-                    Sum_ADC_weight += pos_ADC_sub[3];
+                    Sum_ADC_weight += ADC_sub;
                     N_digits_added++;
                 }
 
@@ -1112,27 +1121,32 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
     vec_self_tracklet_points.clear(); // defined in Ana_Digits_functions.h as static
     vec_self_tracklet_points.resize(540);
 
+    vec_connected_clusters.clear(); // defined in Ana_Digits_functions.h as static
+    vec_connected_clusters.resize(540); // i_det i_trkl i_point (up to 24 time bins, can be less) i_xyz
+
+    vector< vector<Double_t> > vec_single_connected_clusters; // for one tracklet, i_point (up to 24 time bins, can be less) i_xyz
+    vector<Double_t> vec_single_point; // x,y,z,ADC
+    vec_single_point.resize(4); // x,y,z,ADC
+
     vector< vector<Int_t> > vec_N_clusters_self_tracklet_points;
     vec_N_clusters_self_tracklet_points.resize(540);
 
-    Int_t min_nbr_cls = 15;
+    Int_t min_nbr_cls = 10;
 
     for(Int_t i_det = 0; i_det < 540; i_det++) // is done chamber wise
     {
 
-        //for(Int_t i_time = 0; i_time < 24 - min_nbr_cls; i_time++) // is done chamber wise
-        for(Int_t i_time = 0; i_time < 1; i_time++) // is done chamber wise
+        for(Int_t i_time = 0; i_time < 24 - min_nbr_cls; i_time++) // is done chamber wise
+        //for(Int_t i_time = 0; i_time < 1; i_time++) // is done chamber wise  ALEX
         {
-
             Int_t N_clusters = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time].size();
-
+            vec_self_tracklet_points[i_det].resize(N_clusters);
 
             std::sort(vec_all_TRD_digits_clusters[i_det][i_time].begin(),vec_all_TRD_digits_clusters[i_det][i_time].end(),sortcol_first); // large values to small values, last column sorted via function sortcol
 
 
             //printf("i_det: %d, N_clusters: %d \n",i_det,N_clusters);
 
-            vec_self_tracklet_points[i_det].resize(N_clusters);
             vec_N_clusters_self_tracklet_points[i_det].resize(N_clusters);
 
             vector< vector<Int_t> > vec_cls_shared;
@@ -1140,10 +1154,24 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
             for(Int_t i_cls = 0; i_cls < N_clusters; i_cls++) // loop over all clusters in one detector and for time bin 0
             {
+                vec_single_connected_clusters.clear();
+
+                vec_self_tracklet_points[i_det][i_cls].resize(24);
+                for(Int_t i_timebin = 0; i_timebin < 24; i_timebin++) // ALEX why do we set it for all i_time to -999? -> changed
+                {
+                    vec_self_tracklet_points[i_det][i_cls][i_timebin].resize(4);
+                    for (Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+                    {
+                        vec_self_tracklet_points[i_det][i_cls][i_timebin][i_xyzADC] = -999.0;
+                    }
+                }
+
+
                 vec_single_trkl_cls.push_back(i_cls);
                 if(vec_used_clusters[i_det][i_time][i_cls]) continue;
                 Int_t n_clusters_attached = 0;
                 Double_t pos_ADC_max[4] = {vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][3]};
+
                 Int_t N_digits_used = vec_all_TRD_digits_clusters[i_det][i_time][i_cls][4];
                 if(N_digits_used <= 1) continue;
 
@@ -1162,21 +1190,17 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
                 //if(i_time == 0) printf("---> i_det: %d, i_cls: %d, time 0, pos: {%4.3f, %4.3f, %4.3f}, radius: %4.3f, ADC: %4.3f, N_digits_used: %d \n",i_det,i_cls,vec_all_TRD_digits_clusters[i_det][i_time][i_cls][0],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][1],vec_all_TRD_digits_clusters[i_det][i_time][i_cls][2],radius,vec_all_TRD_digits_clusters[i_det][i_time][i_cls][3],(Int_t)vec_all_TRD_digits_clusters[i_det][i_time][i_cls][4]);
 
-                vec_self_tracklet_points[i_det][i_cls].resize(24);
-
-                for(Int_t i_timebin = 0; i_timebin < 24; i_timebin++)
-                {
-                    vec_self_tracklet_points[i_det][i_cls][i_timebin].resize(4);
-                    for (Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
-                    {
-                        vec_self_tracklet_points[i_det][i_cls][i_timebin][i_xyzADC] = -999.0;
-                    }
-                }
-
                 for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
                 {
                     vec_self_tracklet_points[i_det][i_cls][i_time][i_xyzADC] = pos_ADC_max[i_xyzADC];
                 }
+
+                for(Int_t i_xyzADC = 0; i_xyzADC < 4; i_xyzADC++)
+                {
+                    vec_single_point[i_xyzADC] = pos_ADC_max[i_xyzADC];
+                }
+                vec_single_connected_clusters.push_back(vec_single_point);
+
 
                 Int_t    i_time_start    = i_time + 1;
                 Double_t scale_fac_add   = 1.0;
@@ -1241,10 +1265,13 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                     {
                         pos_ADC_max[i_xyzADC] = vec_all_TRD_digits_clusters[i_det][i_time_sub][best_sub_cluster][i_xyzADC]; // The one connected is now the new "first" one for the next search step in time
                         vec_self_tracklet_points[i_det][i_cls][i_time_sub][i_xyzADC] = pos_ADC_max[i_xyzADC];
+                        vec_single_point[i_xyzADC] = pos_ADC_max[i_xyzADC];
 
                         // To do: define array with number of clusters connected
                         // -> cut on those for fit
                     }
+
+                    vec_single_connected_clusters.push_back(vec_single_point);
 
 #if defined(USEEVE)
                     if(graphics)
@@ -1273,10 +1300,13 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 } // end of time sub loop
 
                 vec_N_clusters_self_tracklet_points[i_det][i_cls] = n_clusters_attached;
+
+
+                vec_connected_clusters[i_det].push_back(vec_single_connected_clusters);
             } // end of cluster loop
 
 
-        }
+        } // end of time loop
     }
 
     //printf("connection of clusters within detector done \n");
@@ -1299,11 +1329,11 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
     for(Int_t i_detector = 0; i_detector < 540; i_detector++)
     {
-        vec_self_tracklet_fit_points[i_detector].resize((Int_t)vec_self_tracklet_points[i_detector].size());
+        vec_self_tracklet_fit_points[i_detector].resize((Int_t)vec_connected_clusters[i_detector].size());
 
-        vec_ADC_val[i_detector].resize((Int_t)vec_self_tracklet_points[i_detector].size());
+        vec_ADC_val[i_detector].resize((Int_t)vec_connected_clusters[i_detector].size());
 
-        for (Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_points[i_detector].size(); i_trkl++)
+        for (Int_t i_trkl = 0; i_trkl < (Int_t)vec_connected_clusters[i_detector].size(); i_trkl++)
         {
             vec_self_tracklet_fit_points[i_detector][i_trkl].resize(2);
             for(Int_t i_start_stop = 0; i_start_stop < 2; i_start_stop++)
@@ -1330,18 +1360,24 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
         //printf("i_det: %d, N_tracklets: %d \n",i_det,(Int_t)vec_self_tracklet_points[i_det].size());
 
-        for(Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_points[i_det].size(); i_trkl++)
+        //for(Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_points[i_det].size(); i_trkl++) // ALEX
+        for(Int_t i_trkl = 0; i_trkl < (Int_t)vec_connected_clusters[i_det].size(); i_trkl++)
         {
             //printf("i_det: %d, i_trkl: %d, N_clusters: %d \n",i_det,i_trkl,vec_N_clusters_self_tracklet_points[i_det][i_trkl]);
-            if(vec_N_clusters_self_tracklet_points[i_det][i_trkl] < 23) continue;
-
+            if((Int_t)vec_connected_clusters[i_det][i_trkl].size() < 10) continue; // ALEX
 
             //------------------------------
             Double_t SVD_chi2 = Calc_SVD_tracklet(i_det,i_trkl);
 
-            if(SVD_chi2 > 0.5) continue;
+            if(SVD_chi2 > 0.5) continue; // 0.5 ALEX
 
-            vec_ADC_val[i_det][i_trkl].resize((Int_t)vec_self_tracklet_points[i_det][i_trkl].size());
+
+            //TV3_SVD_tracklet_offset.Print();
+            //TV3_SVD_tracklet_dir.Print();
+
+            //vec_ADC_val[i_det][i_trkl].resize((Int_t)vec_self_tracklet_points[i_det][i_trkl].size());
+            vec_ADC_val[i_det][i_trkl].resize((Int_t)vec_connected_clusters[i_det][i_trkl].size()); // ALEX
+
 
 #if defined(USEEVE)
             if(graphics && 1 == 0) // use for test purposes to check SVD calculation directly
@@ -1368,7 +1404,6 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 #endif
             //------------------------------
 
-
             //-------------------------------------------------------
             // Calculate tracklet base and direction vectors
 
@@ -1377,15 +1412,18 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
             TVector3 TV3_norm_plane = vec_TV3_TRD_center[i_det][2];
             TVector3 TV3_base_fit_t0 = intersect_line_plane(TV3_SVD_tracklet_offset,TV3_SVD_tracklet_dir,TV3_base_plane,TV3_norm_plane);
 
-            for(Int_t a=0;a<(Int_t)vec_self_tracklet_points[i_det][i_trkl].size();a++)
+            for(Int_t a=0;a<(Int_t)vec_connected_clusters[i_det][i_trkl].size();a++)
             {
-                Double_t radius_sub = TMath::Sqrt(TMath::Power(vec_self_tracklet_points[i_det][i_trkl][a][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_trkl][a][1],2));
+                Double_t radius_sub = TMath::Sqrt(TMath::Power(vec_connected_clusters[i_det][i_trkl][a][0],2) + TMath::Power(vec_connected_clusters[i_det][i_trkl][a][1],2));
                 //radii_tracklets_final -> Fill(radius_sub);
                 radii_tracklets_final -> Fill(radius_sub);
 
 
             }
             Double_t TV3_base_fit_t0_radius = TMath::Sqrt(TMath::Power(TV3_base_fit_t0[0],2) + TMath::Power(TV3_base_fit_t0[1],2));
+
+            //TV3_base_fit_t0.Print();
+            //TV3_SVD_tracklet_dir.Print();
 
 
             TVector3 vec_AB[2];
@@ -1398,6 +1436,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
                 vec_AB[1] = TV3_base_fit_t0 + TV3_SVD_tracklet_dir;
             }
 
+
             for(Int_t i_AB = 0; i_AB < 2; i_AB++)
             {
                 for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
@@ -1408,14 +1447,14 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
 
 
             // fill ADC val vector
-            Int_t tbn_max = (Int_t)vec_self_tracklet_points[i_det][i_trkl].size();
-            //Double_t radius_in  = TMath::Sqrt( TMath::Power(vec_self_tracklet_points[i_det][i_trkl][tbn_max-1][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_trkl][tbn_max-1][1],2) );
-            //Double_t radius_out = TMath::Sqrt( TMath::Power(vec_self_tracklet_points[i_det][i_trkl][0][0],2) + TMath::Power(vec_self_tracklet_points[i_det][i_trkl][0][1],2) );
+            Int_t tbn_max = (Int_t)vec_connected_clusters[i_det][i_trkl].size();
+            //Double_t radius_in  = TMath::Sqrt( TMath::Power(vec_connected_clusters[i_det][i_trkl][tbn_max-1][0],2) + TMath::Power(vec_connected_clusters[i_det][i_trkl][tbn_max-1][1],2) );
+            //Double_t radius_out = TMath::Sqrt( TMath::Power(vec_connected_clusters[i_det][i_trkl][0][0],2) + TMath::Power(vec_connected_clusters[i_det][i_trkl][0][1],2) );
 
             for(Int_t i_timebin = 0; i_timebin < tbn_max; i_timebin++)
             {
-                //printf("i_timebin: %d, value: %4.3f \n",i_timebin,vec_self_tracklet_points[i_det][i_trkl][i_timebin][3]);
-                vec_ADC_val[i_det][i_trkl][i_timebin] = vec_self_tracklet_points[i_det][i_trkl][i_timebin][3];
+                //printf("i_timebin: %d, value: %4.3f \n",i_timebin,vec_connected_clusters[i_det][i_trkl][i_timebin][3]);
+                vec_ADC_val[i_det][i_trkl][i_timebin] = vec_connected_clusters[i_det][i_trkl][i_timebin][3]; // ALEX
             }
 
             //-------------------------------------------------------
@@ -1474,7 +1513,7 @@ void TTRD_ST_Make_Tracklets::Make_clusters_and_get_tracklets_fit(Double_t Delta_
         TEve_clusters  ->SetMarkerSize(1.0);
         TEve_clusters  ->SetMarkerStyle(20);
         TEve_clusters  ->SetMarkerColor(kMagenta+1);
-        //gEve->AddElement(TEve_clusters);
+        //gEve->AddElement(TEve_clusters);  // -->
 
         TEve_connected_clusters  ->SetMarkerSize(1.2);
         TEve_connected_clusters  ->SetMarkerStyle(20);
@@ -1514,8 +1553,8 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
     Float_t  helix_par[9];
     Double_t ADC_val[24];
 
-    for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
-    //for(Long64_t i_event = 19; i_event < 20; i_event++)
+    //for(Long64_t i_event = 0; i_event < file_entries_total; i_event++)
+    for(Long64_t i_event = 0; i_event < 1; i_event++)
     {
         if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
@@ -1622,7 +1661,7 @@ Int_t TTRD_ST_Make_Tracklets::Calibrate(Double_t Delta_x, Double_t Delta_z, Doub
                 TRD_ST_Tracklet  ->set_TRD_det(i_det);
                 TRD_ST_Tracklet  ->set_TV3_offset(TV3_trkl_offset);
                 TRD_ST_Tracklet  ->set_TV3_dir(TV3_trkl_dir);
-                for(Int_t i_timebin = 0; i_timebin < (Int_t)vec_ADC_val[i_det][i_trkl].size(); i_timebin++)
+                for(Int_t i_timebin = 0; i_timebin < (Int_t)vec_ADC_val[i_det][i_trkl].size(); i_timebin++) // ALEX
                 {
                     ADC_val[i_timebin] = vec_ADC_val[i_det][i_trkl][i_timebin];
                     TRD_ST_Tracklet  ->set_ADC_val(i_timebin,ADC_val[i_timebin]);

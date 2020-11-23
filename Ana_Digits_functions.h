@@ -155,12 +155,16 @@ static vector< vector< vector<Double_t> > > vec_Dt_digit_pos_cluster;    // laye
 static Int_t global_layer;
 
 static vector< vector< vector< vector<Double_t> > > > vec_self_tracklet_points; //i_det i_trkl i_time i_xyz
+static vector< vector< vector< vector<Double_t> > > > vec_connected_clusters; //i_det i_trkl i_point i_xyz
        
 static Int_t Det;
 static Int_t Trkl;
 
 static const Double_t TRD_res_XY = 0.725/TMath::Sqrt(12.0);
 static const Double_t TRD_res_Z  = 8.5/TMath::Sqrt(12.0);
+
+static Double_t optimal_par[4] = {0.0};
+static Double_t global_best_chi2 = 999999999.0;
 
 //static Ali_AS_Event* AS_Event;
 //static Ali_AS_Track* AS_Track;
@@ -559,10 +563,17 @@ void SumDistance2_self_tr(Int_t &, Double_t *, Double_t & sum, Double_t * par, I
 
     for(Int_t i = 0; i < (Int_t)vec_self_tracklet_points[Det][Trkl].size(); ++i)
     {
+        //if(Det == 418 && Trkl == 0)
+        //{
+        //    printf("point: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i,vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2]);
+        //}
+
         //printf("test 002 \n");
         if(i < 5) continue; // remove amplification region
+        //if(!(i == 3 || i == 10)) continue;
         if(vec_self_tracklet_points[Det][Trkl][i][3] == -999.0) continue;
         Double_t ADC_val = vec_self_tracklet_points[Det][Trkl][i][3];
+        ADC_val = 1.0;
         Double_t d       = distance2(vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2],par);
         sum             += d*ADC_val;
         //if(global_layer == 1) printf("i: %d, dist: %4.3f, ADC: %4.3f, sum: %4.3f, pos: {%4.3f, %4.3f, %4.3f} \n",i,d,ADC_val,sum,vec_Dt_digit_pos_cluster[global_layer][i][0],vec_Dt_digit_pos_cluster[global_layer][i][1],vec_Dt_digit_pos_cluster[global_layer][i][2]);
@@ -590,9 +601,16 @@ void SumDistance2_self_X_tr(Int_t &, Double_t *, Double_t & sum, Double_t * par,
 
     for(Int_t i = 0; i < (Int_t)vec_self_tracklet_points[Det][Trkl].size(); ++i)
     {
+        //if(Det == 418 && Trkl == 0)
+        //{
+        //    printf("point: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i,vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2]);
+        //}
+
         if(i < 5) continue; // remove amplification region
+        //if(!(i == 3 || i == 10)) continue;
         if(vec_self_tracklet_points[Det][Trkl][i][3] == -999.0) continue;
         Double_t ADC_val = vec_self_tracklet_points[Det][Trkl][i][3];
+        ADC_val = 1.0;
         Double_t d       = distance2_X(vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2],par);
         sum             += d*ADC_val;
         //if(global_layer == 1) printf("i: %d, dist: %4.3f, ADC: %4.3f, sum: %4.3f, pos: {%4.3f, %4.3f, %4.3f} \n",i,d,ADC_val,sum,vec_Dt_digit_pos_cluster[global_layer][i][0],vec_Dt_digit_pos_cluster[global_layer][i][1],vec_Dt_digit_pos_cluster[global_layer][i][2]);
@@ -600,6 +618,121 @@ void SumDistance2_self_X_tr(Int_t &, Double_t *, Double_t & sum, Double_t * par,
     }
     if(sum_weight > 0.0) sum /= sum_weight;
     //printf("sum: %4.3f \n",sum);
+}
+
+// function to be minimized
+Double_t SumDistance2_self_tr_GSL(const Double_t* par)
+{
+    //printf("Det: %d, Trkl: %d, \n",Det,Trkl);
+
+    //printf("Min func \n");
+
+    Double_t sum = 0;
+
+    // global layer 0-5 -> TRD individual layer, global layer = 6 -> all first clusters
+    Double_t sum_weight = 0.0;
+
+    //printf("test 001 \n");
+
+    //printf("(Int_t)vec_self_tracklet_points[Det][Trkl].size(): \n",(Int_t)vec_self_tracklet_points[Det][Trkl].size());
+
+
+    Double_t parB[4];
+    parB[0] = par[0];
+    parB[1] = par[1];
+    parB[2] = par[2];
+    parB[3] = par[3];
+
+
+    for(Int_t i = 0; i < (Int_t)vec_self_tracklet_points[Det][Trkl].size(); ++i)
+    {
+        //if(Det == 418 && Trkl == 0)
+        //{
+        //    printf("point: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i,vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2]);
+        //}
+
+        //printf("test 002 \n");
+        if(i < 5) continue; // remove amplification region
+        //if(!(i == 3 || i == 10)) continue;
+        if(vec_self_tracklet_points[Det][Trkl][i][3] == -999.0) continue;
+        Double_t ADC_val = vec_self_tracklet_points[Det][Trkl][i][3];
+        ADC_val = 1.0;
+        Double_t d       = distance2(vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2],parB);
+        sum             += d*ADC_val;
+        //if(global_layer == 1) printf("i: %d, dist: %4.3f, ADC: %4.3f, sum: %4.3f, pos: {%4.3f, %4.3f, %4.3f} \n",i,d,ADC_val,sum,vec_Dt_digit_pos_cluster[global_layer][i][0],vec_Dt_digit_pos_cluster[global_layer][i][1],vec_Dt_digit_pos_cluster[global_layer][i][2]);
+        sum_weight += ADC_val;
+    }
+    if(sum_weight > 0.0) sum /= sum_weight;
+    //printf("sum: %4.3f \n",sum);
+
+    if(sum < global_best_chi2)
+    {
+        optimal_par[0] = par[0];
+        optimal_par[1] = par[1];
+        optimal_par[2] = par[2];
+        optimal_par[3] = par[3];
+
+        global_best_chi2 = sum;
+    }
+
+    return sum;
+}
+
+//------------------------------------------------------------------------------------
+// function to be minimized
+Double_t SumDistance2_self_X_tr_GSL(const Double_t* par)
+{
+
+    //printf("Min func X \n");
+
+    //printf("Det: %d, Trkl: %d, \n",Det,Trkl);
+
+    Double_t sum = 0;
+
+    // global layer 0-5 -> TRD individual layer, global layer = 6 -> all first clusters
+    Double_t sum_weight = 0.0;
+
+    //printf("test 001 \n");
+
+    //printf("(Int_t)vec_self_tracklet_points[Det][Trkl].size(): \n",(Int_t)vec_self_tracklet_points[Det][Trkl].size());
+
+    Double_t parB[4];
+    parB[0] = par[0];
+    parB[1] = par[1];
+    parB[2] = par[2];
+    parB[3] = par[3];
+
+    for(Int_t i = 0; i < (Int_t)vec_self_tracklet_points[Det][Trkl].size(); ++i)
+    {
+        //if(Det == 418 && Trkl == 0)
+        //{
+        //    printf("point: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i,vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2]);
+        //}
+
+        if(i < 5) continue; // remove amplification region
+        //if(!(i == 3 || i == 10)) continue;
+        if(vec_self_tracklet_points[Det][Trkl][i][3] == -999.0) continue;
+        Double_t ADC_val = vec_self_tracklet_points[Det][Trkl][i][3];
+        ADC_val = 1.0;
+        Double_t d       = distance2_X(vec_self_tracklet_points[Det][Trkl][i][0],vec_self_tracklet_points[Det][Trkl][i][1],vec_self_tracklet_points[Det][Trkl][i][2],parB);
+        sum             += d*ADC_val;
+        //if(global_layer == 1) printf("i: %d, dist: %4.3f, ADC: %4.3f, sum: %4.3f, pos: {%4.3f, %4.3f, %4.3f} \n",i,d,ADC_val,sum,vec_Dt_digit_pos_cluster[global_layer][i][0],vec_Dt_digit_pos_cluster[global_layer][i][1],vec_Dt_digit_pos_cluster[global_layer][i][2]);
+        sum_weight += ADC_val;
+    }
+    if(sum_weight > 0.0) sum /= sum_weight;
+    //printf("sum: %4.3f \n",sum);
+
+    if(sum < global_best_chi2)
+    {
+        optimal_par[0] = par[0];
+        optimal_par[1] = par[1];
+        optimal_par[2] = par[2];
+        optimal_par[3] = par[3];
+
+        global_best_chi2 = sum;
+    }
+
+    return sum;
 }
 
 //------------------------------------------------------------------------------------
