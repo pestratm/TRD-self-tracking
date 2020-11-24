@@ -16,6 +16,7 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
     // First compile type root and then:
     // .L TRD_ST_Analyze_tracklets.cxx++
     // .L TRD_Kalman_Tracking.cxx++
+    // .x Macro_TRD_tracking.cc("Split_tracklets_vD_1.546_LA_0.16133_V3_3-3.txt")
 
     gROOT->SetStyle("Plain");
     gStyle->SetOptFit(11);
