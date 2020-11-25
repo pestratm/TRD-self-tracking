@@ -770,8 +770,8 @@ vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfit(
     //get_seed(Tracklets,Num_Tracklets);
     for(Int_t i_vec=1; i_vec< (Int_t) tracks.size();i_vec++)
 	{
-		cout<<"entries now: "<< tracks[i_vec].size()<<endl;			
-    	tracks[i_vec][0]->get_TV3_offset().Print();
+		//cout<<"entries now: "<< tracks[i_vec].size()<<endl;			
+    	//tracks[i_vec][0]->get_TV3_offset().Print();
 		Kalman(tracks[i_vec]);
 		
 	}	
