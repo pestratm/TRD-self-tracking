@@ -528,7 +528,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 		//save Track
 		cout<<"Nbr tracklets: "<<mNbr_tracklets<<" mChi_2: "<<mChi_2<<endl;	
 */
-	 if (mNbr_tracklets>2){ // Changed from 2, Alex: 20.07.2020
+	 if ((mNbr_tracklets>2)&&(mChi_2 < 100)){ // Changed from 2, Alex: 20.07.2020
 		//save Track
 		
 		mFound_tracks.push_back(mTrack);
