@@ -1,0 +1,10 @@
+# ignore compiled stuff
+*.so
+*.d
+*.pcm
+
+# ignore large data file
+TRDhlt.root
+
+# ignore output folder
+ST_out
