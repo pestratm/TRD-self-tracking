@@ -89,7 +89,7 @@ class TRD_Kalman_Trackfinder
   vector<vector<Ali_TRD_ST_Tracklets*>> mFound_tracks; //Array with the Tracklets of all found Tracks
 
   Bool_t mShow;
-
+  Bool_t mSearch_tracklets;
   ROOT::Math::SVector<double, 4> measure(Ali_TRD_ST_Tracklets* tracklet);
   Bool_t fitting(Ali_TRD_ST_Tracklets* a, Ali_TRD_ST_Tracklets* b);
   void get_seed(Ali_TRD_ST_Tracklets** Tracklets, Int_t Num_Tracklets);
@@ -99,6 +99,7 @@ class TRD_Kalman_Trackfinder
   void Kalman(vector<Ali_TRD_ST_Tracklets*> start);
 
  public:
+  vector< vector<Ali_TRD_ST_Tracklets*> > Kalman_Trackfit(vector< vector<Ali_TRD_ST_Tracklets*> > tracks,Int_t prim_vertex);
   vector<vector<Ali_TRD_ST_Tracklets*>> Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets, Int_t Num_Tracklets, Int_t prim_vertex);
   vector<vector<Double_t>> get_Kalman_helix_params();
   void set_layer_radii_hist(TH1D* h_layer_radii_in)

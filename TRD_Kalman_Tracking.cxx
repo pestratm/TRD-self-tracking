@@ -152,7 +152,7 @@ void TRD_Kalman_Trackfinder::get_seed( Ali_TRD_ST_Tracklets** Tracklets, Int_t N
 	//}	
 }
 
-//üredict next location
+//predict next location
 Bool_t TRD_Kalman_Trackfinder::prediction(Double_t dist){
 	if (dist ==0)
 		return 1;
@@ -419,7 +419,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			mCov_Res_Inv	= Cov_res;
 			correction(mMeasurements[i_layer]);	
 		}
-		else
+		else if(mSearch_tracklets)
 		{
 			vector<Int_t> Dets;
 			if (0){} //out of border
@@ -523,8 +523,14 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			
 	}
 	//if Track
-        if(mNbr_tracklets>2){ // Changed from 2, Alex: 20.07.2020
+/*	Double_t Chi_2_list[7]={0.,0.,0.,21.,26.,35.,40.};	
+    if( (mNbr_tracklets>2)	&&	(mChi_2<=Chi_2_list[mNbr_tracklets]) ){ // Changed from 2, Alex: 20.07.2020
 		//save Track
+		cout<<"Nbr tracklets: "<<mNbr_tracklets<<" mChi_2: "<<mChi_2<<endl;	
+*/
+	 if (mNbr_tracklets>2){ // Changed from 2, Alex: 20.07.2020
+		//save Track
+		
 		mFound_tracks.push_back(mTrack);
 		mEstimates.push_back(mEstimate);
 		
@@ -725,6 +731,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets,Int_t Num_Tracklets,Int_t prim_vertex)
 {
     mShow=0;
+	mSearch_tracklets=1;
     mHelices.clear();
     mFound_tracks.clear();
     mEstimates.clear();
@@ -737,6 +744,37 @@ vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfind
     
 	chrono::high_resolution_clock::time_point end_wall_time=chrono::high_resolution_clock::now();
 	T_wall= chrono::duration_cast<chrono::microseconds>(end_wall_time-start_wall_time).count();
+	//printf("T_wall is %f us\n",T_wall);
+	//printf("T_calc is %f us\n",T_calc);
+	
+	/*for (int i=0; i<mSeed.size();i++){
+     if (i == 55 ) mShow=1;
+     Kalman(mSeed[i]);
+     mShow=0;
+     }*/
+    //cout<<mFound_tracks[0][4]->get_TRD_index()<<endl;
+    return mFound_tracks;
+}
+
+
+vector< vector<Ali_TRD_ST_Tracklets*> > TRD_Kalman_Trackfinder::Kalman_Trackfit(vector< vector<Ali_TRD_ST_Tracklets*> > tracks,Int_t prim_vertex)
+{
+    mShow=0;
+	mSearch_tracklets=0;
+    mHelices.clear();
+    mFound_tracks.clear();
+    mEstimates.clear();
+	mPrimVertex=prim_vertex;
+    //cout<<"TRD_Kalman_Trackfinder::Kalman_Trackfind"<<endl;
+	cout<<"entries total: "<< tracks.size()<<endl;			
+    //get_seed(Tracklets,Num_Tracklets);
+    for(Int_t i_vec=1; i_vec< (Int_t) tracks.size();i_vec++)
+	{
+		cout<<"entries now: "<< tracks[i_vec].size()<<endl;			
+    	tracks[i_vec][0]->get_TV3_offset().Print();
+		Kalman(tracks[i_vec]);
+		
+	}	
 	//printf("T_wall is %f us\n",T_wall);
 	//printf("T_calc is %f us\n",T_calc);
 	
