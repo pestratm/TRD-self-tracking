@@ -6,17 +6,19 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 // Environment variables
-#define ENV_PI
-//#define ENV_ALEX
+//#define ENV_PI
+#define ENV_ALEX
 //#define ENV_PI_SVEN
 
-void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3.txt")
+void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3.txt", Int_t event_plot = -1)
 {
+    // event_plot: -1 -> loop over all events, other wise plot or loop over single event
 
     // First compile type root and then:
     // .L TRD_ST_Analyze_tracklets.cxx++
     // .L TRD_Kalman_Tracking.cxx++
-    // .x Macro_TRD_tracking.cc("Split_tracklets_vD_1.546_LA_0.16133_V3_3-3.txt")
+    // .x Macro_TRD_tracking.cc("Split_tracklets_vD_1.546_LA_0.16133_V3_3-3.txt",-1)
+    // .x Macro_TRD_tracking.cc("run0_test.txt",-1) -> calibrated run0 files
 
     gROOT->SetStyle("Plain");
     gStyle->SetOptFit(11);
@@ -64,15 +66,15 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
     Int_t KF_tracker                = 1; // Kalman filter tracker
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 0; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
     Int_t draw_all_tracklets        = 0; // Draw all TRD tracklets
-    Int_t draw_found_tracklets      = 1; // Draws tracklets found by tracker
+    Int_t draw_found_tracklets      = 0; // Draws tracklets found by tracker
     Int_t draw_matched_TPC_track    = 0; // Draw TPC to TRD matched TPC track
     Int_t draw_matched_TRD_track    = 0; // Draw TPC to TRD matched Kalman/TF track
-    Int_t draw_secondary_vertices   = 0; // Draws tracks and secondary vertices
+    Int_t draw_secondary_vertices   = 1; // Draws tracks and secondary vertices
 
     //------------------------------------
 
@@ -101,10 +103,15 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
     // photon events thermal shield: 47,
     // pi0 event: 378
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
-    for(Long64_t event = 0; event < (Int_t) N_Events; event++) // 2,3
-    //for(Long64_t event = 0; event < 1; event++) // 2,3
-    //Int_t event_plot = 555; // 168
-    //for (Long64_t event = event_plot; event < (event_plot+1); event++) // 2,3   192
+    Int_t start_event = 0;
+    Int_t stop_event  = (Int_t) N_Events;
+    if(event_plot != -1)
+    {
+        start_event = event_plot;
+        stop_event  = (event_plot+1);
+    }
+
+    for(Long64_t event = start_event; event < stop_event; event++)
     {
 
         if (event != 0  &&  event % 50 == 0)
@@ -171,7 +178,7 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
         //------------------------------------------------------------
 
  */      
-        TRD_ST_Analyze ->Calibrate(graphics);
+        //TRD_ST_Analyze ->Calibrate(graphics);
         TRD_ST_Analyze ->Calc_Kalman_efficiency();
 
 
@@ -186,7 +193,7 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
 
     }
 	
-    TRD_ST_Analyze ->Draw_n_Save_Calibration(output_dir,out_file_name_calib);
+    //TRD_ST_Analyze ->Draw_n_Save_Calibration(output_dir,out_file_name_calib);
     TRD_ST_Analyze ->Write();
 
 }
