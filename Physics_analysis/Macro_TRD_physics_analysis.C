@@ -10,7 +10,7 @@ R__LOAD_LIBRARY(TRD_physics_analysis_cxx.so);
 #define ENV_ALEX
 //#define ENV_PI_SVEN
 
-void Macro_TRD_tracking(TString input_list = "List_physics.txt")
+void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
 {
 // load the shared libraries here gSystem ->Load("...
     gSystem ->Load("TRD_physics_analysis_cxx.so");
@@ -37,6 +37,7 @@ void Macro_TRD_tracking(TString input_list = "List_physics.txt")
     inlists_dir = "./";
     input_dir  = "../ST_out/";
     output_dir = "./";
+#endif
 
     Ali_TRD_physics_analysis*  TRD_physics_analysis = new Ali_TRD_physics_analysis(output_dir,out_file_name);
     //Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,"test.root",graphics);

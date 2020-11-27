@@ -38,7 +38,7 @@ void Ali_TRD_physics_analysis::Init_tree(TString SEList)
         if(in)
         {
             cout << "file list is ok" << endl;
-            input_SE  = new TChain( TRD_ST_TREE.Data(), TRD_ST_TREE.Data() );
+            input_SE  = new TChain( TRD_Self_TREE.Data(), TRD_Self_TREE.Data() );
             char str[255];       // char array for each file name
             Long64_t entries_save = 0;
             while(in)
@@ -49,13 +49,13 @@ void Ali_TRD_physics_analysis::Init_tree(TString SEList)
                     TString addfile;
                     addfile = str;
                     addfile = pinputdir+addfile;
-                    input_SE ->AddFile(addfile.Data(),-1, TRD_ST_TREE.Data() );
+                    input_SE ->AddFile(addfile.Data(),-1, TRD_Self_TREE.Data() );
                     Long64_t file_entries = input_SE->GetEntries();
                     cout << "File added to data chain: " << addfile.Data() << " with " << (file_entries-entries_save) << " entries" << endl;
                     entries_save = file_entries;
                 }
             }
-            input_SE  ->SetBranchAddress( TRD_ST_BRANCH, &TRD_ST_Event );
+            input_SE  ->SetBranchAddress( TRD_Self_BRANCH, &TRD_Self_Event );
         }
         else
         {
