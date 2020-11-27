@@ -93,6 +93,15 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
 
+    //TRD self tracking output data containers for photons and nuclear interactions
+    TRD_Self_Event = new Ali_TRD_Self_Event();
+    TRD_Photon = new Ali_TRD_Photon();
+    TRD_Nuclear_interaction = new Ali_TRD_Nuclear_interaction();
+    TRD_Kalman_track = new Ali_Kalman_Track();
+    TPC_track = new Ali_TPC_Track();
+
+    //create new 
+
 
     NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv:dotprod:TPCdEdx_A:dca_TPC_A:p_TPC_A:TPCdEdx_B:dca_TPC_B:p_TPC_B:InvMK0s:dcaAB:InvML:InvMaL");
     NT_secondary_vertices ->SetAutoSave( 5000000 );
@@ -104,6 +113,11 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
     Tree_TRD_ST_Event_out  ->Branch("Tree_TRD_ST_Event_branch_out"  , "TRD_ST_Event_out", TRD_ST_Event_out );
     Tree_TRD_ST_Event_out  ->SetAutoSave( 5000000 );
+
+    Tree_TRD_Self_Event_out  = NULL;
+    Tree_TRD_Self_Event_out  = new TTree("Tree_TRD_Self_Event" , "TRD_Self_Events" );
+    Tree_TRD_Self_Event_out  ->Branch("Tree_TRD_Self_Event_branch"  , "TRD_Self_Event", TRD_Self_Event );
+    Tree_TRD_Self_Event_out  ->SetAutoSave( 5000000 );
     //------------------------------------------------
 
 
@@ -973,11 +987,41 @@ Float_t Ali_TRD_ST_Analyze::Calc_nuclev_bitmap(vector<Int_t> vec_idx_kalman_trac
 }
 //----------------------------------------------------------------------------------------
 
+void Ali_TRD_ST_Analyze::set_self_event_info()
+{
+// ???? will it work here  ? Fill event information
+    TRD_Self_Event ->clearPhotonList();
+    TRD_Self_Event ->clearNucInteractionsList();
+
+    TRD_Self_Event ->setTriggerWord( TRD_ST_Event->getTriggerWord() );
+    TRD_Self_Event ->setx( TRD_ST_Event->getx() );
+    TRD_Self_Event ->sety( TRD_ST_Event->gety() );
+    TRD_Self_Event ->setz( TRD_ST_Event->getz() );
+    TRD_Self_Event ->setid( TRD_ST_Event->getid() );
+    TRD_Self_Event ->setN_TPC_tracks( TRD_ST_Event->getN_tracks() );
+    TRD_Self_Event ->setN_TRD_tracklets( TRD_ST_Event->getN_TRD_tracklets() );
+    TRD_Self_Event ->setBeamIntAA( TRD_ST_Event->getBeamIntAA() );
+    TRD_Self_Event ->setT0zVertex( TRD_ST_Event->getT0zVertex() );
+    TRD_Self_Event ->setcent_class_ZNA( TRD_ST_Event->getcent_class_ZNA() );
+    TRD_Self_Event ->setcent_class_ZNC( TRD_ST_Event->getcent_class_ZNC() );
+    TRD_Self_Event ->setcent_class_V0A( TRD_ST_Event->getcent_class_V0A() );
+    TRD_Self_Event ->setcent_class_V0C( TRD_ST_Event->getcent_class_V0C() );
+    TRD_Self_Event ->setcent_class_V0M( TRD_ST_Event->getcent_class_V0M() );
+    TRD_Self_Event ->setcent_class_CL0( TRD_ST_Event->getcent_class_CL0() );
+    TRD_Self_Event ->setcent_class_CL1( TRD_ST_Event->getcent_class_CL1() );
+    TRD_Self_Event ->setcent_class_SPD( TRD_ST_Event->getcent_class_SPD() );
+    TRD_Self_Event ->setcent_class_V0MEq( TRD_ST_Event->getcent_class_V0MEq() );
+    TRD_Self_Event ->setcent_class_V0AEq( TRD_ST_Event->getcent_class_V0AEq() );
+    TRD_Self_Event ->setcent_class_V0CEq( TRD_ST_Event->getcent_class_V0CEq() );
+    //printf("Event information filled \n");
+}
 
 
 //----------------------------------------------------------------------------------------
 Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t flag_TRD_TPC_tracks)
 {
+    
+
     Double_t min_radius_cut = 250.0;
     Double_t max_radius_cut = 356.0;
     if(flag_TRD_TPC_tracks == 0) // TRD tracks
@@ -1038,11 +1082,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
     Int_t i_comb             = 0;
     Int_t i_vertex_acc       = 0;
     Int_t i_close_TPC_photon = 0;
+
     //printf("N_helices: %d \n",(Int_t)vec_helices.size());
     for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices.size() - 1); i_track_A++) // TRD Kalman track A
-    {
+    {        
         for(Int_t i_track_B = (i_track_A+1); i_track_B < (Int_t)vec_helices.size(); i_track_B++) // TRD Kalman track B
-        {
+        {            
             Float_t pathA_est, pathB_est, dcaAB_est;
             //printf("i_track_A: %d, i_track_B: %d, i_comb: %d \n",i_track_A,i_track_B,i_comb);
             Int_t est_return = fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
@@ -1176,6 +1221,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
 
                     Double_t pTA, pzA, pA, pTB, pzB, pB, CA, CB;
+                    Double_t Chi_2A = -1.0;
+                    Double_t Chi_2B = -1.0;
                     Double_t TPCdEdx_A = -1.0;
                     Double_t dca_TPC_A = -1.0;
                     Double_t p_TPC_A   = -1.0;
@@ -1193,6 +1240,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         pB  = TMath::Sqrt(pTB*pTB + pzB*pzB); // p
                         CA  = mHelices_kalman[i_track_A][4]; // curvature
                         CB  = mHelices_kalman[i_track_B][4]; // curvature
+
+                        Chi_2A = mChi_2s_kalman[i_track_A];
+                        Chi_2B = mChi_2s_kalman[i_track_B];
+
+                        //n_(Int_t)vec_kalman_TRD_trackets[i_track_A].size();
+
                     }
                     else // TPC track
                     {
@@ -1222,7 +1275,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 #if defined(USEEVE)
                     //if(graphics) TEveP_sec_vertices ->SetPoint(i_vertex,vertex_point[0],vertex_point[1],vertex_point[2]);
 #endif
-
                     //-------------------------------------------------
                     // Armenteros-Podolanski
                     //printf("radius_vertex: %4.3f \n",radius_vertex);
@@ -1285,11 +1337,10 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                         //printf("AP_value: %4.3f, dot_product_dir_vertex: %4.3f, CA*CB: %4.3f, pTA: %4.3f, pTB: %4.3f \n",AP_value,dot_product_dir_vertex,CA*CB,pTA,pTB);
                         if(AP_value < AP_cut_value && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.8 && pTB < 0.8 && dot_product_dir_vertex > 0.9)
-                        {
+                        {                            
                             Double_t dca_min  = 999.0;
                             Double_t path_min = -999.0;
                             Int_t    i_track_min = -1;
-
 
                             //------------
                             if(flag_TRD_TPC_tracks == 0) // TRD track
@@ -1317,7 +1368,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                                 }
                             }
                             //------------
-
 
                             //-----------------------------------
                             // Topology photon conversion cuts - for print out
@@ -1370,7 +1420,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                             }
                             //-----------------------------------
 
-
                             //-----------------------------------
                             // Ntuple for photon candidates
                             Arr_seconary_params[0]  = (Float_t)vertex_point[0];
@@ -1406,6 +1455,78 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                             //printf("bit_TRD_layer_shared: %d \n",bit_TRD_layer_shared);
                             //-----------------------------------
 
+                            //-----FILL NEW CLASS PHOTON-----------------------------------
+
+                            TRD_Photon = TRD_Self_Event ->createPhoton();
+
+                            TRD_Photon ->set_vertex_point((Float_t)vertex_point[0],(Float_t)vertex_point[1],(Float_t)vertex_point[1]);
+                            TRD_Photon ->set_bit_TRD_layer_shared((Float_t)bit_TRD_layer_shared);
+                            TRD_Photon ->set_pT_AB((Float_t)pT_AB);
+                            TRD_Photon ->set_AP_pT((Float_t)AP_pT);
+                            TRD_Photon ->set_AP_alpha((Float_t)AP_alpha);
+                            TRD_Photon ->set_dca_min((Float_t)dca_min);
+                            TRD_Photon ->set_path_min((Float_t)path_min);
+                            TRD_Photon ->set_Inv_mass_AB((Float_t)Inv_mass_AB);
+                            TRD_Photon ->set_Eta_AB((Float_t)Eta_AB);
+                            TRD_Photon ->set_Phi_AB((Float_t)Phi_AB);
+                            TRD_Photon ->set_dot_product_dir_vertex((Float_t)dot_product_dir_vertex);
+                            TRD_Photon ->set_Inv_mass_AB_K0s((Float_t)Inv_mass_AB_K0s);
+                            TRD_Photon ->set_dcaAB((Float_t)dcaAB);
+                            TRD_Photon ->set_Inv_mass_AB_Lambda((Float_t)Inv_mass_AB_Lambda);
+                            TRD_Photon ->set_Inv_mass_AB_antiLambda((Float_t)Inv_mass_AB_antiLambda);
+
+                            //--------- fill TRD/TPC track info --------------------------
+
+                            if (flag_TRD_TPC_tracks == 0) //Kalman
+                            {
+                                for (Int_t i_trackAB = 0; i_trackAB < 2; i_trackAB++)
+                                {
+                                    //printf("test1 \n");
+                                    TRD_Kalman_track = TRD_Photon -> createKalman_Track();
+                                    //printf("test2 \n");
+
+
+                                    if (i_trackAB == 0 ) { 
+                                        TRD_Kalman_track ->set_Chi2(Chi_2A); 
+                                        TRD_Kalman_track ->setKalmanHelix_param(vec_helices[i_track_A]->getHelix_param(0),vec_helices[i_track_A]->getHelix_param(1),
+                                            vec_helices[i_track_A]->getHelix_param(2),vec_helices[i_track_A]->getHelix_param(3),
+                                            vec_helices[i_track_A]->getHelix_param(4),vec_helices[i_track_A]->getHelix_param(5)); 
+
+                                    }
+                                    if (i_trackAB == 1 ) { 
+                                        TRD_Kalman_track ->set_Chi2(Chi_2B);
+                                        TRD_Kalman_track ->setKalmanHelix_param(vec_helices[i_track_B]->getHelix_param(0),vec_helices[i_track_B]->getHelix_param(1),
+                                            vec_helices[i_track_B]->getHelix_param(2),vec_helices[i_track_B]->getHelix_param(3),
+                                            vec_helices[i_track_B]->getHelix_param(4),vec_helices[i_track_B]->getHelix_param(5)); 
+                                    }
+                                }
+                            }
+
+                            if (flag_TRD_TPC_tracks == 1) //TPC
+                            {
+                                for (Int_t i_trackAB = 0; i_trackAB < 2; i_trackAB++)
+                                {
+                                    TPC_track = TRD_Photon -> createTPC_Track();
+
+                                    if (i_trackAB == 0 ) { 
+                                        TPC_track ->setHelix(vec_helices[i_track_A]->getHelix_param(0),vec_helices[i_track_A]->getHelix_param(1),
+                                            vec_helices[i_track_A]->getHelix_param(2),vec_helices[i_track_A]->getHelix_param(3),
+                                            vec_helices[i_track_A]->getHelix_param(4),vec_helices[i_track_A]->getHelix_param(5)); 
+
+                                    }
+                                    if (i_trackAB == 1 ) { 
+                                        TPC_track ->setHelix(vec_helices[i_track_B]->getHelix_param(0),vec_helices[i_track_B]->getHelix_param(1),
+                                            vec_helices[i_track_B]->getHelix_param(2),vec_helices[i_track_B]->getHelix_param(3),
+                                            vec_helices[i_track_B]->getHelix_param(4),vec_helices[i_track_B]->getHelix_param(5)); 
+                                    }
+                                }
+                            }
+
+                            //--------- end fill Photon and TRD/TPC track info --------------------------
+
+
+
+                            //-------------------------------------------------------------
 
 
                             if(flag_TRD_TPC_tracks == 0) // TRD tracks
@@ -1421,6 +1542,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                                     if(graphics)
                                     {
                                         // Draw kalman tracks
+                                        
                                         Draw_Kalman_Helix_Tracks(i_track_A,kGreen,280.0,500.0);
                                         Draw_Kalman_Helix_Tracks(i_track_B,kRed,280.0,500.0);
 
@@ -1466,7 +1588,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
                     }
                     //-------------------------------------------------
-
                     i_vertex++;
                 }
                 i_comb++;
@@ -1474,11 +1595,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
         }
     }
 
+
     //printf("Number of secondary vertices found: %d \n",i_vertex);
 
 
     if(flag_TRD_TPC_tracks == 0) // TRD tracks
-    {
+    {        
         //------------------------
         Int_t N_sec_vertices = (Int_t)vec_TV3_secondary_vertices.size();
         Double_t radius_sec_vertex;
@@ -1527,6 +1649,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
                 TV3_avg_sec_vertex *= 1.0/(Float_t)(N_close_vertex);
 
+
                 // Determine TPC track(s) which are close to nuclear interaction vertex
                 Float_t pathA_dca = -1.0;
                 Float_t dcaAB_dca = -1.0;
@@ -1568,7 +1691,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                 //-------------------------------
 
 
-
                 Int_t flag_close_TPC_track = 0;
                 Int_t idx_close_TPC_track = -1;
                 for(Int_t i_track = 0; i_track < NumTracks; i_track++)
@@ -1595,7 +1717,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                 }
 
                 //printf("dcaAB_min: %4.3f \n",dcaAB_min);
-
 
 
                 //-----------------------------------
@@ -1628,8 +1749,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                     //printf(" --> bitmap read: %d, i_lay: %d, N_tracklets: %d \n",(Int_t)nuclev_bitmap,i_lay,N_tracklets_layer);
                 }
                 //-----------------------------------
-
-
 
                 //-----------------------------------
                 // Toplogy selection for nuclear events
@@ -1675,8 +1794,48 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                 Arr_cluster_params[11]	= (Float_t)nuclev_bitmap;
 
                 NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
-                //-----------------------------------
 
+                TRD_Nuclear_interaction = TRD_Self_Event -> createNucInteraction();
+
+                TRD_Nuclear_interaction -> set_avg_sec_vertex((Float_t)TV3_avg_sec_vertex[0],(Float_t)TV3_avg_sec_vertex[1],(Float_t)TV3_avg_sec_vertex[2]);
+                TRD_Nuclear_interaction -> set_N_close_vertex((Float_t)N_close_vertex);
+                TRD_Nuclear_interaction -> set_dcaAB_min((Float_t)dcaAB_min);
+                TRD_Nuclear_interaction -> set_dcaAB_min((Float_t)dcaAB_min);
+                TRD_Nuclear_interaction -> set_TOFsignal_min((Float_t)TOFsignal_min);
+                TRD_Nuclear_interaction -> set_Track_length_min((Float_t)Track_length_min);
+                TRD_Nuclear_interaction -> set_TPCdEdx_min((Float_t)TPCdEdx_min);
+                TRD_Nuclear_interaction -> set_pT_min((Float_t)pT_min);
+                TRD_Nuclear_interaction -> set_momentum_min((Float_t)momentum_min);
+                TRD_Nuclear_interaction -> set_nuclev_bitmap((Float_t)nuclev_bitmap);
+
+                if (flag_TRD_TPC_tracks == 0) //Kalman
+                {
+                    for (Int_t i_track = 0; i_track < (Int_t)vec_idx_kalman_tracks_nuclev.size(); i_track++)
+                    {
+                        //printf("test1 \n");
+                        TRD_Kalman_track = TRD_Nuclear_interaction -> createKalman_Track();
+                        //printf("test2 \n");
+
+                            TRD_Kalman_track ->setKalmanHelix_param(vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(0),vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(1),
+                                vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(2),vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(3),
+                                vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(4),vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(5)); 
+                    }
+                }
+                if (flag_TRD_TPC_tracks == 1) //TPC
+                {
+                    for (Int_t i_track = 0; i_track < (Int_t)vec_idx_kalman_tracks_nuclev.size(); i_track++)
+                    {
+                        //printf("test1 \n");
+                        TPC_track = TRD_Nuclear_interaction -> createTPC_Track();
+                        //printf("test2 \n");
+
+                            TPC_track ->setHelix(vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(0),vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(1),
+                                vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(2),vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(3),
+                                vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(4),vec_helices[vec_idx_kalman_tracks_nuclev[i_track]]->getHelix_param(5)); 
+                    }
+                }
+
+                //-----------------------------------
 
 
 
@@ -1713,6 +1872,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                 i_vertex_nucl_int++;
             }
             //if(N_close_vertex > 3) printf("%s ----> N_close_vertex: %d %s, event: %lld \n",KRED,N_close_vertex,KNRM,Global_Event);
+
         }
         //------------------------
         //cout << "End of nuclear interaction finder" << endl;
@@ -1760,6 +1920,9 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 #endif
     }
 
+    Tree_TRD_Self_Event_out ->Fill();
+
+
     return flag_found_good_AP_vertex;
 }
 //----------------------------------------------------------------------------------------
@@ -1785,6 +1948,14 @@ void Ali_TRD_ST_Analyze::set_Kalman_helix_params(vector<vector<Double_t>> mHelic
 }
 //----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::set_Kalman_chi_2(vector<Double_t> mChi_2s_kalman_in) //mChi_2s_tracker_KF
+{
+    //printf("Ali_TRD_ST_Analyze::set_Kalman_helix_params");
+    mChi_2s_kalman = mChi_2s_kalman_in;
+
+}
+//----------------------------------------------------------------------------------------
 
 
 //----------------------------------------------------------------------------------------
@@ -3103,6 +3274,14 @@ void Ali_TRD_ST_Analyze::Write()
 {
     printf("Write data to file \n");
     outputfile ->cd();
+    outputfile ->mkdir("ST_Physics");
+    outputfile ->cd("ST_Physics");
+
+    Tree_TRD_Self_Event_out -> Write();
+
+    outputfile ->cd();
+
+
     NT_secondary_vertices         ->AutoSave("SaveSelf");
     NT_secondary_vertex_cluster   ->AutoSave("SaveSelf");
     TH2D_AP_plot          ->Write();

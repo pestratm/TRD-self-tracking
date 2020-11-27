@@ -19,6 +19,11 @@ vector<vector<Double_t>> TRD_Kalman_Trackfinder::get_Kalman_helix_params()
     return mHelices;
 }
 
+vector<Double_t> TRD_Kalman_Trackfinder::get_Kalman_chi_2()
+{
+    return mChi_2s;
+}
+
 //gives the 4 measurements of a tracklet (y,z,sin(phi),tan(lambda)) back
 ROOT::Math::SVector<double,4> TRD_Kalman_Trackfinder::measure(Ali_TRD_ST_Tracklets* tracklet){
 	ROOT::Math::SVector<double,4> measurement;
@@ -708,6 +713,7 @@ void TRD_Kalman_Trackfinder::Kalman(vector<Ali_TRD_ST_Tracklets*> start)
 			if (charge*xc>charge*x[0])  fHelix[2] = -fHelix[2];
 		}
 		mHelices.push_back(fHelix);
+		mChi_2s.push_back(mChi_2);
 		
 		if(mShow){
 			cout<<"pT: "<<pt <<endl;	

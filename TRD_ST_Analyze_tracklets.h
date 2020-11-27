@@ -49,10 +49,21 @@ using namespace std;
 
 #include "Ali_TRD_ST.h"
 #include "Ali_TRD_ST_LinkDef.h"
+#include "Ali_TRD_Self_Event.h" 
+#include "Ali_TRD_Self_EventLinkDef.h" 
+
 
 ClassImp(Ali_TRD_ST_Tracklets)
-    ClassImp(Ali_TRD_ST_TPC_Track)
-    ClassImp(Ali_TRD_ST_Event)
+ClassImp(Ali_TRD_ST_TPC_Track)
+ClassImp(Ali_TRD_ST_Event)
+
+
+ClassImp(Ali_Kalman_Track)
+ClassImp(Ali_TPC_Track)
+ClassImp(Ali_TRD_Photon)
+ClassImp(Ali_TRD_Nuclear_interaction)
+ClassImp(Ali_TRD_Self_Event)
+
 
 
 #define KNRM  "\x1B[0m"
@@ -84,6 +95,23 @@ private:
     Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track_out;
     Ali_TRD_ST_Event*     TRD_ST_Event_out;
     TTree* Tree_TRD_ST_Event_out;
+
+    //stuff for new classes 
+    Ali_Kalman_Track* TRD_Kalman_track;
+    Ali_TPC_Track* TPC_track;
+    Ali_TRD_Self_Event*   TRD_Self_Event;
+    Ali_TRD_Photon* TRD_Photon;
+    Ali_TRD_Nuclear_interaction* TRD_Nuclear_interaction;
+
+    //Ali_Kalman_Track* TRD_Kalman_track_out;
+    //Ali_TPC_Track* TPC_track_out;
+    Ali_TRD_Self_Event*   TRD_Self_Event_out;
+    Ali_TRD_Photon* TRD_Photon_out;
+    Ali_TRD_Nuclear_interaction* TRD_Nuclear_interaction_out;
+
+    
+    TTree* Tree_TRD_Self_Event_out;
+
 
     TH2D* TH2D_AP_plot;
     const Int_t N_AP_radii = 20;
@@ -167,6 +195,7 @@ private:
     vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
 
     vector<vector<Double_t>> mHelices_kalman; // Kalman helix parameters, based on AliHelix
+    vector<Double_t> mChi_2s_kalman; // Kalman helix parameters, based on AliHelix
     vector<vector<Double_t>> mHelices_TPC; // Kalman helix parameters, based on AliHelix
     vector<vector<Double_t>> PID_params_TPC;
     Double_t aliHelix_params[6];
@@ -210,6 +239,8 @@ public:
     void Draw_hist_TPC_tracklet_diffs();
     TH1I* get_h_good_bad_TRD_chambers();
 
+    void set_self_event_info();
+
     Ali_TRD_ST_Tracklets** Tracklets;
     vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks;
     vector<Int_t> vec_idx_matched_TPC_track;
@@ -217,6 +248,7 @@ public:
     void Draw_Kalman_Tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks);
     void Draw_matched_Kalman_Tracklets(Int_t i_track_plot);
     void set_Kalman_helix_params(vector<vector<Double_t>> mHelices_kalman_in);
+    void set_Kalman_chi_2(vector<Double_t> mChi_2s_in);
     Int_t set_TPC_helix_params(Long64_t i_event);
     void set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_in);
     void Calc_Kalman_efficiency();
