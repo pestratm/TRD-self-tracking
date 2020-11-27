@@ -68,6 +68,7 @@ class TRD_Kalman_Trackfinder
   Double_t b_field	=	0.5;
 
   vector<vector<Double_t>> mHelices; // Kalman helix parameters, based on AliHelix
+  vector<Double_t> mChi_2s;          //chi_2 of every Kalman track
 
   Double_t mTRD_layer_radii[6][3] = {
     { 0,297.5, 306.5 },
@@ -102,6 +103,7 @@ class TRD_Kalman_Trackfinder
   vector< vector<Ali_TRD_ST_Tracklets*> > Kalman_Trackfit(vector< vector<Ali_TRD_ST_Tracklets*> > tracks,Int_t prim_vertex);
   vector<vector<Ali_TRD_ST_Tracklets*>> Kalman_Trackfind(Ali_TRD_ST_Tracklets** Tracklets, Int_t Num_Tracklets, Int_t prim_vertex);
   vector<vector<Double_t>> get_Kalman_helix_params();
+  vector<Double_t> get_Kalman_chi_2();
   void set_layer_radii_hist(TH1D* h_layer_radii_in)
   {
       h_layer_radii = h_layer_radii_in;

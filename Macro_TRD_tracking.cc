@@ -69,8 +69,8 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
     Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 0; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
-    Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
-    Int_t draw_all_tracklets        = 0; // Draw all TRD tracklets
+    Int_t draw_all_TRD_tracks       = 1; // Draw all TRD tracks
+    Int_t draw_all_tracklets        = 1; // Draw all TRD tracklets
     Int_t draw_found_tracklets      = 0; // Draws tracklets found by tracker
     Int_t draw_matched_TPC_track    = 0; // Draw TPC to TRD matched TPC track
     Int_t draw_matched_TRD_track    = 0; // Draw TPC to TRD matched Kalman/TF track
@@ -80,9 +80,12 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
 
     printf("TRD_ST_Analyze_tracklets started \n");
     Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,out_file_name,graphics);
+    //Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,"test.root",graphics);
+
     TRD_ST_Analyze ->set_input_lists(inlists_dir);
     TRD_ST_Analyze ->set_input_dir(input_dir);
     TRD_ST_Analyze ->Init_tree(input_list.Data());
+
 
     Long64_t N_Events = TRD_ST_Analyze ->get_N_Events();
     TH1D* h_layer_radii = TRD_ST_Analyze ->get_layer_radii_hist();
@@ -105,6 +108,7 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
     Int_t start_event = 0;
     Int_t stop_event  = (Int_t) N_Events;
+    //Int_t stop_event  = 15;
     if(event_plot != -1)
     {
         start_event = event_plot;
@@ -123,6 +127,7 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
 
         vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets_KF;
         vector<vector<Double_t>>                mHelices_tracker_KF;
+        vector<Double_t>                        mChi_2s_tracker_KF;
         vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets_TF;
         vector<vector<Double_t>>                mHelices_tracker_TF;
 
@@ -148,9 +153,16 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
             vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
 
             mHelices_tracker_KF = kalid.get_Kalman_helix_params();
+            mChi_2s_tracker_KF = kalid.get_Kalman_chi_2();
+
             //printf("size of mHelices_tracker: %d \n",(Int_t)mHelices_tracker_KF.size());
 
+            //add here chi2 or use different new class already? Ali_Helix replace with new?
+
             TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_tracker_KF);
+
+            TRD_ST_Analyze ->set_Kalman_chi_2(mChi_2s_tracker_KF);
+
             TRD_ST_Analyze ->set_Kalman_TRD_tracklets(tracker_found_tracklets_KF);
 
             if(graphics && draw_found_tracklets) TRD_ST_Analyze ->Draw_Kalman_Tracklets(tracker_found_tracklets_KF); // Draws the Kalman matched TRD tracklets
@@ -181,6 +193,7 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
         //TRD_ST_Analyze ->Calibrate(graphics);
         TRD_ST_Analyze ->Calc_Kalman_efficiency();
 
+        TRD_ST_Analyze ->set_self_event_info();
 
         Int_t found_good_AP_vertex_TPC = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,0); // (0 = no graphics), (0 = TRD, 1 = TPC)
         Int_t found_good_AP_vertex_TRD = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,1); // (0 = no graphics), (0 = TRD, 1 = TPC)
