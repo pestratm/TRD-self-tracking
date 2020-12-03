@@ -662,6 +662,55 @@ ClassDef(Ali_TRD_Self_Event,1);  // A simple event compiled of tracks
 };
 //----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
+class Ali_Helix_copy : public TObject
+{
+private:
+    Float_t        aliHelix_params[6];
+
+
+public:
+    Ali_Helix_copy() :
+        aliHelix_params()
+    {}
+        ~Ali_Helix_copy(){}
+
+        void setHelix(Float_t a, Float_t b,Float_t c,Float_t d,Float_t e,Float_t f)
+        {
+            aliHelix_params[0] = a; // y0
+            aliHelix_params[1] = b; // z0
+            aliHelix_params[2] = c;
+            aliHelix_params[3] = d;
+            aliHelix_params[4] = e; // c curvature
+            aliHelix_params[5] = f; // x0
+        }
+
+        Float_t getHelix_param(Int_t i_param) const              {return aliHelix_params[i_param]; }
+
+        void Evaluate(Double_t t, // helix evaluation, taken from AliHelix
+                      Double_t r[3]);  //radius vector
+
+        ClassDef(Ali_Helix_copy,1);
+};
+//----------------------------------------------------------------------------------------
+
+
+
+//________________________________________________________________________
+void Ali_Helix_copy::Evaluate(Double_t t,Double_t r[3])  //radius vector
+{
+  //--------------------------------------------------------------------
+  // Calculate position of a point on a track and some derivatives at given phase
+  //--------------------------------------------------------------------
+  float phase=aliHelix_params[4]*t+aliHelix_params[2];
+  Double_t sn=sinf(phase), cs=cosf(phase);
+  //  Double_t sn=TMath::Sin(phase), cs=TMath::Cos(phase);
+
+  r[0] = aliHelix_params[5] + sn/aliHelix_params[4];
+  r[1] = aliHelix_params[0] - cs/aliHelix_params[4];
+  r[2] = aliHelix_params[1] + aliHelix_params[3]*t;
+}
+//________________________________________________________________________
 
 
 #endif // __ALI_TRD_SELF_EVENT_H__
