@@ -64,7 +64,7 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
     for(Long64_t event = start_event; event < stop_event; event++)
     {
         //-------> Tracklets = new Ali_TRD_ST_Tracklets*[NumTracklets]; what is this??
-        //class Ali_Helix
+        //class _copy
         //all Floates?
 
         if (event != 0  &&  event % 50 == 0)

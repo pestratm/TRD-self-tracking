@@ -147,7 +147,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
 		        	Double_t Chi2 = Kalman_Track_photon ->get_Chi2();
 		        	vec_photon_kalman_chi2[i_photon].push_back(Chi2);
 
-		        	vec_photon_kalman_helices[i_photon].push_back(new Ali_Helix());
+		        	vec_photon_kalman_helices[i_photon].push_back(new Ali_Helix_copy());
 
 		        	vec_photon_kalman_helices[i_photon][(Int_t)vec_photon_kalman_helices[i_photon].size()-1] ->setHelix(Kalman_Track_photon->getKalmanHelix_param(0),
 		        		Kalman_Track_photon->getKalmanHelix_param(1),Kalman_Track_photon->getKalmanHelix_param(2),
@@ -163,7 +163,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
 		        {
 		        	TPC_Track_photon = TRD_Photon ->getTPC_Track(i_track);
 
-		        	vec_photon_tpc_helices[i_photon].push_back(new Ali_Helix());
+		        	vec_photon_tpc_helices[i_photon].push_back(new Ali_Helix_copy());
 		        	vec_photon_tpc_helices[i_photon][(Int_t)vec_photon_tpc_helices[i_photon].size()-1] ->setHelix(TPC_Track_photon->getHelix_param(0),
 		        		TPC_Track_photon->getHelix_param(1),TPC_Track_photon->getHelix_param(2),
 		        		TPC_Track_photon->getHelix_param(3),TPC_Track_photon->getHelix_param(4),TPC_Track_photon->getHelix_param(5));
@@ -222,7 +222,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
 		        	Double_t Chi2 = Kalman_Track_interact ->get_Chi2();
 		        	vec_ni_kalman_chi2[i_interaction].push_back(Chi2);
 
-		        	vec_ni_kalman_helices[i_interaction].push_back(new Ali_Helix());
+		        	vec_ni_kalman_helices[i_interaction].push_back(new Ali_Helix_copy());
 
 		        	vec_ni_kalman_helices[i_interaction][(Int_t)vec_ni_kalman_helices[i_interaction].size()-1] ->setHelix(Kalman_Track_interact->getKalmanHelix_param(0),
 		        		Kalman_Track_interact->getKalmanHelix_param(1),Kalman_Track_interact->getKalmanHelix_param(2),
@@ -238,7 +238,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
 		        {
 		        	TPC_Track_interact = TRD_Nuclear_interaction ->getTPC_Track(i_track);
 
-		        	vec_ni_tpc_helices[i_interaction].push_back(new Ali_Helix());
+		        	vec_ni_tpc_helices[i_interaction].push_back(new Ali_Helix_copy());
 		        	vec_ni_tpc_helices[i_interaction][(Int_t)vec_ni_tpc_helices[i_interaction].size()-1] ->setHelix(TPC_Track_interact->getHelix_param(0),
 		        		TPC_Track_interact->getHelix_param(1),TPC_Track_interact->getHelix_param(2),
 		        		TPC_Track_interact->getHelix_param(3),TPC_Track_interact->getHelix_param(4),TPC_Track_interact->getHelix_param(5));
