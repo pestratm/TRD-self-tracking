@@ -45,7 +45,7 @@ ClassImp(Ali_TPC_Track)
 ClassImp(Ali_TRD_Photon)
 ClassImp(Ali_TRD_Nuclear_interaction)
 ClassImp(Ali_TRD_Self_Event)
-ClassImp(Ali_Helix)
+ClassImp(Ali_Helix_copy)
 
 class Ali_TRD_physics_analysis
 {
@@ -89,16 +89,16 @@ private:
     vector< TVector3 > vec_PhotonVertex; //[i_photon]
     
     vector< vector< Double_t>> vec_photon_kalman_chi2; //[i_photon][i_track]
-    vector< vector< Ali_Helix* >> vec_photon_kalman_helices; //[i_photon][i_track]
-    vector< vector< Ali_Helix* >> vec_photon_tpc_helices; //[i_photon][i_track]
+    vector< vector< Ali_Helix_copy* >> vec_photon_kalman_helices; //[i_photon][i_track]
+    vector< vector< Ali_Helix_copy* >> vec_photon_tpc_helices; //[i_photon][i_track]
 
     //things for Nuclear interactions
     TVector3 TV3_NIVertex;
     vector< TVector3 > vec_NIVertex;
 
     vector< vector< Double_t>> vec_ni_kalman_chi2; //[i_interaction][i_track]
-    vector< vector< Ali_Helix* >> vec_ni_kalman_helices; //[i_interaction][i_track]
-    vector< vector< Ali_Helix* >> vec_ni_tpc_helices; //[i_interaction][i_track]
+    vector< vector< Ali_Helix_copy* >> vec_ni_kalman_helices; //[i_interaction][i_track]
+    vector< vector< Ali_Helix_copy* >> vec_ni_tpc_helices; //[i_interaction][i_track]
 
     //things for Nuclear ingeractions
     
