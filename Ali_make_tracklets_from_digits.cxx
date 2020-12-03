@@ -267,13 +267,24 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     cout << "String: " << string.Data() << ", run_number_from_list: " << run_number_from_list << endl;
     //-----------------------------------
 
+    //AliCDBManager::SetRun(run_number_from_list);
+
+    AliCDBManager* CDBman = AliCDBManager::Instance();
+    if (!CDBman->IsDefaultStorageSet())
+    {
+        CDBman->SetDefaultStorage("local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB");
+        //man->SetRun(fESD->GetRunNumber());
+        CDBman->SetRun(run_number_from_list);
+    }
+
 
     // AliCDBEntry->GetObject()->IsA()->GetName()
     //-----------------------------------
     // Pad noise
     cout << "Open pad noise calibration file from database" << endl;
     //AliCDBEntry *entryB = AliCDBManager::Instance()->Get("TRD/Calib/PadNoise",run_number_from_list); // new
-    AliCDBEntry *entryB = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
+    //AliCDBEntry *entryB = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
+    AliCDBEntry *entryB = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
     PadNoise = (AliTRDCalPad*)entryB->GetObject();
     cout << "Calibration data opened" << endl;
     //-----------------------------------
@@ -282,7 +293,8 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //-----------------------------------
     // ChamberVdrift
     cout << "Open ChamberVdrift calibration file from database" << endl;
-    AliCDBEntry *entryC = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberVdrift",run_number_from_list);
+    //AliCDBEntry *entryC = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberVdrift",run_number_from_list);
+    AliCDBEntry *entryC = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberVdrift",run_number_from_list);
     ChamberVdrift = (AliTRDCalDet*)entryC->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -295,7 +307,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //-----------------------------------
     // ChamberT0
     cout << "Open ChamberT0 calibration file from database" << endl;
-    AliCDBEntry *entryC1 = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberT0",run_number_from_list);
+    AliCDBEntry *entryC1 = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberT0",run_number_from_list);
     ChamberT0 = (AliTRDCalDet*)entryC1->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -308,7 +320,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //-----------------------------------
     // LocalT0
     cout << "Open LocalT0 calibration file from database" << endl;
-    AliCDBEntry *entryC2 = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/LocalT0",run_number_from_list);
+    AliCDBEntry *entryC2 = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/LocalT0",run_number_from_list);
     LocalT0_pad = (AliTRDCalPad*)entryC2->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -325,7 +337,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     // LocalVdrift
     // Values are all 0
     cout << "Open LocalVdrift calibration file from database" << endl;
-    AliCDBEntry *entryD = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/LocalVdrift",run_number_from_list);
+    AliCDBEntry *entryD = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/LocalVdrift",run_number_from_list);
     AliTRDCalDet *LocalVdrift = (AliTRDCalDet*)entryD->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -340,7 +352,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     // ChamberExB
     // Values are all 0
     cout << "Open ChamberExB calibration file from database" << endl;
-    AliCDBEntry *entryE = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberExB",run_number_from_list);
+    AliCDBEntry *entryE = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberExB",run_number_from_list);
     ChamberExB = (AliTRDCalDet*)entryE->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -354,7 +366,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //----------------------------------------------------------------------
     // Krypton calibration -> pad gain factors
     cout << "Open Krypto calibration file from database" << endl;
-    AliCDBEntry *entryF = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/Krypton_2015-02",run_number_from_list);
+    AliCDBEntry *entryF = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/Krypton_2015-02",run_number_from_list);
     KryptoGain = (AliTRDCalOnlineGainTable*)entryF->GetObject();
     cout << "Calibration data opened" << endl;
     //Float_t GainFactor = KryptoGain ->GetGainCorrectionFactor(i_det,i_row,i_column);
@@ -365,7 +377,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //----------------------------------------------------------------------
     // Chamber gain factors
     cout << "Open chamber gain file from database" << endl;
-    AliCDBEntry *entryG = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberGainFactor",run_number_from_list);
+    AliCDBEntry *entryG = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberGainFactor",run_number_from_list);
     chambergain = (AliTRDCalDet*)entryG->GetObject();
     //Float_t valuegainiteration = chambergain->GetValue(det);
     //----------------------------------------------------------------------
