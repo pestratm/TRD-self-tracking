@@ -157,7 +157,7 @@ Ali_make_tracklets_from_digits::Ali_make_tracklets_from_digits(const char *name)
 fDigitsInputFileName("TRD.FltDigits.root"), fDigitsInputFile(0),
 fDigitsOutputFileName(""), fDigitsOutputFile(0),
 fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),TRD_ST_Tracklet(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0), fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),
-fListOfHistos(0x0),fTree(0x0),h_dca(0x0),h_dca_xyz(0x0), h2D_TPC_dEdx_vs_momentum(0x0), h_ADC_tracklet(0x0), h_ADC_vs_time(0x0), fPIDResponse(0), EsdTrackCuts(0)
+fListOfHistos(0x0),fTree(0x0), fPIDResponse(0), EsdTrackCuts(0)
 {
     // Constructor
 
@@ -221,6 +221,10 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     cout << "In UserNotify" << endl;
     cout << "fDigitsInputFileName: " << fDigitsInputFileName.Data() << endl;
 
+    auto grid = TGrid::Connect("alien://");
+
+    cout << "Connected to GRID" << endl;
+
     fParam = AliTRDCommonParam::Instance();
 
     delete fDigitsInputFile;
@@ -268,7 +272,8 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //-----------------------------------
     // Pad noise
     cout << "Open pad noise calibration file from database" << endl;
-    AliCDBEntry *entryB = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list);
+    //AliCDBEntry *entryB = AliCDBManager::Instance()->Get("TRD/Calib/PadNoise",run_number_from_list); // new
+    AliCDBEntry *entryB = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
     PadNoise = (AliTRDCalPad*)entryB->GetObject();
     cout << "Calibration data opened" << endl;
     //-----------------------------------
@@ -458,7 +463,6 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 	cout << "i_det: " << i_det << ", N_columns: " << N_columns << endl;
     }
 
-    auto grid = TGrid::Connect("alien://");
 
     //---------------------------------------
     // Load TRD geometry, created by Create_TRD_geometry_files.cc
@@ -633,25 +637,6 @@ void Ali_make_tracklets_from_digits::UserCreateOutputObjects()
 
     fListOfHistos = new TList();
     fListOfHistos ->SetOwner();
-
-    h_ADC_tracklet.resize(2);
-    for(Int_t i_ADC = 0; i_ADC < 2; i_ADC++)
-    {
-        HistName = "h_ADC_tracklet_";
-        HistName += i_ADC;
-        h_ADC_tracklet[i_ADC] = new TH1D(HistName.Data(),HistName.Data(),350,-50.0,300.0);
-        fListOfHistos->Add(h_ADC_tracklet[i_ADC]);
-    }
-
-
-    h_ADC_vs_time.resize(540);
-    for(Int_t i_det = 0; i_det < 540; i_det++)
-    {
-        HistName = "h_ADC_vs_time_";
-        HistName += i_det;
-        h_ADC_vs_time[i_det] = new TProfile(HistName.Data(),HistName.Data(),30,0.0,30.0);
-        fListOfHistos->Add(h_ADC_vs_time[i_det]);
-    }
 
 
     OpenFile(2);
@@ -1054,7 +1039,6 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 		    Int_t fBaseline = fDigMan->GetDigitsParam()->GetADCbaseline(i_det); // ADC baseline to be subtracted from digit ADC values, constant value of 10
                     ADC_amplitude_sum_times += ADC_amplitude;
 
-                    if((ADC_amplitude - fBaseline) > 0.0) h_ADC_vs_time[i_det] ->Fill(i_time,ADC_amplitude - fBaseline);
 
                     //printf("ADC_amplitude: %4.3f \n",ADC_amplitude);
 

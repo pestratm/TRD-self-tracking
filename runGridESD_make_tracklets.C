@@ -16,6 +16,8 @@ class AliAnalysisAlien;
 void runGridESD_make_tracklets()
 {
 
+    // aliroot runGridESD_make_tracklets.C
+
     TString fname="testName";
     Int_t sub=702;
   /// set parameters for the analysis
@@ -129,7 +131,7 @@ void runGridESD_make_tracklets()
     alienHandler->AddIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_PHYSICS/include");
 
     // make sure your source files get copied to grid
-    alienHandler->SetAdditionalLibs("Ali_AS_Event.h Ali_AS_EventLinkDef.h Ali_make_tracklets_from_digits.h Ali_make_tracklets_from_digits.cxx");
+    alienHandler->SetAdditionalLibs("Ali_AS_Event.h Ali_AS_EventLinkDef.h Ali_make_tracklets_from_digits.h Ali_make_tracklets_from_digits.cxx Ali_TRD_ST.h Ali_TRD_ST_LinkDef.h");
     alienHandler->SetAnalysisSource("Ali_make_tracklets_from_digits.cxx");
 
     // select the aliphysics version. all other packages

@@ -3,6 +3,8 @@
 
 class AliTRDdigitsManager;
 
+using namespace std;
+
 #include "AliAnalysisTaskSE.h"
 
 #include "TMath.h"
@@ -38,8 +40,7 @@ public:
 	: AliAnalysisTaskSE(),
 	fDigitsInputFileName("TRD.FltDigits.root"), fDigitsInputFile(0),
 	fDigitsOutputFileName(""), fDigitsOutputFile(0),
-	fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),TRD_ST_Tracklet(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0),fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),
-	h_dca(0x0),h_dca_xyz(0x0),h2D_TPC_dEdx_vs_momentum(0x0),h_ADC_tracklet(0x0),h_ADC_vs_time(0x0)
+	fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),TRD_ST_Tracklet(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0),fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE)
     {
 	cout << "" << endl;
 	cout << "***************************************************************************************" << endl;
@@ -112,11 +113,6 @@ public:
 	Int_t N_good_events;
 	Int_t fDigitsLoadedFlag;
 
-	std::vector<TH1D*> h_dca;
-	std::vector< std::vector<TH1D*> > h_dca_xyz;
-        TH2D* h2D_TPC_dEdx_vs_momentum;
-        vector<TH1D*> h_ADC_tracklet;
-        vector<TProfile*> h_ADC_vs_time;
 
         TVector3 TV3_SVD_tracklet_offset;
         TVector3 TV3_SVD_tracklet_dir;
