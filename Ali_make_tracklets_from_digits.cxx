@@ -157,7 +157,8 @@ Ali_make_tracklets_from_digits::Ali_make_tracklets_from_digits(const char *name)
 fDigitsInputFileName("TRD.FltDigits.root"), fDigitsInputFile(0),
 fDigitsOutputFileName(""), fDigitsOutputFile(0),
 fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),TRD_ST_Tracklet(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0), fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),
-fListOfHistos(0x0),fTree(0x0), fPIDResponse(0), EsdTrackCuts(0)
+fListOfHistos(0x0),fTree(0x0), fPIDResponse(0), EsdTrackCuts(0),aliHelix(),TV3_SVD_tracklet_offset(),TV3_SVD_tracklet_dir(),
+vec_self_tracklet_fit_points(),vec_ADC_val(),vec_TV3_TRD_center_offset(),vec_TV3_TRD_center(),TV3_trkl_offset(),TV3_trkl_dir()
 {
     // Constructor
 
@@ -221,7 +222,6 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     cout << "In UserNotify" << endl;
     cout << "fDigitsInputFileName: " << fDigitsInputFileName.Data() << endl;
 
-    auto grid = TGrid::Connect("alien://");
 
     cout << "Connected to GRID" << endl;
 
@@ -269,6 +269,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 
     //AliCDBManager::SetRun(run_number_from_list);
 
+    /*
     AliCDBManager* CDBman = AliCDBManager::Instance();
     if (!CDBman->IsDefaultStorageSet())
     {
@@ -276,15 +277,20 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
         //man->SetRun(fESD->GetRunNumber());
         CDBman->SetRun(run_number_from_list);
     }
+    */
 
+
+    cout << "Open connection to GRID" << endl;
+    //auto grid = TGrid::Connect("alien://");
+    TGrid::Connect("alien");
 
     // AliCDBEntry->GetObject()->IsA()->GetName()
     //-----------------------------------
     // Pad noise
     cout << "Open pad noise calibration file from database" << endl;
     //AliCDBEntry *entryB = AliCDBManager::Instance()->Get("TRD/Calib/PadNoise",run_number_from_list); // new
-    //AliCDBEntry *entryB = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
-    AliCDBEntry *entryB = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
+    AliCDBEntry *entryB = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
+    //AliCDBEntry *entryB = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
     PadNoise = (AliTRDCalPad*)entryB->GetObject();
     cout << "Calibration data opened" << endl;
     //-----------------------------------
@@ -294,7 +300,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     // ChamberVdrift
     cout << "Open ChamberVdrift calibration file from database" << endl;
     //AliCDBEntry *entryC = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberVdrift",run_number_from_list);
-    AliCDBEntry *entryC = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberVdrift",run_number_from_list);
+    AliCDBEntry *entryC = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberVdrift",run_number_from_list);
     ChamberVdrift = (AliTRDCalDet*)entryC->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -307,7 +313,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //-----------------------------------
     // ChamberT0
     cout << "Open ChamberT0 calibration file from database" << endl;
-    AliCDBEntry *entryC1 = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberT0",run_number_from_list);
+    AliCDBEntry *entryC1 = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberT0",run_number_from_list);
     ChamberT0 = (AliTRDCalDet*)entryC1->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -319,10 +325,10 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 
     //-----------------------------------
     // LocalT0
-    cout << "Open LocalT0 calibration file from database" << endl;
-    AliCDBEntry *entryC2 = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/LocalT0",run_number_from_list);
-    LocalT0_pad = (AliTRDCalPad*)entryC2->GetObject();
-    cout << "Calibration data opened" << endl;
+    //cout << "Open LocalT0 calibration file from database" << endl;
+    //AliCDBEntry *entryC2 = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/LocalT0",run_number_from_list);
+    //LocalT0_pad = (AliTRDCalPad*)entryC2->GetObject();
+    //cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
     //{
     //    Int_t col = 2;
@@ -337,7 +343,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     // LocalVdrift
     // Values are all 0
     cout << "Open LocalVdrift calibration file from database" << endl;
-    AliCDBEntry *entryD = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/LocalVdrift",run_number_from_list);
+    AliCDBEntry *entryD = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/LocalVdrift",run_number_from_list);
     AliTRDCalDet *LocalVdrift = (AliTRDCalDet*)entryD->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -351,10 +357,10 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //-----------------------------------
     // ChamberExB
     // Values are all 0
-    cout << "Open ChamberExB calibration file from database" << endl;
-    AliCDBEntry *entryE = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberExB",run_number_from_list);
-    ChamberExB = (AliTRDCalDet*)entryE->GetObject();
-    cout << "Calibration data opened" << endl;
+    //cout << "Open ChamberExB calibration file from database" << endl;
+    //AliCDBEntry *entryE = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberExB",run_number_from_list);
+    //ChamberExB = (AliTRDCalDet*)entryE->GetObject();
+    //cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
     //{
     //    cout << "i_det: " << i_det << ", ExB: " << ChamberExB->GetValue(i_det) << endl;
@@ -365,10 +371,10 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 
     //----------------------------------------------------------------------
     // Krypton calibration -> pad gain factors
-    cout << "Open Krypto calibration file from database" << endl;
-    AliCDBEntry *entryF = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/Krypton_2015-02",run_number_from_list);
-    KryptoGain = (AliTRDCalOnlineGainTable*)entryF->GetObject();
-    cout << "Calibration data opened" << endl;
+    //cout << "Open Krypto calibration file from database" << endl;
+    //AliCDBEntry *entryF = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/Krypton_2015-02",run_number_from_list);
+    //KryptoGain = (AliTRDCalOnlineGainTable*)entryF->GetObject();
+    //cout << "Calibration data opened" << endl;
     //Float_t GainFactor = KryptoGain ->GetGainCorrectionFactor(i_det,i_row,i_column);
     //----------------------------------------------------------------------
 
@@ -376,9 +382,9 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 
     //----------------------------------------------------------------------
     // Chamber gain factors
-    cout << "Open chamber gain file from database" << endl;
-    AliCDBEntry *entryG = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberGainFactor",run_number_from_list);
-    chambergain = (AliTRDCalDet*)entryG->GetObject();
+    //cout << "Open chamber gain file from database" << endl;
+    //AliCDBEntry *entryG = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberGainFactor",run_number_from_list);
+    //chambergain = (AliTRDCalDet*)entryG->GetObject();
     //Float_t valuegainiteration = chambergain->GetValue(det);
     //----------------------------------------------------------------------
 
@@ -549,8 +555,8 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     else
     {
         cout << "Load alignment file" << endl;
-        //TRD_alignment_file = TFile::Open("alien:///alice/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root");
-        TRD_alignment_file = TFile::Open("/cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root");
+        TRD_alignment_file = TFile::Open("alien:///alice/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root");
+        //TRD_alignment_file = TFile::Open("/cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root");
         //TRD_alignment_file = TFile::Open("/alice/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root");
         cout << "Alignment file from database loaded" << endl;
     }
@@ -1245,7 +1251,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 		    // Get the detector wise defined calibration values
 		    Double_t fCalVdriftDetValue = ChamberVdrift ->GetValue(i_det);
 		    Double_t fCalT0DetValue     = ChamberT0     ->GetValue(i_det);
-		    Double_t fCalExBDetValue    = ChamberExB    ->GetValue(i_det);
+		    //Double_t fCalExBDetValue    = ChamberExB    ->GetValue(i_det);
 
 		    // Retrieve calibration values
 		    // drift velocity
@@ -1255,10 +1261,10 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
                     Double_t fSamplingFrequency = fParam->GetSamplingFrequency();
 		    t0 /= fSamplingFrequency;
 		    // ExB correction
-		    Double_t exb = fCalExBDetValue;//AliTRDCommonParam::Instance()->GetOmegaTau(vd);
+		    //Double_t exb = fCalExBDetValue;//AliTRDCommonParam::Instance()->GetOmegaTau(vd);
 
-		    Float_t lorentz_angle_corr_y = ChamberExB->GetValue(i_det)*TRD_drift_time;
-		    TRD_loc_Y -= Sign_magnetic_field*lorentz_angle_corr_y;
+		    //Float_t lorentz_angle_corr_y = ChamberExB->GetValue(i_det)*TRD_drift_time;
+		    //TRD_loc_Y -= Sign_magnetic_field*lorentz_angle_corr_y;
 
 		    //printf("ExB correction: %f \n",Sign_magnetic_field*lorentz_angle_corr_y);
 
@@ -1312,7 +1318,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
                     AS_Digit ->sethit_ids(x_TRD,y_TRD);
                     AS_Digit ->setdca_to_track(0.0,0.0,0.0,0.0);
                     AS_Digit ->setImpactAngle(0.0);
-                    for(Int_t i_time = 0; i_time < vec_ADC_time_bins.size(); i_time++)
+                    for(Int_t i_time = 0; i_time < (Int_t)vec_ADC_time_bins.size(); i_time++)
                     {
                         Double_t ADC_value  = vec_ADC_time_bins[i_time];
                         AS_Digit ->setADC_time_value(i_time,(Short_t)ADC_value);

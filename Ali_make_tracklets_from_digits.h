@@ -3,7 +3,10 @@
 
 class AliTRDdigitsManager;
 
-using namespace std;
+
+//#if ROOT_VERSION_CODE >= ROOT_VERSION(6,00,0)
+//#include "AliAnalysisTaskSE.h"
+//#endif
 
 #include "AliAnalysisTaskSE.h"
 
@@ -29,6 +32,9 @@ ClassImp(Ali_TRD_ST_Tracklets)
 ClassImp(Ali_TRD_ST_TPC_Track)
 ClassImp(Ali_TRD_ST_Event)
 
+
+using namespace std;
+
 static vector< vector< vector< vector<Double_t> > > > vec_connected_clusters; //i_det i_trkl i_point i_xyz
 
 
@@ -40,7 +46,9 @@ public:
 	: AliAnalysisTaskSE(),
 	fDigitsInputFileName("TRD.FltDigits.root"), fDigitsInputFile(0),
 	fDigitsOutputFileName(""), fDigitsOutputFile(0),
-	fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),TRD_ST_Tracklet(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0),fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE)
+        fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),TRD_ST_Tracklet(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0),fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),
+        aliHelix(),fListOfHistos(),fTree(),fPIDResponse(),EsdTrackCuts(),TV3_SVD_tracklet_offset(),TV3_SVD_tracklet_dir(),
+        vec_self_tracklet_fit_points(),vec_ADC_val(),vec_TV3_TRD_center_offset(),vec_TV3_TRD_center(),TV3_trkl_offset(),TV3_trkl_dir()
     {
 	cout << "" << endl;
 	cout << "***************************************************************************************" << endl;

@@ -9,16 +9,28 @@ class AliEmcalJetTask;
 class AliAnalysisGrid;
 class AliAnalysisAlien;
 
+
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,00,0)
 #include "Ali_make_tracklets_from_digits.h"
+#endif
 //#include "Ali_make_tracklets_from_digits.cxx"
 
 
 void runGridESD_make_tracklets()
 {
 
+    gInterpreter->GenerateDictionary("vector< vector< vector< vector<Double_t> > > >","vector");
+
+
     // aliroot runGridESD_make_tracklets.C
 
-    TString fname="testName";
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,00,0)
+    cout << "ROOT 6 is used" << endl;
+#else
+    cout << "ROOT 5 is used" << endl;
+#endif
+
+    TString fname="TRD_tracklets";
     Int_t sub=702;
   /// set parameters for the analysis
   const char *cDataType = "ESD";                           // set analysis type; AOD or ESD
@@ -136,7 +148,14 @@ void runGridESD_make_tracklets()
 
     // select the aliphysics version. all other packages
     // are LOADED AUTOMATICALLY!
-    alienHandler->SetAliPhysicsVersion("vAN-20200815_ROOT6-1");
+
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,00,0)
+    //alienHandler->SetAliPhysicsVersion("vAN-20200815_ROOT6-1");
+    alienHandler->SetAliPhysicsVersion("vAN-20201103_ROOT6-1");
+    //alienHandler->SetAliPhysicsVersion("vAN-20201203_ROOT6-1");
+#else
+    alienHandler->SetAliPhysicsVersion("vAN-20181112-1");
+#endif
 
     // set the Alien API version
     alienHandler->SetAPIVersion("V1.1x");
