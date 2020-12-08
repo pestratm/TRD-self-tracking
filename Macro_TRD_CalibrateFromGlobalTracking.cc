@@ -4,14 +4,14 @@
 
 R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
-R__LOAD_LIBRARY(checkDbgOutput_C.so);
+R__LOAD_LIBRARY(Load_HLT_TRD_Tracking_Output_C.so);
 
 // Environment variables
 //#define ENV_PI
 #define ENV_ALEX
 //#define ENV_PI_SVEN
 
-void Macro_TRD_Calibrate_Ole(TString input_list = "List_data_ADC.txt",TString input_file = "TRDhlt.root")
+void Macro_TRD_CalibrateFromGlobalTracking(TString input_list = "List_data_ADC.txt",TString input_file = "TRDhlt.root")
 {
 
     // First compile type root and then:
@@ -32,8 +32,8 @@ void Macro_TRD_Calibrate_Ole(TString input_list = "List_data_ADC.txt",TString in
     gSystem ->Load("TRD_Kalman_Tracking_cxx.so");
 
     gSystem ->Load("TRD_ST_Analyze_tracklets_cxx.so");
-	
-	gSystem ->Load("checkDbgOutput_C.so");
+
+	gSystem ->Load("Load_HLT_TRD_Tracking_Output_C.so");
 
     //------------------------------------
     // Define output file name and directory
@@ -173,11 +173,11 @@ void Macro_TRD_Calibrate_Ole(TString input_list = "List_data_ADC.txt",TString in
         }
         //------------------------------------------------------------
 
- */      
+ */
         TRD_ST_Analyze ->Calibrate(graphics);
       //  TRD_ST_Analyze ->Calc_Kalman_efficiency();
 	//	TRD_ST_Analyze -> hists_pv_dca();
-		
+
 
         //Int_t found_good_AP_vertex_TPC = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,0); // (0 = no graphics), (0 = TRD, 1 = TPC)
         //Int_t found_good_AP_vertex_TRD = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,1); // (0 = no graphics), (0 = TRD, 1 = TPC)
@@ -189,7 +189,7 @@ void Macro_TRD_Calibrate_Ole(TString input_list = "List_data_ADC.txt",TString in
         //Ali_TRD_ST_Tracklets* last_tracklet;
 
     }
-	
+
     TRD_ST_Analyze ->Draw_n_Save_Calibration(output_dir,out_file_name_calib);
     TRD_ST_Analyze -> Draw_n_Save_hists_pv_dca(output_dir, out_file_name_calib);
     TRD_ST_Analyze ->Write();
