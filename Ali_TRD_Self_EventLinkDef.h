@@ -6,6 +6,6 @@
 #pragma link C++ class Ali_TRD_Photon+;
 #pragma link C++ class Ali_TRD_Nuclear_interaction+;
 #pragma link C++ class Ali_TRD_Self_Event+;
-
+#pragma link C++ class Ali_Helix_copy+;
 
 #endif
