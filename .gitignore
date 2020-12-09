@@ -8,3 +8,7 @@ TRDhlt.root
 
 # ignore output folder
 ST_out
+
+AnalysisResults.root
+
+AutoDict*
