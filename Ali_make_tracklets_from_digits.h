@@ -82,6 +82,8 @@ public:
 	}
 	void SetDigitsOutputFilename(TString x) {fDigitsOutputFileName=x;}
 
+  void EnableLocalMode() { fLocalMode = kTRUE; }
+
 	AliHelix aliHelix;
 
     protected:
@@ -96,6 +98,7 @@ public:
 
     private:
 
+  Bool_t fLocalMode;  // flag for running mode: default kFALSE (GRID mode)
 	TFile* OpenDigitsFile(TString inputfile, TString digfile, TString opt);
 
 	TString fDigitsInputFileName;         //! Name of digits file for reading

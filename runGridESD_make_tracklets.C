@@ -40,10 +40,8 @@ void runGridESD_make_tracklets()
   const char *cGridMode = "test";                          // grid mode; test, full or terminate (for merging)
   Bool_t useJDL = kTRUE;
   const char *cTaskName = "TRD_Make_Tracklets"; // name of the task
-  Bool_t local = kFALSE;                                    // kTRUE for local analysis, kFALSE for grid analysis
+  Bool_t local = kTRUE;                                    // kTRUE for local analysis, kFALSE for grid analysis
 
-  if(local && !isMC) TGrid::Connect("alien://");
-  
   
   /// since we will compile a class, tell root where to look for headers  
 #if !defined (__CINT__) || defined (__CLING__)
@@ -87,9 +85,9 @@ void runGridESD_make_tracklets()
   cout << "Loaded macro Ali_make_tracklets_from_digits.cxx" << endl;
  
   // load the addtask macro and create the task
-  Ali_make_tracklets_from_digits *correlationTask = 0;
-  //correlationTask = reinterpret_cast<Ali_make_tracklets_from_digits*>(gInterpreter->ExecuteMacro("AddTaskJetCorrelationsLB.C(\"usedefault\", \"usedefault\", \"usedefault\", \"new\", \"alien:///alice/cern.ch/user/l/lbergman/EfficiencyHistograms_LHC18q/EfficiencyHistos_LHC18q.root\")" ));
-  correlationTask = reinterpret_cast<Ali_make_tracklets_from_digits*>(gInterpreter->ExecuteMacro(Form("AddTask_tracklets_aschmah.C")));
+  Ali_make_tracklets_from_digits *myTask = 0;
+  //myTask = reinterpret_cast<Ali_make_tracklets_from_digits*>(gInterpreter->ExecuteMacro("AddTaskJetCorrelationsLB.C(\"usedefault\", \"usedefault\", \"usedefault\", \"new\", \"alien:///alice/cern.ch/user/l/lbergman/EfficiencyHistograms_LHC18q/EfficiencyHistos_LHC18q.root\")" ));
+  myTask = reinterpret_cast<Ali_make_tracklets_from_digits*>(gInterpreter->ExecuteMacro(Form("AddTask_tracklets_aschmah.C")));
   
   
   /// start analysis
@@ -99,29 +97,24 @@ void runGridESD_make_tracklets()
   mgr->SetUseProgressBar(kTRUE, 250);
   
   if (local){
-    TChain *pChain = new TChain("aodTree");
+    myTask->EnableLocalMode();
+    TChain *pChain = new TChain("esdTree");
 
     if(isMC){
-      /*
-	pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296618/AliAOD_MC.root");
-	pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296619/AliAOD_MC.root");
-	pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296621/AliAOD_MC.root");
-	pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296622/AliAOD_MC.root");
-	pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296623/AliAOD_MC.root");
-      */
-      pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296618/AliAOD_MChighN.root");
-      pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296619/AliAOD_MChighN.root");
-      pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296621/AliAOD_MChighN.root");
-      pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296622/AliAOD_MChighN.root");
-      pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296623/AliAOD_MChighN.root");
-      
+      printf("Error: MC requested\n");
+      return;
     }
     else{
-      //pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296618/AliAOD.root");
-      //pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296619/AliAOD.root");
-      //pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296621/AliAOD.root");
-      //pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296622/AliAOD.root");
-      pChain->Add("/misc/alidata100/alice_u/bergmann/phd/datafiles/LHC18q/296623/AliAOD.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1804/AliESDs.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1805/AliESDs.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1806/AliESDs.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1807/AliESDs.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1808/AliESDs.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1809/AliESDs.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1810/AliESDs.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1811/AliESDs.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1900/AliESDs.root");
+      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1901/AliESDs.root");
     }
     
     mgr->StartAnalysis("local",pChain);

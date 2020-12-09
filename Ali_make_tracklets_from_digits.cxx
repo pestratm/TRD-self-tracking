@@ -92,8 +92,6 @@ static TGeoHMatrix TM_TRD_rotation_det[540];
 static TGeoHMatrix TM_TRD_rotation_sector[18];
 static TVector3    TV3_TRD_translation[540];
 static const Double_t TRD_lorentz_angle = TMath::DegToRad()*8.8;
-static const char *pathdatabase="alien://folder=/alice/data/2016/OCDB"; // for pPb
-//static const char *pathdatabase="alien://folder=/alice/data/2015/OCDB"; // for PbPb
 static AliTRDCalDet *ChamberVdrift;
 static AliTRDCalDet *ChamberT0;
 static AliTRDCalDet *ChamberExB;
@@ -154,6 +152,7 @@ bool sortcol_first( const vector<Double_t>& v1,
 //________________________________________________________________________
 Ali_make_tracklets_from_digits::Ali_make_tracklets_from_digits(const char *name)
 : AliAnalysisTaskSE(name),
+fLocalMode(kFALSE),
 fDigitsInputFileName("TRD.FltDigits.root"), fDigitsInputFile(0),
 fDigitsOutputFileName(""), fDigitsOutputFile(0),
 fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),TRD_ST_Tracklet(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0), fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),
@@ -267,30 +266,26 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     cout << "String: " << string.Data() << ", run_number_from_list: " << run_number_from_list << endl;
     //-----------------------------------
 
-    //AliCDBManager::SetRun(run_number_from_list);
 
-    /*
     AliCDBManager* CDBman = AliCDBManager::Instance();
-    if (!CDBman->IsDefaultStorageSet())
-    {
+    if (!CDBman->IsDefaultStorageSet()) {
+      if (fLocalMode) {
+        cout << "Running in local mode" << endl;
         CDBman->SetDefaultStorage("local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB");
-        //man->SetRun(fESD->GetRunNumber());
-        CDBman->SetRun(run_number_from_list);
+      } else {
+        cout << "Open connection to GRID" << endl;
+        TGrid::Connect("alien");
+        CDBman->SetDefaultStorage("raw://");
+      }
+      CDBman->SetRun(run_number_from_list);
     }
-    */
 
-
-    cout << "Open connection to GRID" << endl;
-    //auto grid = TGrid::Connect("alien://");
-    TGrid::Connect("alien");
 
     // AliCDBEntry->GetObject()->IsA()->GetName()
     //-----------------------------------
     // Pad noise
     cout << "Open pad noise calibration file from database" << endl;
-    //AliCDBEntry *entryB = AliCDBManager::Instance()->Get("TRD/Calib/PadNoise",run_number_from_list); // new
-    AliCDBEntry *entryB = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
-    //AliCDBEntry *entryB = CDBman->GetStorage(pathdatabase)->Get("TRD/Calib/PadNoise",run_number_from_list); // old
+    AliCDBEntry *entryB = CDBman->Get("TRD/Calib/PadNoise",run_number_from_list); // new
     PadNoise = (AliTRDCalPad*)entryB->GetObject();
     cout << "Calibration data opened" << endl;
     //-----------------------------------
@@ -299,8 +294,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //-----------------------------------
     // ChamberVdrift
     cout << "Open ChamberVdrift calibration file from database" << endl;
-    //AliCDBEntry *entryC = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberVdrift",run_number_from_list);
-    AliCDBEntry *entryC = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberVdrift",run_number_from_list);
+    AliCDBEntry *entryC = CDBman->Get("TRD/Calib/ChamberVdrift",run_number_from_list); // new
     ChamberVdrift = (AliTRDCalDet*)entryC->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -313,7 +307,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     //-----------------------------------
     // ChamberT0
     cout << "Open ChamberT0 calibration file from database" << endl;
-    AliCDBEntry *entryC1 = AliCDBManager::Instance()->GetStorage(pathdatabase)->Get("TRD/Calib/ChamberT0",run_number_from_list);
+    AliCDBEntry *entryC1 = CDBman->Get("TRD/Calib/ChamberT0",run_number_from_list);
     ChamberT0 = (AliTRDCalDet*)entryC1->GetObject();
     cout << "Calibration data opened" << endl;
     //for(Int_t i_det = 0; i_det < 540; i_det++)
@@ -484,7 +478,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 
     //---------------------------------------
     // Load TRD geometry, created by Create_TRD_geometry_files.cc
-    TFile* file_TRD_geom = TFile::Open("alien::///alice/cern.ch/user/a/aschmah/Data/TRD_geometry_full.root");
+    TFile* file_TRD_geom = fLocalMode ? TFile::Open("Data/TRD_geometry_full.root") : TFile::Open("alien::///alice/cern.ch/user/a/aschmah/Data/TRD_geometry_full.root");
 
     vec_TV3_TRD_center.resize(540);
     vec_TV3_TRD_center_offset.resize(540);
@@ -555,15 +549,14 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     else
     {
         cout << "Load alignment file" << endl;
-        TRD_alignment_file = TFile::Open("alien:///alice/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root");
-        //TRD_alignment_file = TFile::Open("/cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root");
+        TRD_alignment_file = fLocalMode ? TFile::Open("/cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root") : TFile::Open("alien:///alice/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root");
         //TRD_alignment_file = TFile::Open("/alice/data/2016/OCDB/TRD/Align/Data/Run0_999999999_v1_s0.root");
         cout << "Alignment file from database loaded" << endl;
     }
 
     cout << "Open calibration file" << endl;
     //TRD_calibration_file_AA = TFile::Open("alien::///alice/cern.ch/user/a/aschmah/Data/TRD_Calib_vDfit_and_LAfit_3456.root");
-    TRD_calibration_file_AA = TFile::Open("alien::///alice/cern.ch/user/a/aschmah/Data/TRD_Calib_vDfit_and_LAfit_23_11_2020.root ");
+    TRD_calibration_file_AA = fLocalMode ? TFile::Open("Data/TRD_Calib_vDfit_and_LAfit_23_11_2020.root ") : TFile::Open("alien::///alice/cern.ch/user/a/aschmah/Data/TRD_Calib_vDfit_and_LAfit_23_11_2020.root ");
     cout << "Calibration file opened" << endl;
     tg_v_fit_vs_det         = (TGraph*)TRD_calibration_file_AA ->Get("tg_v_fit_vs_det");
     h_v_fit_vs_det = new TH1D("h_v_fit_vs_det","h_v_fit_vs_det",540,0,540);
