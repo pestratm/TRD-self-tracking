@@ -1565,8 +1565,10 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
         TRD_ST_TPC_Track ->setnsigma_e_TPC( AS_Track ->getnsigma_e_TPC() );
         TRD_ST_TPC_Track ->setnsigma_pi_TPC( AS_Track ->getnsigma_pi_TPC() );
         TRD_ST_TPC_Track ->setnsigma_p_TPC( AS_Track ->getnsigma_p_TPC() );
+        TRD_ST_TPC_Track ->setnsigma_K_TPC( AS_Track ->getnsigma_K_TPC() );
         TRD_ST_TPC_Track ->setnsigma_e_TOF( AS_Track ->getnsigma_e_TOF() );
         TRD_ST_TPC_Track ->setnsigma_pi_TOF( AS_Track ->getnsigma_pi_TOF() );
+        TRD_ST_TPC_Track ->setnsigma_K_TOF( AS_Track ->getnsigma_K_TOF() );
         TRD_ST_TPC_Track ->setTRDSignal( AS_Track ->getTRDSignal() );
         TRD_ST_TPC_Track ->setTRDsumADC( AS_Track ->getTRDsumADC() );
         TRD_ST_TPC_Track ->setdca( AS_Track ->getdca() );  // charge * distance of closest approach to the primary vertex

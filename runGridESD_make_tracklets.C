@@ -37,7 +37,7 @@ void runGridESD_make_tracklets()
   const char *cRunPeriod = "LHC16q";                       // set run period, LHC18q
   Bool_t      isMC=kFALSE;                                  //Monte Carlo or "real" data
   //const UInt_t iNumEvents = 5;                             // number of events to be analyzed
-  const char *cGridMode = "full";                          // grid mode; test, full or terminate (for merging)
+  const char *cGridMode = "test";                          // grid mode; test, full or terminate (for merging)
   Bool_t useJDL = kTRUE;
   const char *cTaskName = "TRD_Make_Tracklets"; // name of the task
   Bool_t local = kFALSE;                                    // kTRUE for local analysis, kFALSE for grid analysis
