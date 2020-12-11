@@ -169,6 +169,13 @@ vec_self_tracklet_fit_points(),vec_ADC_val(),vec_TV3_TRD_center_offset(),vec_TV3
     DefineOutput(1, TList::Class());
     DefineOutput(2, TTree::Class());
 
+
+    EsdTrackCuts = new AliESDtrackCuts();
+    fGeo = new AliTRDgeometry;
+    fDigMan = new AliTRDdigitsManager;
+    fDigMan->CreateArrays();
+    h_v_fit_vs_det = new TH1D("h_v_fit_vs_det","h_v_fit_vs_det",540,0,540);
+    h_LA_factor_fit_vs_det = new TH1D("h_LA_factor_fit_vs_det","h_LA_factor_fit_vs_det",540,0,540);
 }
 
 //_______________________________________________________________________
@@ -416,7 +423,7 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 
 
     fEventNoInFile = -1;
-    N_good_events  = 0;
+    //N_good_events  = 0;
 
 
     fDigitsInputFile = OpenDigitsFile(fname,fDigitsInputFileName,""); // <-
@@ -441,7 +448,6 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 
 
 
-    EsdTrackCuts = new AliESDtrackCuts();
 
     EsdTrackCuts->AliESDtrackCuts::SetRequireTPCRefit(kTRUE);
     EsdTrackCuts->SetMinRatioCrossedRowsOverFindableClustersTPC(0.52);
@@ -459,21 +465,18 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     cout << "" << endl;
 
     // create a TRD geometry, needed for matching digits to tracks
-    fGeo = new AliTRDgeometry;
     if(!fGeo)
     {
 	AliFatal("cannot create geometry ");
     }
 
     //if(fDigMan) delete fDigMan;
-    fDigMan = new AliTRDdigitsManager;
-    fDigMan->CreateArrays();
 
-    for(Int_t i_det = 0; i_det < 5; i_det++)
-    {
-	Int_t N_columns   = fDigMan->GetDigits(i_det)->GetNcol();
-	cout << "i_det: " << i_det << ", N_columns: " << N_columns << endl;
-    }
+    //for(Int_t i_det = 0; i_det < 5; i_det++)
+    //{
+    //    Int_t N_columns   = fDigMan->GetDigits(i_det)->GetNcol();
+    //    cout << "i_det: " << i_det << ", N_columns: " << N_columns << endl;
+    //}
 
 
     //---------------------------------------
@@ -559,7 +562,6 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     TRD_calibration_file_AA = fLocalMode ? TFile::Open("Data/TRD_Calib_vDfit_and_LAfit_23_11_2020.root ") : TFile::Open("alien::///alice/cern.ch/user/a/aschmah/Data/TRD_Calib_vDfit_and_LAfit_23_11_2020.root ");
     cout << "Calibration file opened" << endl;
     tg_v_fit_vs_det         = (TGraph*)TRD_calibration_file_AA ->Get("tg_v_fit_vs_det");
-    h_v_fit_vs_det = new TH1D("h_v_fit_vs_det","h_v_fit_vs_det",540,0,540);
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
         h_v_fit_vs_det ->SetBinContent(i_det+1,1.05);
@@ -571,7 +573,6 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
         h_v_fit_vs_det ->SetBinContent(det+1,vD);
     }
     tg_LA_factor_fit_vs_det = (TGraph*)TRD_calibration_file_AA ->Get("tg_LA_factor_fit_vs_det");
-    h_LA_factor_fit_vs_det = new TH1D("h_LA_factor_fit_vs_det","h_LA_factor_fit_vs_det",540,0,540);
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
          h_LA_factor_fit_vs_det->SetBinContent(i_det+1,-0.14);
@@ -719,7 +720,6 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 
 
 
-
     //-----------------------------------------------------------------------------------------------------
     //-----------------------------------------------------------------------------------------------------
     // prepare event data structures
@@ -734,22 +734,6 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     // Check if TRD digits (raw data) are available for this ESD event
     if(!ReadDigits()) return;
     //-----------------------------------------------------------------
-
-
-#if 0
-    //-----------------------------------------------------------------
-    // Connect friends
-    printf("Connect friends \n");
-    fESD->SetESDfriend(esdFr);
-
-    TTree* cTree = esdH->GetTree();
-    cTree->AddFriend("esdFriendTree", esdFriendTreeFName.Data());
-    cTree->SetBranchStatus("ESDfriend.", 1);
-    esdFr = (AliESDfriend*)(fESD->FindListObject("AliESDfriend"));
-    if (esdFr) cTree->SetBranchAddress("ESDfriend.", &esdFr);
-    //-----------------------------------------------------------------
-#endif
-
 
     AliAnalysisManager *man = AliAnalysisManager::GetAnalysisManager();
     if(man)
@@ -1582,16 +1566,27 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
         TRD_ST_TPC_Track ->setHelix(helix_par[0],helix_par[1],helix_par[2],helix_par[3],helix_par[4],helix_par[5],helix_par[6],helix_par[7],helix_par[8]);
     }
 
-    printf("Track information filled \n");
+    //printf("Track information filled \n");
     //------------------------------------------
 
 
 
     //-----------------------------------
     //Tree_AS_Event ->Fill();
-    Tree_TRD_ST_Event ->Fill();
-    cout << "Tree filled" << endl;
+    Tree_TRD_ST_Event ->Fill(); // new tracklets tree to be filled
+    //Long64_t size_of_tree = Tree_TRD_ST_Event ->GetEntries();
+    //printf("Event: %d, tree filled, size of tree: %lld \n",N_good_events,size_of_tree);
     //-----------------------------------
+
+
+#if 0
+    ProcInfo_t procInfo;
+    gSystem->GetProcInfo(&procInfo);
+    AliInfoF("Processing event %i", fEventNoInFile);
+    AliInfoF("Memory: RSS: %3ld VMEM: %3ld",procInfo.fMemResident/1024,procInfo.fMemVirtual/1024);
+#endif
+    printf("Event: %d \n",N_good_events);
+
 
     N_good_events++;
 
@@ -2395,7 +2390,7 @@ Bool_t Ali_make_tracklets_from_digits::ReadDigits()
     }
 
     // reset digit arrays
-    for(Int_t det=0; det<540; det++)
+    for(Int_t det = 0; det<  540; det++)
     {
 	fDigMan->ClearArrays(det);
 	fDigMan->ClearIndexes(det);
@@ -2410,8 +2405,7 @@ Bool_t Ali_make_tracklets_from_digits::ReadDigits()
 
 
     // read digits from file
-    TTree* tr = (TTree*)fDigitsInputFile->Get(Form("Event%d/TreeD",
-						   fEventNoInFile));
+    TTree* tr = (TTree*)fDigitsInputFile->Get(Form("Event%d/TreeD",fEventNoInFile));
 
     if(!tr)
     {
@@ -2419,17 +2413,31 @@ Bool_t Ali_make_tracklets_from_digits::ReadDigits()
 	return kFALSE;
     }
 
+    //printf("  --> read");
     fDigMan->ReadDigits(tr);
     delete tr;
 
+    //Int_t sum_dim_before = 0;
+    //Int_t sum_dim_after  = 0;
+
     // expand digits for use in this task
-    for(Int_t det=0; det<540; det++)
+    for(Int_t det = 0; det < 540; det++)
     {
 	if(fDigMan->GetDigits(det))
-	{
-	    fDigMan->GetDigits(det)->Expand();
+        {
+            //Int_t dim_before = fDigMan->GetDigits(det)->GetDim();
+            fDigMan->GetDigits(det)->Expand();
+            //Int_t dim_after = fDigMan->GetDigits(det)->GetDim();
+
+            //sum_dim_before += dim_before;
+            //sum_dim_after  += dim_after;
+            //printf("det: %d, dim_before: %d, dim_after: %d \n",det,dim_before,dim_after);
 	}
     }
+
+    //cout << " --> size of fDigMan: " << sizeof(fDigMan) << endl;
+    //printf("sum_dim_before: %d, sum_dim_after: %d \n",sum_dim_before,sum_dim_after);
+
 
     fDigitsLoadedFlag = kTRUE;
     return kTRUE;
