@@ -1587,6 +1587,12 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 #endif
     printf("Event: %d \n",N_good_events);
 
+    if (fLocalMode) {
+      ProcInfo_t procInfo;
+      gSystem->GetProcInfo(&procInfo);
+      AliInfoF("Processing event %i", N_good_events);
+      AliInfoF("Memory: RSS: %3ld VMEM: %3ld",procInfo.fMemResident/1024,procInfo.fMemVirtual/1024);
+    }
 
     N_good_events++;
 
