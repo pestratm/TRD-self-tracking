@@ -160,7 +160,6 @@ fListOfHistos(0x0),fTree(0x0), fPIDResponse(0), EsdTrackCuts(0),aliHelix(),TV3_S
 vec_self_tracklet_fit_points(),vec_ADC_val(),vec_TV3_TRD_center_offset(),vec_TV3_TRD_center(),TV3_trkl_offset(),TV3_trkl_dir()
 {
     // Constructor
-
     // Define input and output slots here
     // Input slot #0 works with a TChain
     DefineInput(0, TChain::Class());
@@ -168,14 +167,6 @@ vec_self_tracklet_fit_points(),vec_ADC_val(),vec_TV3_TRD_center_offset(),vec_TV3
     // Output slot #0 id reserved by the base class for AOD
     DefineOutput(1, TList::Class());
     DefineOutput(2, TTree::Class());
-
-
-    EsdTrackCuts = new AliESDtrackCuts();
-    fGeo = new AliTRDgeometry;
-    fDigMan = new AliTRDdigitsManager;
-    fDigMan->CreateArrays();
-    h_v_fit_vs_det = new TH1D("h_v_fit_vs_det","h_v_fit_vs_det",540,0,540);
-    h_LA_factor_fit_vs_det = new TH1D("h_LA_factor_fit_vs_det","h_LA_factor_fit_vs_det",540,0,540);
 }
 
 //_______________________________________________________________________
@@ -227,6 +218,18 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
     cout << "" << endl;
     cout << "In UserNotify" << endl;
     cout << "fDigitsInputFileName: " << fDigitsInputFileName.Data() << endl;
+
+
+    if(!EsdTrackCuts) EsdTrackCuts = new AliESDtrackCuts();
+    if(!fGeo) fGeo = new AliTRDgeometry;
+    if(!fDigMan)
+    {
+        fDigMan = new AliTRDdigitsManager;
+        fDigMan->CreateArrays();
+    }
+    if(!h_v_fit_vs_det)         h_v_fit_vs_det         = new TH1D("h_v_fit_vs_det","h_v_fit_vs_det",540,0,540);
+    if(!h_LA_factor_fit_vs_det) h_LA_factor_fit_vs_det = new TH1D("h_LA_factor_fit_vs_det","h_LA_factor_fit_vs_det",540,0,540);
+
 
 
     cout << "Connected to GRID" << endl;
@@ -447,8 +450,8 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 
 
 
-
-
+    cout << "Add EsdTrackCuts" << endl;
+    if(EsdTrackCuts) cout << "EsdTrackCuts exists" << endl;
     EsdTrackCuts->AliESDtrackCuts::SetRequireTPCRefit(kTRUE);
     EsdTrackCuts->SetMinRatioCrossedRowsOverFindableClustersTPC(0.52);
     EsdTrackCuts->AliESDtrackCuts::SetMinNClustersTPC(50); // 60, Automatically requires TPC refitted tracks?
