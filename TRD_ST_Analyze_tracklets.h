@@ -228,6 +228,12 @@ private:
     TH2D* vec_TH2D_pvdca_vs_sector;
     //Int_t inits_vec_tp_pvdca_vs_sector = 0;
 
+    vector<vector<Double_t>> ADC_rel;
+    vector<TGraph*> tg_bethe_bloch; // [e mu pi K p]
+    TProfile* tp_gain;
+    TH2D* th2d_gain;
+    //TFile* out_gain;
+
 public:
     Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, Int_t graphics);
     //~Ali_TRD_ST_Analyze();
@@ -280,6 +286,8 @@ public:
     Float_t primary_vertex_dca(Int_t i_track);
     //static Double_t distance_circ_point_2D(Double_t x,Double_t y,Double_t *p);
     //static void sum_distance_circ_point_2D(Int_t &, Double_t *, Double_t & sum, Double_t * par, Int_t );
+    TProfile* Calibrate_gain(Long64_t i_event, Int_t Bethe_flag);
+    void Draw_Save_Gain_calib();
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
