@@ -10,7 +10,7 @@ R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 #define ENV_ALEX
 //#define ENV_PI_SVEN
 
-void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3.txt", Int_t event_plot = -1)
+void Macro_TRD_tracking(TString input_list = "new_trkl_test.txt", Int_t event_plot = -1)
 {
     // event_plot: -1 -> loop over all events, other wise plot or loop over single event
 
@@ -26,6 +26,11 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
     gStyle->SetFrameBorderMode(0);
     gStyle->SetFillColor(0);
     gStyle->SetPalette(27);
+    
+    gStyle->SetPalette( kDarkBodyRadiator);
+
+
+
     gStyle->SetCanvasColor(0);
     gStyle->SetFrameFillColor(0);
     gStyle->SetCanvasBorderMode(0);
@@ -66,15 +71,17 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
     Int_t KF_tracker                = 1; // Kalman filter tracker
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 0; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 1; // Draw all TRD tracks
-    Int_t draw_all_tracklets        = 1; // Draw all TRD tracklets
-    Int_t draw_found_tracklets      = 0; // Draws tracklets found by tracker
+    Int_t draw_all_tracklets        = 0; // Draw all TRD tracklets
+    Int_t draw_found_tracklets      = 1; // Draws tracklets found by tracker
     Int_t draw_matched_TPC_track    = 0; // Draw TPC to TRD matched TPC track
     Int_t draw_matched_TRD_track    = 0; // Draw TPC to TRD matched Kalman/TF track
     Int_t draw_secondary_vertices   = 1; // Draws tracks and secondary vertices
+    Int_t calibrate_gain            = 1; // Calibrate TRD chamber gain
+    Int_t Bethe_flag                = 1; // 1: Bethe Bloch for gain calib || 0: TPC dEdx for gain calib
 
     //------------------------------------
 
@@ -108,7 +115,7 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
     // nuclear interaction event: 158, 168(!), 3741, 92, 328(!)
     Int_t start_event = 0;
     Int_t stop_event  = (Int_t) N_Events;
-    //Int_t stop_event  = 15;
+    //Int_t stop_event  = 1;
     if(event_plot != -1)
     {
         start_event = event_plot;
@@ -140,6 +147,8 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
 
 
         TRD_ST_Analyze ->Do_TPC_TRD_matching(event,3.0,10.0,graphics*draw_tracklets_TPC_match); // last one is graphics  --> draws kalman TRD tracklets
+
+        if (calibrate_gain) TProfile* gain = TRD_ST_Analyze->Calibrate_gain(event,Bethe_flag);       
 
         TRD_ST_Analyze ->set_TPC_helix_params(event);
 
@@ -207,6 +216,7 @@ void Macro_TRD_tracking(TString input_list = "List_digits_vD_1.546_LA_0.16133_V3
     }
 	
     //TRD_ST_Analyze ->Draw_n_Save_Calibration(output_dir,out_file_name_calib);
+    if(calibrate_gain) TRD_ST_Analyze ->Draw_Save_Gain_calib();
     TRD_ST_Analyze ->Write();
 
 }

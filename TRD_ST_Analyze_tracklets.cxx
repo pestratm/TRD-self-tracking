@@ -338,6 +338,17 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
         }
     }
 	       
+    TFile* file_bethe_bloch = TFile::Open("Data/Bethe_Bloch.root");
+    tg_bethe_bloch.resize(5);
+    tg_bethe_bloch[0] = (TGraph*)file_bethe_bloch ->Get("TSPLINE3_DATA_ELECTRON_LHC10H_PASS2_PBPB_MEAN");
+    tg_bethe_bloch[1] = (TGraph*)file_bethe_bloch ->Get("TSPLINE3_DATA_MUON_LHC10H_PASS2_PBPB_MEAN");
+    tg_bethe_bloch[2] = (TGraph*)file_bethe_bloch ->Get("TSPLINE3_DATA_PION_LHC10H_PASS2_PBPB_MEAN");
+    tg_bethe_bloch[3] = (TGraph*)file_bethe_bloch ->Get("TSPLINE3_DATA_KAON_LHC10H_PASS2_PBPB_MEAN");
+    tg_bethe_bloch[4] = (TGraph*)file_bethe_bloch ->Get("TSPLINE3_DATA_PROTON_LHC10H_PASS2_PBPB_MEAN");
+
+    tp_gain = new TProfile("tp_gain","tp_gain",540,0,539);
+    th2d_gain = new TH2D("th2d_gain","th2d_gain",540,0,539,50,0,20);
+
 }
 //----------------------------------------------------------------------------------------
 
@@ -1962,7 +1973,6 @@ void Ali_TRD_ST_Analyze::set_Kalman_chi_2(vector<Double_t> mChi_2s_kalman_in) //
 Int_t Ali_TRD_ST_Analyze::set_TPC_helix_params(Long64_t i_event)
 {
     //printf("Ali_TRD_ST_Analyze::set_TPC_helix_params");
-
     vec_helices_TPC.clear();
 
 
@@ -2856,11 +2866,19 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
     vector< vector<TVector3> > vec_TV3_dir_tracklets;
     vector< vector<TVector3> > vec_TV3_offset_tracklets;
     vector< vector<Int_t> > TRD_index_tracklets;
+
+    vector <vector < vector<Double_t>>> vec_ADC_val;
     vec_TV3_dir_tracklets.resize(540);
     vec_TV3_offset_tracklets.resize(540);
     TRD_index_tracklets.resize(540);
+    //vec_ADC_val.resize(540);
 
-    Double_t ADC_val[24];
+    //for (Int_t i_det = 0; i_det < 540; i_det++)
+    //{
+    //    vec_ADC_val[i_det].resize(0);
+    //}
+
+    //Double_t ADC_val[24];
 
     TVector3 TV3_offset;
     TVector3 TV3_dir;
@@ -2881,6 +2899,14 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
         TV3_dir         = TRD_ST_Tracklet ->get_TV3_dir();
         i_det           = TRD_ST_Tracklet ->get_TRD_det();
 
+        //printf("test 1 \n");
+
+        //vec_ADC_val[i_det].resize((Int_t)vec_ADC_val[i_det].size()+1); 
+
+        //vec_ADC_val[i_det][i_tracklet].resize(24);
+
+        //for (Int_t i_time = 0; i_time < 24; i_time++) { vec_ADC_val[i_det][i_tracklet][i_time]        = TRD_ST_Tracklet ->get_ADC_val(i_time); }
+
         //create "tracklets"
         Int_t i_sector = (Int_t)(i_det/30);
         Int_t i_stack  = (Int_t)(i_det%30/6);
@@ -2890,6 +2916,8 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
         vec_TV3_dir_tracklets[i_det].push_back(TV3_dir);
         vec_TV3_offset_tracklets[i_det].push_back(TV3_offset);
         TRD_index_tracklets[i_det].push_back(i_tracklet);
+        //printf("test 2 \n");
+
     }
     //--------------------------------------------------
 
@@ -3005,7 +3033,14 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
             temp_tracklet->set_TV3_offset(vec_TV3_offset_tracklets[det_best][tracklet_best]);
             temp_tracklet->set_TV3_dir(vec_TV3_dir_tracklets[det_best][tracklet_best]);
             temp_tracklet->set_TRD_index(TRD_index_tracklets[det_best][tracklet_best]);
+            //for (Int_t i_time = 0; i_time < 24; i_time++)
+            //{
+            //    temp_tracklet ->set_ADC_val(i_time,vec_ADC_val[det_best][tracklet_best][i_time]); 
+            //}
             matched_tracks[tracks_size][matched_tracks[tracks_size].size() - 1] = temp_tracklet;
+
+
+//printf("tracklet TRD index: %d, i_track: %d, i_layer: %d \n",TRD_index_tracklets[det_best][tracklet_best],tracks_size,matched_tracks[tracks_size].size() - 1);
 
 
             //------------------------------------------
@@ -3101,7 +3136,212 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
 }
 //----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
+TProfile* Ali_TRD_ST_Analyze::Calibrate_gain(Long64_t i_event, Int_t Bethe_flag)
+{
 
+    if (!input_SE->GetEntry( i_event )) return 0;
+    UShort_t NumTracks            = TRD_ST_Event ->getNumTracks();
+
+    Int_t N_TPC_tracks = (Int_t)matched_tracks.size();
+
+    //printf("n TPC tracks: %d \n",NumTracks);
+
+    ADC_rel.resize(540);  //relative ADC for each chamber
+
+    for (Int_t i_TPC_track = 0; i_TPC_track < N_TPC_tracks; i_TPC_track++)
+    //TVector3 TPC_TV3_offset = matched_tracks[i_TPC_track][i_layer_TPC]->get_TV3_offset();
+    {
+        TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(vec_idx_matched_TPC_track[i_TPC_track]);
+
+        Double_t nsigma_TPC_e   = TRD_ST_TPC_Track ->getnsigma_e_TPC();
+        Double_t nsigma_TPC_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TPC();
+        Double_t nsigma_TPC_p   = TRD_ST_TPC_Track ->getnsigma_p_TPC();
+        Double_t nsigma_TPC_K   = TRD_ST_TPC_Track ->getnsigma_K_TPC();
+
+        //if (i_TPC_track%10 == 0) 
+            //printf("\ni_track: %d, nsigma_TPC_e: %4.3f, nsigma_TPC_pi: %4.3f, nsigma_TPC_p: %4.3f \n, nsigma_TPC_K: %4.3f \n",i_TPC_track,nsigma_TPC_e,nsigma_TPC_pi,nsigma_TPC_p,nsigma_TPC_K);
+        
+        Double_t nsigma_TOF_e   = TRD_ST_TPC_Track ->getnsigma_e_TOF();
+        Double_t nsigma_TOF_pi  = TRD_ST_TPC_Track ->getnsigma_pi_TOF();
+        Double_t TRD_signal     = TRD_ST_TPC_Track ->getTRDSignal();
+        Double_t TRDsumADC      = TRD_ST_TPC_Track ->getTRDsumADC();
+        Double_t dca            = TRD_ST_TPC_Track ->getdca();  // charge * distance of closest approach to the primary vertex
+        TLorentzVector TLV_part = TRD_ST_TPC_Track ->get_TLV_part();
+        UShort_t NTPCcls        = TRD_ST_TPC_Track ->getNTPCcls();
+        UShort_t NTRDcls        = TRD_ST_TPC_Track ->getNTRDcls();
+        UShort_t NITScls        = TRD_ST_TPC_Track ->getNITScls();
+        Float_t TPCchi2         = TRD_ST_TPC_Track ->getTPCchi2();
+        Float_t TPCdEdx         = TRD_ST_TPC_Track ->getTPCdEdx();
+        Float_t TOFsignal       = TRD_ST_TPC_Track ->getTOFsignal(); // in ps (1E-12 s)
+        Float_t Track_length    = TRD_ST_TPC_Track ->getTrack_length();
+        Float_t charge = 1.0;
+        if(dca < 0.0) charge = -1.0;
+
+        Float_t momentum        = TLV_part.P();
+        Float_t eta_track       = TLV_part.Eta();
+        Float_t pT_track        = TLV_part.Pt();
+        Float_t theta_track     = TLV_part.Theta();
+        Float_t phi_track       = TLV_part.Phi();
+
+        if(momentum < 0.3 && momentum > 0.7) continue;
+        //if(momentum < 0.3 ) continue;
+        //if (!(matched_tracks[i_TPC_track])==NULL) continue;
+
+        if ((abs(nsigma_TPC_pi) < 2.5 && abs(nsigma_TPC_p) > 2.5 && abs(nsigma_TPC_K) > 2.5) // Pi
+                || (abs(nsigma_TPC_pi) > 2.5 && abs(nsigma_TPC_p) < 2.5 && abs(nsigma_TPC_K) > 2.5) //p
+                    || (abs(nsigma_TPC_pi) > 2.5 && abs(nsigma_TPC_p) > 2.5 && abs(nsigma_TPC_K) < 2.5)) //K
+        {
+            for (Int_t i_layer = 0; i_layer < (Int_t)matched_tracks[i_TPC_track].size(); i_layer++)
+            {
+//printf("i_TPC_track: %d, i_layer: %d, (Int_t)matched_tracks[i_TPC_track].size(): %d \n",i_TPC_track,i_layer,(Int_t)matched_tracks[i_TPC_track].size());
+
+                if(matched_tracks[i_TPC_track][i_layer] != NULL)
+                {
+                    Int_t det = matched_tracks[i_TPC_track][i_layer] ->get_TRD_det();
+                    //ADC_rel[det].push_back(NULL);
+
+                    Double_t ADC = 0.0;
+                    Int_t tb_count = 0;
+
+                    Ali_TRD_ST_Tracklets* TRD_ST_Tracklet_adc = TRD_ST_Event    ->getTracklet((Int_t)matched_tracks[i_TPC_track][i_layer]->get_TRD_index());
+
+                    //TVector3 TV3_offset_matched = matched_tracks[i_TPC_track][i_layer] ->GetTV3_offset();
+                    TVector3 TV3_dir_matched    = matched_tracks[i_TPC_track][i_layer] ->get_TV3_dir();
+
+                    if (TV3_dir_matched.Dot((*vec_TV3_TRD_center[det][2])) == 0.0) continue;
+
+                Double_t scale_factor = 3.7*((*vec_TV3_TRD_center[det][2]).Mag())/((*vec_TV3_TRD_center[det][2]).Dot(TV3_dir_matched));
+                    // 3.7 divided by (dot product of vectors/length of norm vector)
+
+                    //Double_t tracklet_length = 3.7/TMath::Sin(((-1*(*vec_TV3_TRD_center[det][2])).Angle(TV3_dir_matched)));
+
+                    //TMath::Sqrt( TMath::Power(3.0*TV3_dir_matched[0],2) + TMath::Power(3.0*TV3_dir_matched[1],2))
+                Double_t tracklet_length = TMath::Sqrt( TMath::Power(scale_factor*TV3_dir_matched[0],2) + TMath::Power(scale_factor*TV3_dir_matched[1],2) + TMath::Power(scale_factor*TV3_dir_matched[2],2));
+                    //same as scale factor 
+
+                    //vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0],TV3_offset[1],TV3_offset[2]);
+                    //vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0] + scale_length_vec*TV3_dir[0],TV3_offset[1] + scale_length_vec*TV3_dir[1],TV3_offset[2] + scale_length_vec*TV3_dir[2]);
+                    //if (tracklet_length > 10.0) continue;
+    //printf("\ntracklet TV3_dir_matched[0]: %4.3f, TV3_dir_matched[1]: %4.3f, TV3_dir_matched[2]: %4.3f, dot: %4.3f, tracklet_length: %4.3f \n",TV3_dir_matched[0],TV3_dir_matched[1],TV3_dir_matched[2],TV3_dir_matched.Dot((*vec_TV3_TRD_center[det][2])),tracklet_length);
+    //printf("normZ[0]: %4.3f, normZ[1]: %4.3f, normZ[2]: %4.3f \n",(*vec_TV3_TRD_center[det][2]).X(),(*vec_TV3_TRD_center[det][2]).Y(),(*vec_TV3_TRD_center[det][2]).Z());
+    //printf("x2: %4.3f, y2: %4.3f,  z2: %4.3f, sum: %4.3f, sqrt: %4.3f \n",TMath::Power(3.0*TV3_dir_matched[0],2),TMath::Power(3.0*TV3_dir_matched[1],2),TMath::Power(3.0*TV3_dir_matched[2],2),
+        //TMath::Power(3.0*TV3_dir_matched[0],2) + TMath::Power(3.0*TV3_dir_matched[1],2) + TMath::Power(3.0*TV3_dir_matched[2],2),TMath::Sqrt( TMath::Power(3.0*TV3_dir_matched[0],2) + TMath::Power(3.0*TV3_dir_matched[1],2) + TMath::Power(3.0*TV3_dir_matched[2],2)));
+
+                    for (Int_t i_time = 0; i_time < 24; i_time++) //24 time bins!
+                    {
+
+                        //TRD_index_tracklets[i_det][i_trkl] = index
+                        if (TRD_ST_Tracklet_adc ->get_ADC_val(i_time) < 10.0) continue;
+                        ADC += (TRD_ST_Tracklet_adc ->get_ADC_val(i_time) - 10.0);
+                        tb_count++;
+                    }
+                    if (tb_count == 23) 
+                    {
+                        if(Bethe_flag == 1) //do via Bethe-Bloch
+                        {
+                            //vector<TGraph*> tg_bethe_bloch; // [e mu pi K p]
+
+                            Double_t BB_val = -1.0; 
+
+                            if (abs(nsigma_TPC_pi) < 2.5 ) BB_val = tg_bethe_bloch[2] ->Eval(momentum); //pi
+                            if (abs(nsigma_TPC_p) < 2.5 )  BB_val = tg_bethe_bloch[4] ->Eval(momentum); //p
+                            if (abs(nsigma_TPC_K) < 2.5 )  BB_val = tg_bethe_bloch[3] ->Eval(momentum); //p
+
+                            if (BB_val == 0 || BB_val == -1.0) continue;
+                            ADC = ADC/(BB_val*abs(tracklet_length));
+
+                        }
+                        if(Bethe_flag == 0) // do via TPC dEdx
+                        {
+                            if(TPCdEdx == 0) continue;
+                            ADC = ADC/(TPCdEdx*abs(tracklet_length));
+                        }
+
+                        ADC_rel[det].push_back(ADC); 
+                        tp_gain->Fill(det,ADC);
+                        th2d_gain->Fill(det,ADC);
+                        //printf("\ndet: %d, TP content: %4.3f, ADC: %4.3f, TPCdEdx: %4.3f, tracklet_length: %4.3f \n",det,tp_gain->GetBinContent(det),ADC,TPCdEdx,tracklet_length);
+                    }
+                }
+            }
+        }
+    }
+
+#if 0
+    if((Int_t)vec_tp_gain.size() == 0)
+    {
+        vec_tp_gain.resize(540);
+        vec_TH2D_gain.resize(540);
+
+        for (Int_t i_det = 0; i_det < 540; i_det++)
+        {
+            vec_tp_gain[i_det] = new TProfile(Form("vec_tp_gain_%d",i_det),Form("vec_tp_gain_%d",i_det),360,-360,360);
+            vec_TH2D_gain[i_det] = new TH2D(Form("vec_tp_gain_%d",i_det),Form("vec_tp_gain_%d",i_det),10,70,110,50,-25,25);
+        }
+    }
+#endif
+
+//tp_gain ->Draw();
+//th2d_gain->Draw();  
+
+return tp_gain;
+
+}
+//----------------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Draw_Save_Gain_calib()
+{
+    #if 0
+
+    TH1D* h_dummy_TP_gain = new TH1D("h_dummy_TP_gain","h_dummy_TP_gain",90,50,140);
+    h_dummy_TP_gain->SetStats(1);
+    h_dummy_TP_gain->SetTitle("");
+    h_dummy_TP_gain->GetXaxis()->SetTitleOffset(0.85);
+    h_dummy_TP_gain->GetYaxis()->SetTitleOffset(0.78);
+    h_dummy_TP_gain->GetXaxis()->SetLabelOffset(0.0);
+    h_dummy_TP_gain->GetYaxis()->SetLabelOffset(0.01);
+    h_dummy_TP_gain->GetXaxis()->SetLabelSize(0.04);
+    h_dummy_TP_gain->GetYaxis()->SetLabelSize(0.04);
+    h_dummy_TP_gain->GetXaxis()->SetTitleSize(0.04);
+    h_dummy_TP_gain->GetYaxis()->SetTitleSize(0.04);
+    //h_dummy_TP_gain->GetXaxis()->SetNdivisions(540,'N');
+    //h_dummy_TP_gain->GetYaxis()->SetNdivisions(5,'N');
+    h_dummy_TP_gain->GetXaxis()->CenterTitle();
+    h_dummy_TP_gain->GetYaxis()->CenterTitle();
+    h_dummy_TP_gain->GetXaxis()->SetTitle("Chamber ID");
+    h_dummy_TP_gain->GetYaxis()->SetTitle("<ADC/dEdx>");
+    h_dummy_TP_gain->GetXaxis()->SetRangeUser(0,539);
+    //h_dummy_TP_gain->GetYaxis()->SetRangeUser(-24,24);
+    #endif
+    
+    TCanvas *can_TP_gain = new TCanvas("can_TP_gain", "can_TP_gain",10,10,1500,500);
+    can_TP_gain->cd();
+    tp_gain->GetXaxis()->SetTitle("Chamber ID");
+    tp_gain->GetYaxis()->SetTitle("<ADC/dEdx>");
+    tp_gain->SetStats(0);
+    tp_gain->SetTitle("");
+    //h_dummy_TP_gain->Draw("h");
+    //tp_gain ->LabelsOption("");
+    tp_gain ->DrawCopy("");
+
+    TCanvas *can_th2d_gain = new TCanvas("can_th2d_gain", "can_th2d_gain",10,10,1500,500);
+    can_th2d_gain->cd();
+
+    th2d_gain->GetXaxis()->SetTitle("Chamber ID");
+    th2d_gain->GetYaxis()->SetTitle("<ADC/dEdx>");
+    th2d_gain->SetStats(0);
+    th2d_gain->SetTitle("");
+    th2d_gain ->DrawCopy("COLZ");
+
+    TFile* out_gain = new TFile("out_gain.root","RECREATE");
+    out_gain->cd();
+    tp_gain->Write();
+    th2d_gain->Write();
+
+}
+//----------------------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------------------
 void Ali_TRD_ST_Analyze::Draw_Kalman_Tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > found_tracks)
@@ -3324,7 +3564,6 @@ void Ali_TRD_ST_Analyze::Write()
     {
         vec_h2D_delta_pT_all_vs_pT[i_layer] ->Write();
     }
-
 
     printf("All data written \n");
 }
@@ -3997,7 +4236,7 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration(TString out_dir, TString out_fi
     #if 1
     Int_t arr_color_layer[6] = {kBlack,kRed,kBlue,kGreen,kMagenta,kCyan};
 
-    for(Int_t i_sec_block = 0; i_sec_block < 1; i_sec_block++) //<6
+    for(Int_t i_sec_block = 0; i_sec_block < 6; i_sec_block++) //<6
     {
         HistName = "h_dummy_Delta_vs_impact_";
         HistName += i_sec_block;
