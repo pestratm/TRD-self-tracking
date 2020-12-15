@@ -62,6 +62,7 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
 
 
     for(Long64_t event = start_event; event < stop_event; event++)
+    //for(Long64_t event = start_event; event < 100000; event++)
     {
         //-------> Tracklets = new Ali_TRD_ST_Tracklets*[NumTracklets]; what is this??
         //class _copy
@@ -75,6 +76,7 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
         }
         
         TRD_physics_analysis ->Loop_event(event);
+        TRD_physics_analysis ->Calculate_pi0_mass();
 
         //printf("\n Event: %lld, Photons: %d, Nuclear interactions: %d \n",event,(Int_t)vec_PhotonVertex.size(),(Int_t)vec_NIVertex.size());
 
