@@ -18,7 +18,7 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
 // load the shared libraries here gSystem ->Load("...
     gSystem ->Load("TRD_physics_analysis_cxx.so");
 
-	TString out_file_name = input_list;
+    TString out_file_name = input_list;
     out_file_name += "_physics_out.root";
 
     TString input_dir  = "../ST_out/";
@@ -67,9 +67,9 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
         //class _copy
         //all Floates?
 
-        if (event != 0  &&  event % 50 == 0)
+        if (event != 0  &&  event % 5000 == 0)
         cout << "." << flush;
-        if (event != 0  &&  event % 500 == 0)
+        if (event != 0  &&  event % 50000 == 0)
         {
             printf("event: %lld out of %lld, %4.2f%% total done \n",event,N_Events,((Double_t)event/(Double_t)N_Events)*100.0);
         }
@@ -79,5 +79,7 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
         //printf("\n Event: %lld, Photons: %d, Nuclear interactions: %d \n",event,(Int_t)vec_PhotonVertex.size(),(Int_t)vec_NIVertex.size());
 
     }
+
+    TRD_physics_analysis ->Draw();
 }
 
