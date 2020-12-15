@@ -95,6 +95,10 @@ private:
     vector< vector< Ali_Helix_copy* >> vec_photon_kalman_helices; //[i_photon][i_track]
     vector< vector< Ali_Helix_copy* >> vec_photon_tpc_helices; //[i_photon][i_track]
 
+    vector <TLorentzVector> vec_TLV_photon;
+
+    TH1D* TH1_mass_pi0;
+
     //things for Nuclear interactions
     TVector3 TV3_NIVertex;
     vector< TVector3 > vec_NIVertex;
@@ -118,6 +122,8 @@ public:
 
     Long64_t get_N_Events() {return N_Events;}
     void Draw();
+
+    void Calculate_pi0_mass();
     
     ClassDef(Ali_TRD_physics_analysis, 1)
 };

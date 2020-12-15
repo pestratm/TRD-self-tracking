@@ -84,7 +84,6 @@ TVector3 calculateDCA_vec_StraightToPoint(TVector3 &base, TVector3 &dir, TVector
 //----------------------------------------------------------------------------------------
 
 
-
 //----------------------------------------------------------------------------------------
 TCanvas* Draw_2D_histo_and_canvas(TH2D* hist, TString name, Int_t x_size, Int_t y_size,
                               Double_t min_val, Double_t max_val, TString option)
@@ -163,6 +162,8 @@ Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_
     printf("test printf: %s \n",HistName.Data());
 
     TH2_vertex_photon_XY = new TH2D("TH2_vertex_photon_XY","TH2_vertex_photon_XY",400,-400,400,400,-400,400);
+    //TH1_mass_pi0 = new TH1D("TH1_mass_pi0","TH1_mass_pi0",400,0,1000);
+    TH1_mass_pi0 = new TH1D("TH1_mass_pi0","TH1_mass_pi0",400,0,1.5);
 }
 
 //----------------------------------------------------------------------------------------
@@ -259,7 +260,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
     vec_photon_tpc_helices.clear();
     vec_photon_tpc_helices.resize(NumPhotons);
 
-    // vec_TLV_photon
+    vec_TLV_photon.clear();
 
     for(Int_t i_photon = 0; i_photon < NumPhotons; i_photon++)
     {
@@ -307,6 +308,64 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
         }
         //------------------------------------------
 
+        vector<Bool_t> conds;
+        Bool_t cond1=(
+                      (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 1 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 1 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 1 );
+        conds.push_back(cond1);
+        Bool_t cond2=(
+                      (shared_layer[0] + shared_layer[1] + shared_layer[2] + shared_layer[3]) > 2 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3]) > 0 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3]) > 0 );
+        conds.push_back(cond2);
+
+        Bool_t cond3=(
+                      (shared_layer[0] + shared_layer[1] + shared_layer[2]) > 0 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2]) > 2 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2]) > 2 );
+        conds.push_back(cond3);
+
+        Bool_t cond4=(
+                      (shared_layer[0] + shared_layer[1]) > 0 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2] + independent_layer_A[1]) > 2 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2] + independent_layer_B[1]) > 2 );
+        conds.push_back(cond4);
+        
+        Bool_t cond5=(
+                      (shared_layer[0] + shared_layer[1] + shared_layer[2]) == 0 &&
+                      (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2] + independent_layer_A[1] + independent_layer_A[0]) > 3 &&
+                      (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2] + independent_layer_B[1] + independent_layer_B[0]) > 3 );
+        conds.push_back(cond5);
+        
+        Bool_t cond6=!(
+                       (shared_layer[3] + shared_layer[4] + shared_layer[5]) > 0 &&
+                       (independent_layer_A[0] + independent_layer_A[1] + independent_layer_A[2] ) > 0 &&
+                       (independent_layer_B[0] + independent_layer_B[1] + independent_layer_B[2] ) > 0 );
+        conds.push_back(cond6);
+
+        if((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6)
+        {
+            if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
+            {
+                TLorentzVector TLV_photon;
+                TLV_photon.SetPtEtaPhiM(ph_pT_AB,ph_Eta_AB,ph_Phi_AB,0.0);
+
+                TVector3 dir;
+                dir = TLV_photon.Vect();
+
+                TVector3 base;
+                base.SetXYZ(PhotonVertexX,PhotonVertexY,PhotonVertexZ); 
+
+                TVector3 point;
+                point.SetXYZ(0.0,0.0,0.0);
+
+                Double_t dist = calculateMinimumDistanceStraightToPoint(base, dir, point);
+
+                if (dist < 20.0) vec_TLV_photon.push_back(TLV_photon);
+            }
+        }
+
         // Add some condition if its a good photon
         // Fill TLorentzVector with photon.
 
@@ -318,6 +377,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
 
         //if(AP_value < AP_cut_value && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.8 && pTB < 0.8 && dot_product_dir_vertex > 0.9)
         // vec_TLV_photon ->SetPtEtaPhiM(ph_pT_AB);
+
+        #if 0 //not needed right now
 
         UShort_t N_Kalman_tracks = TRD_Photon ->getNumKalman_Tracks(); //should be always 2 or 0
 
@@ -353,6 +414,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
             }
         }
 
+        #endif
+
         //printf("--> Photon conversion number %d: TRD tracks: %d, TPC tracks: %d \n",i_photon,N_Kalman_tracks,N_TPC_tracks);
 
     }
@@ -368,6 +431,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
 
     //--------------------------------------------------
     //Nuclear interactions loop
+
+    #if 0 //also not needed right now
 
     vec_NIVertex.clear();
 
@@ -438,6 +503,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
         //printf("--> Nuclear interaction number %d: TRD tracks: %d, TPC tracks: %d \n",i_interaction,N_Kalman_tracks,N_TPC_tracks);
 
     }
+    #endif
     // Nuclear interactions done
     //--------------------------------------------------
 
@@ -447,12 +513,35 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
 //----------------------------------------------------------------------------------------
 
 
-
 //----------------------------------------------------------------------------------------
-void Ali_TRD_physics_analysis::Draw()
+void Ali_TRD_physics_analysis::Calculate_pi0_mass() //loop over all good photons
 {
-    TCanvas* can_vertex_photon_XY = Draw_2D_histo_and_canvas(TH2_vertex_photon_XY,"can_vertex_photon_XY",800,650,0,0,"colz"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
-    can_vertex_photon_XY ->SetLogz(1);
+    //printf("Calculate_pi0_mass started \n");
+
+    for (Int_t i_photon_A = 0; i_photon_A < (Int_t)vec_TLV_photon.size(); i_photon_A++)
+    {
+        for (Int_t i_photon_B = 0; i_photon_B < (Int_t)vec_TLV_photon.size(); i_photon_B++)
+        {
+            if (i_photon_A == i_photon_B) continue;
+            TLorentzVector TLV_pi0; 
+            TLV_pi0 = vec_TLV_photon[i_photon_A]+vec_TLV_photon[i_photon_B];
+            Double_t Mass_pi0 = TLV_pi0.M();
+            TH1_mass_pi0 ->Fill(Mass_pi0);
+
+TH1_mass_pi0->Draw();
+        }
+
+    }
+
 }
 //----------------------------------------------------------------------------------------
 
+#if 1
+//----------------------------------------------------------------------------------------
+void Ali_TRD_physics_analysis::Draw()
+{
+    TCanvas* can_vertex_photon_XY = Draw_1D_histo_and_canvas(TH1_mass_pi0,"can_TH1_mass_pi0",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
+    //can_TH1_mass_pi0 ->SetLogz(1);
+}
+//----------------------------------------------------------------------------------------
+#endif
