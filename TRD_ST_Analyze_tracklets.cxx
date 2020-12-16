@@ -103,11 +103,11 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     //create new 
 
 
-    NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv:dotprod:TPCdEdx_A:dca_TPC_A:p_TPC_A:TPCdEdx_B:dca_TPC_B:p_TPC_B:InvMK0s:dcaAB:InvML:InvMaL");
-    NT_secondary_vertices ->SetAutoSave( 5000000 );
+    //NT_secondary_vertices = new TNtuple("NT_secondary_vertices","NT_secondary_vertices Ntuple","x:y:z:ntracks:pT_AB:qpT_A:qpT_B:AP_pT:AP_alpha:dcaTPC:pathTPC:InvM:Eta:Phi:GlobEv:dotprod:TPCdEdx_A:dca_TPC_A:p_TPC_A:TPCdEdx_B:dca_TPC_B:p_TPC_B:InvMK0s:dcaAB:InvML:InvMaL");
+    //NT_secondary_vertices ->SetAutoSave( 5000000 );
 
-    NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom:layerbitmap");
-    NT_secondary_vertex_cluster ->SetAutoSave( 5000000 );
+    //NT_secondary_vertex_cluster = new TNtuple("NT_secondary_vertex_cluster","NT_secondary_vertex_cluster Ntuple","x:y:z:nvertices:dcaTPC:tof:trklength:dEdx:dcaprim:pT:mom:layerbitmap");
+    //NT_secondary_vertex_cluster ->SetAutoSave( 5000000 );
 
     Tree_TRD_ST_Event_out  = NULL;
     Tree_TRD_ST_Event_out  = new TTree("Tree_TRD_ST_Event_out" , "TRD_ST_Events_out" );
@@ -1461,7 +1461,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                             Arr_seconary_params[25] = (Float_t)Inv_mass_AB_antiLambda;
 
                             //printf("vertex pos: {%4.3f, %4.3f, %4.3f}, ntracks: %4.3f \n",Arr_seconary_params[0],Arr_seconary_params[1],Arr_seconary_params[2],Arr_seconary_params[3]);
-                            NT_secondary_vertices ->Fill(Arr_seconary_params);
+                            //NT_secondary_vertices ->Fill(Arr_seconary_params);
 
                             //printf("bit_TRD_layer_shared: %d \n",bit_TRD_layer_shared);
                             //-----------------------------------
@@ -1804,7 +1804,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                 Arr_cluster_params[10]	= (Float_t)momentum_min;
                 Arr_cluster_params[11]	= (Float_t)nuclev_bitmap;
 
-                NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
+                //NT_secondary_vertex_cluster->Fill(Arr_cluster_params);
 
                 TRD_Nuclear_interaction = TRD_Self_Event -> createNucInteraction();
 
@@ -3522,8 +3522,8 @@ void Ali_TRD_ST_Analyze::Write()
     outputfile ->cd();
 
 
-    NT_secondary_vertices         ->AutoSave("SaveSelf");
-    NT_secondary_vertex_cluster   ->AutoSave("SaveSelf");
+    //NT_secondary_vertices         ->AutoSave("SaveSelf");
+    //NT_secondary_vertex_cluster   ->AutoSave("SaveSelf");
     TH2D_AP_plot          ->Write();
     outputfile ->mkdir("AP_radii");
     outputfile ->cd("AP_radii");
