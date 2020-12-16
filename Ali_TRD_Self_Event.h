@@ -191,8 +191,6 @@ private:
     Float_t vertex_point[3];
     Float_t bit_TRD_layer_shared;
     Float_t pT_AB;
-    //Float_t pTA; //pTA*TMath::Sign(1,CA);
-    //Float_t pTB; //pTB*TMath::Sign(1,CB);
     Float_t AP_pT;
     Float_t AP_alpha;
     Float_t dca_min;
@@ -200,14 +198,7 @@ private:
     Float_t Inv_mass_AB;
     Float_t Eta_AB;
     Float_t Phi_AB;
-    //Float_t Global_Event;
     Float_t dot_product_dir_vertex;
-    //Float_t TPCdEdx_A;
-    //Float_t dca_TPC_A;
-    //Float_t p_TPC_A;
-    //Float_t TPCdEdx_B;
-    //Float_t dca_TPC_B;
-    //Float_t p_TPC_B;
     Float_t Inv_mass_AB_K0s;
     Float_t dcaAB;
     Float_t Inv_mass_AB_Lambda;
@@ -216,14 +207,17 @@ private:
     UShort_t fNumTPC_Tracks;
     UShort_t fNumKalman_Tracks;
 
+    TLorentzVector TLV_part_A; // Lorentz vector properties of this particle
+    TLorentzVector TLV_part_B; // Lorentz vector properties of this particle
+
     TClonesArray* fTPC_Tracks;              //->
     TClonesArray* fKalman_Tracks;           //->
 
 public:
-    Ali_TRD_Photon() : 
-    vertex_point(),bit_TRD_layer_shared(-1),pT_AB(-1),AP_pT(-1),AP_alpha(-1),dca_min(-1),path_min(-1),Inv_mass_AB(-1),Eta_AB(-1),Phi_AB(-1),
-        dot_product_dir_vertex(-1),
-            Inv_mass_AB_K0s(-1),dcaAB(-1),Inv_mass_AB_Lambda(-1),Inv_mass_AB_antiLambda(-1),fNumTPC_Tracks(0),fNumKalman_Tracks(0)
+    Ali_TRD_Photon() :
+        vertex_point(),bit_TRD_layer_shared(-1),pT_AB(-1),AP_pT(-1),AP_alpha(-1),dca_min(-1),path_min(-1),Inv_mass_AB(-1),Eta_AB(-1),Phi_AB(-1),
+        dot_product_dir_vertex(-1),Inv_mass_AB_K0s(-1),dcaAB(-1),Inv_mass_AB_Lambda(-1),Inv_mass_AB_antiLambda(-1),
+        fNumTPC_Tracks(0),fNumKalman_Tracks(0),TLV_part_A(),TLV_part_B()
     {
         fTPC_Tracks             = new TClonesArray( "Ali_TPC_Track", 10 );
         fKalman_Tracks          = new TClonesArray( "Ali_Kalman_Track", 10 );
@@ -236,104 +230,108 @@ public:
         fKalman_Tracks = NULL;
     }
 
-	// setters
-    void set_vertex_point(Float_t x, Float_t y, Float_t z)         {    vertex_point[0] = x; vertex_point[1] = y; vertex_point[2] = z;  }
-    void set_bit_TRD_layer_shared(Float_t bit_layer_shared)        {    bit_TRD_layer_shared = bit_layer_shared;                        }
-    void set_pT_AB(Float_t pt_ab)                                  {    pT_AB = pt_ab;                                                  }
-    void set_AP_pT(Float_t ap_pt)                                  {    AP_pT = ap_pt;                                                  }
-    void set_AP_alpha(Float_t ap_alpha)                            {    AP_alpha = ap_alpha;                                            }
-    void set_dca_min(Float_t dca)                                  {    dca_min = dca;                                                  }
-    void set_path_min(Float_t path)                                {    path_min = path;                                                }
-    void set_Inv_mass_AB(Float_t mass_ab)                          {    Inv_mass_AB = mass_ab;                                          }
-    void set_Eta_AB(Float_t eta_ab)                                {    Eta_AB = eta_ab;                                                }
-    void set_Phi_AB(Float_t phi_ab)                                {    Phi_AB = phi_ab;                                                }
-    void set_dot_product_dir_vertex(Float_t product)               {    dot_product_dir_vertex = product;                               }
-    void set_Inv_mass_AB_K0s(Float_t mass_k0)                      {    Inv_mass_AB_K0s = mass_k0;                                      }
-    void set_dcaAB(Float_t dca_ab)                                 {    dcaAB = dca_ab;                                                 }    
-    void set_Inv_mass_AB_Lambda(Float_t mass_l)                    {    Inv_mass_AB_Lambda = mass_l;                                    }
-	void set_Inv_mass_AB_antiLambda(Float_t mass_al)               {    Inv_mass_AB_antiLambda = mass_al;                               }
+        // setters
+        void set_vertex_point(Float_t x, Float_t y, Float_t z)         {    vertex_point[0] = x; vertex_point[1] = y; vertex_point[2] = z;  }
+        void set_bit_TRD_layer_shared(Float_t bit_layer_shared)        {    bit_TRD_layer_shared = bit_layer_shared;                        }
+        void set_pT_AB(Float_t pt_ab)                                  {    pT_AB = pt_ab;                                                  }
+        void set_AP_pT(Float_t ap_pt)                                  {    AP_pT = ap_pt;                                                  }
+        void set_AP_alpha(Float_t ap_alpha)                            {    AP_alpha = ap_alpha;                                            }
+        void set_dca_min(Float_t dca)                                  {    dca_min = dca;                                                  }
+        void set_path_min(Float_t path)                                {    path_min = path;                                                }
+        void set_Inv_mass_AB(Float_t mass_ab)                          {    Inv_mass_AB = mass_ab;                                          }
+        void set_Eta_AB(Float_t eta_ab)                                {    Eta_AB = eta_ab;                                                }
+        void set_Phi_AB(Float_t phi_ab)                                {    Phi_AB = phi_ab;                                                }
+        void set_dot_product_dir_vertex(Float_t product)               {    dot_product_dir_vertex = product;                               }
+        void set_Inv_mass_AB_K0s(Float_t mass_k0)                      {    Inv_mass_AB_K0s = mass_k0;                                      }
+        void set_dcaAB(Float_t dca_ab)                                 {    dcaAB = dca_ab;                                                 }
+        void set_Inv_mass_AB_Lambda(Float_t mass_l)                    {    Inv_mass_AB_Lambda = mass_l;                                    }
+        void set_Inv_mass_AB_antiLambda(Float_t mass_al)               {    Inv_mass_AB_antiLambda = mass_al;                               }
+        void set_TLV_part_A(TLorentzVector tlv)                        {    TLV_part_A = tlv;                                               }
+        void set_TLV_part_B(TLorentzVector tlv)                        {    TLV_part_B = tlv;                                               }
 
-	// getters
 
-    Float_t get_vertex_point(Int_t i_xyz) const    {    return vertex_point[i_xyz];         }
-    Float_t get_bit_TRD_layer_shared() const       {    return bit_TRD_layer_shared; }
-    Float_t get_pT_AB() const                      {    return pT_AB;   }
-    Float_t get_AP_pT() const                      {    return AP_pT; }
-    Float_t get_AP_alpha() const                   {    return AP_alpha; }
-    Float_t get_dca_min() const                                 {    return dca_min; }
-    Float_t get_path_min() const                               {    return path_min; }
-    Float_t get_Inv_mass_AB() const                         {    return Inv_mass_AB; }
-    Float_t get_Eta_AB() const                               {    return Eta_AB; }
-    Float_t get_Phi_AB() const                               {    return Phi_AB;  }
-    Float_t get_dot_product_dir_vertex() const              {    return dot_product_dir_vertex; }
-    Float_t get_Inv_mass_AB_K0s() const                     {    return Inv_mass_AB_K0s; }
-    Float_t get_dcaAB() const                                {    return dcaAB; }
-    Float_t get_Inv_mass_AB_Lambda() const                   {    return Inv_mass_AB_Lambda; }
-    Float_t get_Inv_mass_AB_antiLambda() const              {    return Inv_mass_AB_antiLambda; }
+        // getters
+        Float_t get_vertex_point(Int_t i_xyz) const    {    return vertex_point[i_xyz];         }
+        Float_t get_bit_TRD_layer_shared() const       {    return bit_TRD_layer_shared; }
+        Float_t get_pT_AB() const                      {    return pT_AB;   }
+        Float_t get_AP_pT() const                      {    return AP_pT; }
+        Float_t get_AP_alpha() const                   {    return AP_alpha; }
+        Float_t get_dca_min() const                                 {    return dca_min; }
+        Float_t get_path_min() const                               {    return path_min; }
+        Float_t get_Inv_mass_AB() const                         {    return Inv_mass_AB; }
+        Float_t get_Eta_AB() const                               {    return Eta_AB; }
+        Float_t get_Phi_AB() const                               {    return Phi_AB;  }
+        Float_t get_dot_product_dir_vertex() const              {    return dot_product_dir_vertex; }
+        Float_t get_Inv_mass_AB_K0s() const                     {    return Inv_mass_AB_K0s; }
+        Float_t get_dcaAB() const                                {    return dcaAB; }
+        Float_t get_Inv_mass_AB_Lambda() const                   {    return Inv_mass_AB_Lambda; }
+        Float_t get_Inv_mass_AB_antiLambda() const              {    return Inv_mass_AB_antiLambda; }
+        TLorentzVector get_TLV_part_A() const       { return TLV_part_A;   }
+        TLorentzVector get_TLV_part_B() const       { return TLV_part_B;   }
 
-    //-----------------------------------
+        //-----------------------------------
 
-    Ali_TPC_Track* createTPC_Track()
-    {
-        if (fNumTPC_Tracks == fTPC_Tracks->GetSize())
-        fTPC_Tracks->Expand( fNumTPC_Tracks + 10 );
-        if (fNumTPC_Tracks >= 10000)
+        Ali_TPC_Track* createTPC_Track()
         {
-        Fatal( "Ali_TRD_photons::createTPC_Track()", "ERROR: Too many TPC tracks (>10000)!" );
-        exit( 2 );
+            if (fNumTPC_Tracks == fTPC_Tracks->GetSize())
+                fTPC_Tracks->Expand( fNumTPC_Tracks + 10 );
+            if (fNumTPC_Tracks >= 10000)
+            {
+                Fatal( "Ali_TRD_photons::createTPC_Track()", "ERROR: Too many TPC tracks (>10000)!" );
+                exit( 2 );
+            }
+
+            new((*fTPC_Tracks)[fNumTPC_Tracks++]) Ali_TPC_Track;
+            return (Ali_TPC_Track*)((*fTPC_Tracks)[fNumTPC_Tracks - 1]);
+        }
+        void clearTPC_TrackList()
+        {
+            fNumTPC_Tracks   = 0;
+            fTPC_Tracks      ->Clear();
+        }
+        UShort_t getNumTPC_Tracks() const
+        {
+            return fNumTPC_Tracks;
+        }
+        Ali_TPC_Track* getTPC_Track(UShort_t i) const
+        {
+            return i < fNumTPC_Tracks ? (Ali_TPC_Track*)((*fTPC_Tracks)[i]) : NULL;
         }
 
-        new((*fTPC_Tracks)[fNumTPC_Tracks++]) Ali_TPC_Track;
-        return (Ali_TPC_Track*)((*fTPC_Tracks)[fNumTPC_Tracks - 1]);
-    }
-    void clearTPC_TrackList()
-    {
-        fNumTPC_Tracks   = 0;
-        fTPC_Tracks      ->Clear();
-    }
-    UShort_t getNumTPC_Tracks() const
-    {
-        return fNumTPC_Tracks;
-    }
-    Ali_TPC_Track* getTPC_Track(UShort_t i) const
-    {
-        return i < fNumTPC_Tracks ? (Ali_TPC_Track*)((*fTPC_Tracks)[i]) : NULL;
-    }
-     
-    //-----------------------------------
+        //-----------------------------------
 
 
-    //-----------------------------------   
+        //-----------------------------------
 
-    Ali_Kalman_Track* createKalman_Track()
-    {
-        if (fNumKalman_Tracks == fKalman_Tracks->GetSize())
-        fKalman_Tracks->Expand( fNumKalman_Tracks + 10 );
-        if (fNumKalman_Tracks >= 10000)
+        Ali_Kalman_Track* createKalman_Track()
         {
-        Fatal( "Ali_TRD_photons::createKalman_Track()", "ERROR: Too many Kalman tracks (>10000)!" );
-        exit( 2 );
+            if (fNumKalman_Tracks == fKalman_Tracks->GetSize())
+                fKalman_Tracks->Expand( fNumKalman_Tracks + 10 );
+            if (fNumKalman_Tracks >= 10000)
+            {
+                Fatal( "Ali_TRD_photons::createKalman_Track()", "ERROR: Too many Kalman tracks (>10000)!" );
+                exit( 2 );
+            }
+
+            new((*fKalman_Tracks)[fNumKalman_Tracks++]) Ali_Kalman_Track;
+            return (Ali_Kalman_Track*)((*fKalman_Tracks)[fNumKalman_Tracks - 1]);
+        }
+        void clearKalman_TrackList()
+        {
+            fNumKalman_Tracks   = 0;
+            fKalman_Tracks      ->Clear();
+        }
+        UShort_t getNumKalman_Tracks() const
+        {
+            return fNumKalman_Tracks;
+        }
+        Ali_Kalman_Track* getKalman_Track(UShort_t i) const
+        {
+            return i < fNumKalman_Tracks ? (Ali_Kalman_Track*)((*fKalman_Tracks)[i]) : NULL;
         }
 
-        new((*fKalman_Tracks)[fNumKalman_Tracks++]) Ali_Kalman_Track;
-        return (Ali_Kalman_Track*)((*fKalman_Tracks)[fNumKalman_Tracks - 1]);
-    }
-    void clearKalman_TrackList()
-    {
-        fNumKalman_Tracks   = 0;
-        fKalman_Tracks      ->Clear();
-    }
-    UShort_t getNumKalman_Tracks() const
-    {
-        return fNumKalman_Tracks;
-    }
-    Ali_Kalman_Track* getKalman_Track(UShort_t i) const
-    {
-        return i < fNumKalman_Tracks ? (Ali_Kalman_Track*)((*fKalman_Tracks)[i]) : NULL;
-    }
-	
 
-	ClassDef(Ali_TRD_Photon,1);  //
+        ClassDef(Ali_TRD_Photon,1);  //
 };
 //----------------------------------------------------------------------------------------
 
@@ -341,18 +339,18 @@ public:
 class Ali_TRD_Nuclear_interaction : public TObject
 {
 private:
-                                
+
     Float_t avg_sec_vertex[3];
     Float_t N_close_vertex;
     Float_t dcaAB_min;
-    Float_t TOFsignal_min; 
-    Float_t Track_length_min; 
+    Float_t TOFsignal_min;
+    Float_t Track_length_min;
     Float_t TPCdEdx_min;
     //Float_t dca_to_prim;
     Float_t pT_min;
     Float_t momentum_min;
     Float_t nuclev_bitmap;
-    
+
     UShort_t fNumTPC_Tracks;
     UShort_t fNumKalman_Tracks;
 
@@ -360,52 +358,52 @@ private:
     TClonesArray* fKalman_Tracks;           //->
 
 public:
-    Ali_TRD_Nuclear_interaction() : 
-    avg_sec_vertex(),N_close_vertex(-1),dcaAB_min(-1),TOFsignal_min(-1),Track_length_min(-1),TPCdEdx_min(-1),pT_min(-1),momentum_min(-1),nuclev_bitmap(-1),fNumTPC_Tracks(0),fNumKalman_Tracks(0)
+    Ali_TRD_Nuclear_interaction() :
+        avg_sec_vertex(),N_close_vertex(-1),dcaAB_min(-1),TOFsignal_min(-1),Track_length_min(-1),TPCdEdx_min(-1),pT_min(-1),momentum_min(-1),nuclev_bitmap(-1),fNumTPC_Tracks(0),fNumKalman_Tracks(0)
     {
         fTPC_Tracks             = new TClonesArray( "Ali_TPC_Track", 10 );
         fKalman_Tracks          = new TClonesArray( "Ali_Kalman_Track", 10 );
     }
-    ~Ali_TRD_Nuclear_interaction() 
-    {
-        delete fTPC_Tracks;
-        fTPC_Tracks = NULL;
-        delete fKalman_Tracks;
-        fKalman_Tracks = NULL;
-    }
+        ~Ali_TRD_Nuclear_interaction()
+        {
+            delete fTPC_Tracks;
+            fTPC_Tracks = NULL;
+            delete fKalman_Tracks;
+            fKalman_Tracks = NULL;
+        }
 
-    // setters
-    void set_avg_sec_vertex(Float_t x, Float_t y, Float_t z)         {    avg_sec_vertex[0] = x; avg_sec_vertex[1] = y; avg_sec_vertex[2] = z;  }
-    void set_N_close_vertex(Float_t n)                              {    N_close_vertex = n;                        }
-    void set_dcaAB_min(Float_t dca)                                  {    dcaAB_min = dca;                                                  }
-    void set_TOFsignal_min(Float_t tof)                                      {    TOFsignal_min = tof;                                         }
-    void set_Track_length_min(Float_t length)                                      {    Track_length_min = length;                                    }
-    void set_TPCdEdx_min(Float_t dedx)                                  {    TPCdEdx_min = dedx;                                                  }
-    //void set_dca_to_prim(Float_t dcaprim)                            {    dca_to_prim = dcaprim;                                            }
-    void set_pT_min(Float_t pt)                                  {    pT_min = pt;                                                  }
-    void set_momentum_min(Float_t mom)                                {    momentum_min = mom;                                                }
-    void set_nuclev_bitmap(Float_t bitmap)                          {    nuclev_bitmap = bitmap;                                          }
-    
-    // getters
+        // setters
+        void set_avg_sec_vertex(Float_t x, Float_t y, Float_t z)         {    avg_sec_vertex[0] = x; avg_sec_vertex[1] = y; avg_sec_vertex[2] = z;  }
+        void set_N_close_vertex(Float_t n)                              {    N_close_vertex = n;                        }
+        void set_dcaAB_min(Float_t dca)                                  {    dcaAB_min = dca;                                                  }
+        void set_TOFsignal_min(Float_t tof)                                      {    TOFsignal_min = tof;                                         }
+        void set_Track_length_min(Float_t length)                                      {    Track_length_min = length;                                    }
+        void set_TPCdEdx_min(Float_t dedx)                                  {    TPCdEdx_min = dedx;                                                  }
+        //void set_dca_to_prim(Float_t dcaprim)                            {    dca_to_prim = dcaprim;                                            }
+        void set_pT_min(Float_t pt)                                  {    pT_min = pt;                                                  }
+        void set_momentum_min(Float_t mom)                                {    momentum_min = mom;                                                }
+        void set_nuclev_bitmap(Float_t bitmap)                          {    nuclev_bitmap = bitmap;                                          }
 
-    Float_t get_avg_sec_vertex(Int_t i_xyz) const    {    return avg_sec_vertex[i_xyz];         }
-    Float_t get_N_close_vertex() const       {    return N_close_vertex; }
-    Float_t get_dcaAB_min() const                      {    return dcaAB_min;   }
-    Float_t get_TOFsignal_min() const                        {    return TOFsignal_min; }
-    Float_t get_Track_length_min() const                        {    return Track_length_min; }
-    Float_t get_TPCdEdx_min() const                      {    return TPCdEdx_min; }
-    //Float_t get_dca_to_prim() const                   {    return dca_to_prim; }
-    Float_t get_pT_min() const                                 {    return pT_min; }
-    Float_t get_momentum_min() const                               {    return momentum_min; }
-    Float_t get_nuclev_bitmap() const                         {    return nuclev_bitmap; }
-    
-    //-----------------------------------
+        // getters
 
-    Ali_TPC_Track* createTPC_Track()
-    {
-        if (fNumTPC_Tracks == fTPC_Tracks->GetSize())
-        fTPC_Tracks->Expand( fNumTPC_Tracks + 10 );
-        if (fNumTPC_Tracks >= 10000)
+        Float_t get_avg_sec_vertex(Int_t i_xyz) const    {    return avg_sec_vertex[i_xyz];         }
+        Float_t get_N_close_vertex() const       {    return N_close_vertex; }
+        Float_t get_dcaAB_min() const                      {    return dcaAB_min;   }
+        Float_t get_TOFsignal_min() const                        {    return TOFsignal_min; }
+        Float_t get_Track_length_min() const                        {    return Track_length_min; }
+        Float_t get_TPCdEdx_min() const                      {    return TPCdEdx_min; }
+        //Float_t get_dca_to_prim() const                   {    return dca_to_prim; }
+        Float_t get_pT_min() const                                 {    return pT_min; }
+        Float_t get_momentum_min() const                               {    return momentum_min; }
+        Float_t get_nuclev_bitmap() const                         {    return nuclev_bitmap; }
+
+        //-----------------------------------
+
+        Ali_TPC_Track* createTPC_Track()
+        {
+            if (fNumTPC_Tracks == fTPC_Tracks->GetSize())
+                fTPC_Tracks->Expand( fNumTPC_Tracks + 10 );
+            if (fNumTPC_Tracks >= 10000)
         {
         Fatal( "Ali_TRD_Nuclear_interaction::createTPC_Track()", "ERROR: Too many TPC tracks (>10000)!" );
         exit( 2 );

@@ -1485,6 +1485,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                             TRD_Photon ->set_dcaAB((Float_t)dcaAB);
                             TRD_Photon ->set_Inv_mass_AB_Lambda((Float_t)Inv_mass_AB_Lambda);
                             TRD_Photon ->set_Inv_mass_AB_antiLambda((Float_t)Inv_mass_AB_antiLambda);
+                            TRD_Photon ->set_TLV_part_A(TLV_A);
+                            TRD_Photon ->set_TLV_part_B(TLV_B);
 
                             //--------- fill TRD/TPC track info --------------------------
 
