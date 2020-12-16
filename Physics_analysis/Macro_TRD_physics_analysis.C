@@ -41,8 +41,12 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
     input_dir  = "../ST_out/";
     output_dir = "./";
 #endif
+    
+    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_Physics_analysis.h needs to be defined too)
 
-    Ali_TRD_physics_analysis*  TRD_physics_analysis = new Ali_TRD_physics_analysis(output_dir,out_file_name);
+    Double_t dist_max               = 30.0; //cm: maximum disctance between primary event vertex and photon origin according to TLV 
+
+    Ali_TRD_physics_analysis*  TRD_physics_analysis = new Ali_TRD_physics_analysis(output_dir,out_file_name,graphics);
     //Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,"test.root",graphics);
 
     TRD_physics_analysis ->set_input_lists(inlists_dir);
@@ -56,17 +60,21 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
     
     Long64_t N_Events = TRD_physics_analysis ->get_N_Events();
 
+    //printf("test 1 \n");
+
     Int_t start_event = 0;
     Int_t stop_event  = (Int_t) N_Events;
     //Int_t stop_event  = 15;
 
 
-    for(Long64_t event = start_event; event < stop_event; event++)
-    //for(Long64_t event = start_event; event < 100000; event++)
+    //for(Long64_t event = start_event; event < stop_event; event++)
+    for(Long64_t event = start_event; event < 1000; event++)
     {
         //-------> Tracklets = new Ali_TRD_ST_Tracklets*[NumTracklets]; what is this??
         //class _copy
         //all Floates?
+    //printf("test 2 \n");
+
 
         if (event != 0  &&  event % 5000 == 0)
         cout << "." << flush;
@@ -74,8 +82,11 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
         {
             printf("event: %lld out of %lld, %4.2f%% total done \n",event,N_Events,((Double_t)event/(Double_t)N_Events)*100.0);
         }
+
+    //printf("test 3 \n");
+
         
-        TRD_physics_analysis ->Loop_event(event);
+        TRD_physics_analysis ->Loop_event(event,dist_max,graphics);
         TRD_physics_analysis ->Calculate_pi0_mass();
 
         //printf("\n Event: %lld, Photons: %d, Nuclear interactions: %d \n",event,(Int_t)vec_PhotonVertex.size(),(Int_t)vec_NIVertex.size());

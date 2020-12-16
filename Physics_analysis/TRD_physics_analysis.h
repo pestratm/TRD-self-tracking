@@ -1,3 +1,5 @@
+#define USEEVE
+
 using namespace std;
 #include <cmath>
 #include <iostream>
@@ -38,6 +40,15 @@ using namespace std;
 #include "Math/SMatrix.h"
 #include "Math/MatrixFunctions.h"
 #include "TProfile.h"
+
+#include "TPolyLine.h"
+
+//#if defined(USEEVE)
+#include "TEveBox.h"
+#include <TEveManager.h>
+#include "TEveLine.h"
+#include "TEvePointSet.h"
+//#endif
 
 #include "../Ali_TRD_Self_Event.h" 
 #include "../Ali_TRD_Self_EventLinkDef.h"
@@ -99,6 +110,9 @@ private:
 
     TH1D* TH1_mass_pi0;
 
+    vector<TEveLine*> TEveLine_mother;
+
+
     //things for Nuclear interactions
     TVector3 TV3_NIVertex;
     vector< TVector3 > vec_NIVertex;
@@ -110,11 +124,11 @@ private:
     //things for Nuclear ingeractions
     
 public:
-    Ali_TRD_physics_analysis(TString out_dir, TString out_file_name);
+    Ali_TRD_physics_analysis(TString out_dir, TString out_file_name, Int_t graphics);
     //~Ali_TRD_ST_Analyze();
 
     void Init_tree(TString SEList);
-    Int_t Loop_event(Long64_t i_event);
+    Int_t Loop_event(Long64_t i_event, Double_t dist_max, Int_t graphics);
 
 
     void set_input_lists(TString input_dir_lists_in) {input_dir_lists = input_dir_lists_in;}
