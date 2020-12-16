@@ -129,7 +129,7 @@ TCanvas* Draw_1D_histo_and_canvas(TH1D* hist, TString name, Int_t x_size, Int_t 
     canvas->SetTicks(1,1);
     canvas->SetGrid(0,0);
 
-    hist->SetStats(0);
+    hist->SetStats(1);
     hist->SetTitle("");
     hist->GetXaxis()->SetTitleOffset(1.2);
     hist->GetYaxis()->SetTitleOffset(1.2);
@@ -152,7 +152,7 @@ TCanvas* Draw_1D_histo_and_canvas(TH1D* hist, TString name, Int_t x_size, Int_t 
 
 
 //----------------------------------------------------------------------------------------
-Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_file_name)
+Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_file_name, Int_t graphics)
 {
     SetRootGraphicStyle();
 
@@ -162,8 +162,184 @@ Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_
     printf("test printf: %s \n",HistName.Data());
 
     TH2_vertex_photon_XY = new TH2D("TH2_vertex_photon_XY","TH2_vertex_photon_XY",400,-400,400,400,-400,400);
-    //TH1_mass_pi0 = new TH1D("TH1_mass_pi0","TH1_mass_pi0",400,0,1000);
+    TH2D* h2D_dEdx_vs_mom = new TH2D("h2D_dEdx_vs_mom","h2D_dEdx_vs_mom",200,0,5,200,0,150.0);
+
     TH1_mass_pi0 = new TH1D("TH1_mass_pi0","TH1_mass_pi0",400,0,1.5);
+
+    #if defined(USEEVE)
+    if(graphics)
+    {
+        SetRootGraphicStyle();
+        //--------------------------
+        printf("Ana_sec_vertices started \n");
+
+        //gStyle->SetPalette(kDarkBodyRadiator); // https://root.cern.ch/doc/master/classTColor.html
+        //gStyle->SetPalette(kInvertedDarkBodyRadiator); // https://root.cern.ch/doc/master/classTColor.html
+        gStyle->SetPalette(kTemperatureMap); // https://root.cern.ch/doc/master/classTColor.html
+        //--------------------------
+
+
+
+        //--------------------------
+        // Load TRD geometry
+        TEveManager::Create();
+
+        TH1I* h_good_bad_TRD_chambers;
+        h_good_bad_TRD_chambers = new TH1I("h_good_bad_TRD_chambers","h_good_bad_TRD_chambers",540,0,540);
+        TFile* file_TRD_QA_flags = TFile::Open("../Data/chamber_QC_flags.root");
+        vector<int> *t_flags;
+        file_TRD_QA_flags ->GetObject("QC_flags", t_flags);
+
+        // Its a 3 digit binary number. LSB is ADC good = 0 or bad = 1, next bit is anode HV good = 0, or bad = 1, and last bit is drift HV
+        // so a 3 means that the ADC and the anode HV was bad, but the drift HV was okay
+
+        // LSB = official QA, bit 1 = no fit, bit 2 = anode HV defect, bit 3 = drift HV defect, bit 4 = adc defect
+
+        // number   adc defect   drift HV defect   anode HD defect    no fit   official QA
+        //   0          0               0                0               0          0         --> all good
+        //   1          0               0                0               0          1         --> official QA bad, rest good
+        //  ...
+        //   31         1               1                1               1          1         --> all bad
+
+        Int_t i_chamber = 0;
+        for(vector<int>::iterator it = t_flags->begin(); it != t_flags->end(); ++it)
+        {
+            //cout << "chamber: " << i_chamber << ", it: "  << *it << ", " << t_flags->at(i_chamber) << endl;
+            h_good_bad_TRD_chambers ->SetBinContent(i_chamber+1,t_flags->at(i_chamber));
+            i_chamber++;
+        }
+
+        Int_t color_flag_QC[32];
+        for(Int_t i_QC_flag = 0; i_QC_flag < 32; i_QC_flag++)
+        {
+            color_flag_QC[i_QC_flag] = kCyan;
+
+            Int_t k_bit = 1; // fit
+            Int_t bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
+            if(bit_value == 1) // no fit
+            {
+                color_flag_QC[i_QC_flag] = kPink;
+            }
+
+            k_bit = 4; // ADC value
+            bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
+            if(bit_value == 1) // ADC low
+            {
+                color_flag_QC[i_QC_flag] = kMagenta;
+            }
+
+            k_bit = 2; // anode HV
+            bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
+            if(bit_value == 1) // anode HV low
+            {
+                color_flag_QC[i_QC_flag] = kYellow;
+            }
+
+            k_bit = 3; // drift HV bit
+            bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
+            if(bit_value == 1) // drift HV defect
+            {
+                color_flag_QC[i_QC_flag] = kOrange;
+            }
+
+            k_bit = 0; // official QA
+            bit_value = (i_QC_flag & ( 1 << k_bit )) >> k_bit;
+            if(bit_value == 1) // official QA bad
+            {
+                color_flag_QC[i_QC_flag] = kRed;
+            }
+        }
+        color_flag_QC[31] = kRed;
+
+        vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
+        TFile* file_TRD_geom = TFile::Open("../Data/TRD_Geom.root");
+        vec_TH1D_TRD_geometry.resize(3); // x,y,z
+        for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
+        {
+            vec_TH1D_TRD_geometry[i_xyz].resize(8); // 8 vertices
+            for(Int_t i_vertex = 0; i_vertex < 8; i_vertex++)
+            {
+                HistName = "vec_TH1D_TRD_geometry_xyz_";
+                HistName += i_xyz;
+                HistName += "_V";
+                HistName += i_vertex;
+                vec_TH1D_TRD_geometry[i_xyz][i_vertex] = (TH1D*)file_TRD_geom->Get(HistName.Data());
+            }
+
+        }
+
+        vector<TEveBox*> vec_eve_TRD_detector_box;
+        vec_eve_TRD_detector_box.resize(540);
+        vector< vector<TPolyLine*> > vec_PL_TRD_det_2D;
+        vec_PL_TRD_det_2D.resize(18); // sectors
+        for(Int_t i_sector = 0; i_sector < 18; i_sector++)
+        {
+            vec_PL_TRD_det_2D[i_sector].resize(6); // layers
+            for(Int_t i_layer = 0; i_layer < 6; i_layer++)
+            {
+                vec_PL_TRD_det_2D[i_sector][i_layer] = new TPolyLine();
+            }
+        }
+        for(Int_t TRD_detector = 0; TRD_detector < 540; TRD_detector++)
+        {
+            Int_t i_sector = (Int_t)(TRD_detector/30);
+            Int_t i_stack  = (Int_t)(TRD_detector%30/6);
+            Int_t i_layer  = TRD_detector%6;
+            //Int_t i_det = layer + 6*stack + 30*sector;
+
+
+            vec_eve_TRD_detector_box[TRD_detector] = new TEveBox;
+
+            HistName = "TRD_box_";
+            HistName += TRD_detector;
+            vec_eve_TRD_detector_box[TRD_detector] ->SetName(HistName.Data());
+            Int_t flag_QC = h_good_bad_TRD_chambers ->GetBinContent(TRD_detector+1);
+            if(!flag_QC) // chamber is OK flagged by QA
+            {
+                vec_eve_TRD_detector_box[TRD_detector]->SetMainColor(kCyan);
+                vec_eve_TRD_detector_box[TRD_detector]->SetMainTransparency(95); // the higher the value the more transparent
+            }
+            else // bad chamber
+            {
+                vec_eve_TRD_detector_box[TRD_detector]->SetMainColor(color_flag_QC[flag_QC]);
+                vec_eve_TRD_detector_box[TRD_detector]->SetMainTransparency(85); // the higher the value the more transparent
+            }
+
+            for(Int_t i_vertex = 0; i_vertex < 8; i_vertex++)
+            {
+                Double_t arr_pos_glb[3] = {vec_TH1D_TRD_geometry[0][i_vertex]->GetBinContent(TRD_detector),vec_TH1D_TRD_geometry[1][i_vertex]->GetBinContent(TRD_detector),vec_TH1D_TRD_geometry[2][i_vertex]->GetBinContent(TRD_detector)};
+                vec_eve_TRD_detector_box[TRD_detector]->SetVertex(i_vertex,arr_pos_glb[0],arr_pos_glb[1],arr_pos_glb[2]);
+
+                if(i_stack == 0 && i_vertex < 4)
+                {
+                    vec_PL_TRD_det_2D[i_sector][i_layer] ->SetPoint(i_vertex,arr_pos_glb[0],arr_pos_glb[1]);
+                    if(i_vertex == 0) vec_PL_TRD_det_2D[i_sector][i_layer] ->SetPoint(4,arr_pos_glb[0],arr_pos_glb[1]);
+                }
+            }
+
+            gEve->AddElement(vec_eve_TRD_detector_box[TRD_detector]);
+        }
+        gEve->Redraw3D(kTRUE);
+        //--------------------------
+
+        //-------------------------
+        Double_t TRD_layer_radii[6][2] =
+        {
+            {297.5,306.5},
+            {310.0,320.0},
+            {323.0,333.0},
+            {336.0,345.5},
+            {348.0,357.0},
+            {361.0,371.0}
+        };
+
+        //Int_t color_layer_match[6] = {kRed,kGreen,kSpring-6,kYellow,kPink-3,kOrange+8};
+        Int_t color_layer_match[6] = {kGray+1,kAzure-2,kGreen+2,kCyan+2,kOrange+2,kRed};
+
+        //--------------------------
+    }
+
+    #endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -223,12 +399,11 @@ void Ali_TRD_physics_analysis::Init_tree(TString SEList) // read data from files
 //----------------------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------------------
-Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from each event
+Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, Int_t graphics) //get all info from each event
 {
     //printf("Ali_TRD_ST_Analyze::Loop_event \n");
 
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
-
 
     //--------------------------------------------------
     // Event information (more data members available, see Ali_TRD_Self_Event class definition)
@@ -242,6 +417,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
     TV3_EventVertex.SetXYZ(EventVertexX,EventVertexY,EventVertexZ);
     Float_t  V0MEq                = TRD_Self_Event ->getcent_class_V0MEq();
 
+    TVector3 TV3_prim_vertex(EventVertexX,EventVertexY,EventVertexZ);
+
     //--------------------------------------------------
 
     //printf("\n Event: %lld, Photon conversions: %d, Nuclear interactions: %d \n",i_event,NumPhotons,NumNucInteractions);
@@ -250,6 +427,9 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
     // Photon loop
 
     vec_PhotonVertex.clear();
+
+    vec_TLV_photon.clear();
+    
 
     vec_photon_kalman_chi2.clear();
     vec_photon_kalman_chi2.resize(NumPhotons);
@@ -260,7 +440,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
     vec_photon_tpc_helices.clear();
     vec_photon_tpc_helices.resize(NumPhotons);
 
-    vec_TLV_photon.clear();
+    Int_t i_vertex_photon = 0;
 
     for(Int_t i_photon = 0; i_photon < NumPhotons; i_photon++)
     {
@@ -271,8 +451,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
         Float_t PhotonVertexZ   = TRD_Photon ->get_vertex_point(2);
 
         TV3_PhotonVertex.SetXYZ(PhotonVertexX,PhotonVertexY,PhotonVertexZ);
-        TH2_vertex_photon_XY ->Fill(PhotonVertexX,PhotonVertexY);
 
+        TH2_vertex_photon_XY ->Fill(PhotonVertexY,PhotonVertexZ);
 
         vec_PhotonVertex.push_back(TV3_PhotonVertex);
 
@@ -290,7 +470,6 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
         Float_t ph_dcaAB   		  = TRD_Photon ->get_dcaAB();
         Float_t ph_Inv_mass_AB_Lambda     = TRD_Photon ->get_Inv_mass_AB_Lambda();
         Float_t ph_Inv_mass_AB_antiLambda = TRD_Photon ->get_Inv_mass_AB_antiLambda();
-
 
         //------------------------------------------
         // Analyze the bit map
@@ -344,25 +523,49 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
                        (independent_layer_B[0] + independent_layer_B[1] + independent_layer_B[2] ) > 0 );
         conds.push_back(cond6);
 
-        if((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6)
+
+        //if((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6)
         {
-            if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
+            //if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
             {
                 TLorentzVector TLV_photon;
                 TLV_photon.SetPtEtaPhiM(ph_pT_AB,ph_Eta_AB,ph_Phi_AB,0.0);
 
-                TVector3 dir;
-                dir = TLV_photon.Vect();
+                TVector3 TV3_dir;
+                TV3_dir = TLV_photon.Vect();
 
-                TVector3 base;
-                base.SetXYZ(PhotonVertexX,PhotonVertexY,PhotonVertexZ); 
+                TVector3 TV3_sec_vertex(PhotonVertexX,PhotonVertexY,PhotonVertexZ); 
 
-                TVector3 point;
-                point.SetXYZ(0.0,0.0,0.0);
+                //TVector3 point;
+                //point.SetXYZ(0.0,0.0,0.0);
 
-                Double_t dist = calculateMinimumDistanceStraightToPoint(base, dir, point);
+                Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_sec_vertex, TV3_dir, TV3_prim_vertex);
 
-                if (dist < 20.0) vec_TLV_photon.push_back(TLV_photon);
+                //if (dist < dist_max) 
+                {
+                    vec_TLV_photon.push_back(TLV_photon);
+                    //printf("vec_TLV_photon size: %d \n",(Int_t)vec_TLV_photon.size());
+
+                    //#if defined (USEEVE) 
+                    if(graphics)
+                    {
+                    Double_t distance_to_prim_vertex = (TV3_prim_vertex - TV3_sec_vertex).Mag();
+
+                    TEveLine_mother.resize(i_vertex_photon+1);
+                    TEveLine_mother[i_vertex_photon] = new TEveLine();
+
+                    TEveLine_mother[i_vertex_photon] ->SetNextPoint(PhotonVertexX,PhotonVertexY,PhotonVertexZ);
+                    TEveLine_mother[i_vertex_photon] ->SetNextPoint(PhotonVertexX - distance_to_prim_vertex*TV3_dir[0],
+                        PhotonVertexY - distance_to_prim_vertex*TV3_dir[1],PhotonVertexZ - distance_to_prim_vertex*TV3_dir[2]);
+
+                    //printf("photon vertex: {%4.3f, %4.3f, %4.3f}, second point: {%4.3f, %4.3f, %4.3f} \n",PhotonVertexX,PhotonVertexY,PhotonVertexZ,
+                    //PhotonVertexX - distance_to_prim_vertex*TV3_dir[0],PhotonVertexY - distance_to_prim_vertex*TV3_dir[1],PhotonVertexZ - distance_to_prim_vertex*TV3_dir[2]);
+                    i_vertex_photon++;
+                    //printf("i_vertex_photon: %d \n",i_vertex_photon);
+
+                    }
+                    //#endif
+                }
             }
         }
 
@@ -507,6 +710,23 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event) //get all info from
     // Nuclear interactions done
     //--------------------------------------------------
 
+    //#if defined(USEEVE)
+
+    if (graphics)
+    {
+
+        for(Int_t i_mother = 0; i_mother < (Int_t)TEveLine_mother.size(); i_mother++)
+        {
+            TEveLine_mother[i_mother]    ->SetLineStyle(9);
+            TEveLine_mother[i_mother]    ->SetLineWidth(3);
+            TEveLine_mother[i_mother]    ->SetMainColor(kMagenta);
+            TEveLine_mother[i_mother]    ->SetMainAlpha(1.0);
+            gEve->AddElement(TEveLine_mother[i_mother]);
+        }
+        gEve->Redraw3D(kTRUE);
+        //#endif
+    }
+
 
     return 1;
 }
@@ -527,8 +747,7 @@ void Ali_TRD_physics_analysis::Calculate_pi0_mass() //loop over all good photons
             TLV_pi0 = vec_TLV_photon[i_photon_A]+vec_TLV_photon[i_photon_B];
             Double_t Mass_pi0 = TLV_pi0.M();
             TH1_mass_pi0 ->Fill(Mass_pi0);
-
-TH1_mass_pi0->Draw();
+            //printf("number of entries: %d \n",TH1_mass_pi0->GetEntries());
         }
 
     }
@@ -540,7 +759,10 @@ TH1_mass_pi0->Draw();
 //----------------------------------------------------------------------------------------
 void Ali_TRD_physics_analysis::Draw()
 {
-    TCanvas* can_vertex_photon_XY = Draw_1D_histo_and_canvas(TH1_mass_pi0,"can_TH1_mass_pi0",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
+    TCanvas* can_TH1_mass_pi0 = Draw_1D_histo_and_canvas(TH1_mass_pi0,"can_TH1_mass_pi0",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
+    //can_TH1_mass_pi0 ->SetLogz(1);
+
+    TCanvas* can_TH2_vertex_photon_XY = Draw_2D_histo_and_canvas(TH2_vertex_photon_XY,"can_TH2_vertex_photon_XY",800,650,0,0,"COLZ"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
     //can_TH1_mass_pi0 ->SetLogz(1);
 }
 //----------------------------------------------------------------------------------------

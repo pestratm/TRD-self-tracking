@@ -1470,7 +1470,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
                             TRD_Photon = TRD_Self_Event ->createPhoton();
 
-                            TRD_Photon ->set_vertex_point((Float_t)vertex_point[0],(Float_t)vertex_point[1],(Float_t)vertex_point[1]);
+                            TRD_Photon ->set_vertex_point((Float_t)vertex_point[0],(Float_t)vertex_point[1],(Float_t)vertex_point[2]);
                             TRD_Photon ->set_bit_TRD_layer_shared((Float_t)bit_TRD_layer_shared);
                             TRD_Photon ->set_pT_AB((Float_t)pT_AB);
                             TRD_Photon ->set_AP_pT((Float_t)AP_pT);
