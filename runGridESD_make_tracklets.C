@@ -31,22 +31,39 @@ void runGridESD_make_tracklets()
 #endif
 
     TString fname="TRD_tracklets";
-    Int_t sub=702;
-  /// set parameters for the analysis
-  const char *cDataType = "ESD";                           // set analysis type; AOD or ESD
-  const char *cRunPeriod = "LHC16q";                       // set run period, LHC18q
-  Bool_t      isMC=kFALSE;                                  //Monte Carlo or "real" data
-  //const UInt_t iNumEvents = 5;                             // number of events to be analyzed
-  const char *cGridMode = "full";                          // grid mode; test, full or terminate (for merging)
-  Bool_t useJDL = kTRUE;
-  const char *cTaskName = "TRD_Make_Tracklets"; // name of the task
-  Bool_t local = kFALSE;                                    // kTRUE for local analysis, kFALSE for grid analysis
 
-  
-  /// since we will compile a class, tell root where to look for headers  
+    Int_t beamtime = 0; // 0: p-Pb 2016, 1: Pb-Pb 2018
+
+    Int_t sub=702;
+    TString sRunPeriod;
+    if(beamtime == 0) // p-Pb 2016
+    {
+        sub = 702;
+        sRunPeriod = "LHC16q";
+    }
+    if(beamtime == 1) // Pb-Pb 2018
+    {
+        sub = 800;
+        sRunPeriod = "LHC18r";
+    }
+
+
+
+    /// set parameters for the analysis
+    const char *cDataType = "ESD";                           // set analysis type; AOD or ESD
+    const char *cRunPeriod = sRunPeriod.Data();                       // set run period, LHC18q
+    Bool_t      isMC=kFALSE;                                  //Monte Carlo or "real" data
+  //const UInt_t iNumEvents = 5;                             // number of events to be analyzed
+    const char *cGridMode = "full";                          // grid mode; test, full or terminate (for merging)
+    Bool_t useJDL = kTRUE;
+    const char *cTaskName = "TRD_Make_Tracklets"; // name of the task
+    Bool_t local = kFALSE;                                    // kTRUE for local analysis, kFALSE for grid analysis
+
+
+    /// since we will compile a class, tell root where to look for headers
 #if !defined (__CINT__) || defined (__CLING__)
-  gInterpreter->ProcessLine(".include $ROOTSYS/include");
-  gInterpreter->ProcessLine(".include $ALICE_ROOT/include");
+    gInterpreter->ProcessLine(".include $ROOTSYS/include");
+    gInterpreter->ProcessLine(".include $ALICE_ROOT/include");
 #else
   gROOT->ProcessLine(".include $ROOTSYS/include");
   gROOT->ProcessLine(".include $ALICE_ROOT/include");
@@ -160,25 +177,48 @@ void runGridESD_make_tracklets()
     }
     else
     {
-      alienHandler->SetGridDataDir("/alice/data/2016/LHC16q"); // OK
-      alienHandler->SetGridWorkingDir(Form("%s/sub%d/",fname.Data(),sub)); // No idea
-      alienHandler->SetDataPattern("*pass1_CENT_wSDD/*/AliESDs.root"); // OK
-      alienHandler->SetAnalysisMacro(Form("TaskTrackAna%d.C",sub));
-      alienHandler->SetExecutable(Form("TaskTrackAna%d.sh",sub));
-      alienHandler->SetJDLName(Form("TaskTrackAna%d.jdl",sub));
-      alienHandler->SetRunPrefix("000");
+        if(sub == 702)
+        {
+            alienHandler->SetGridDataDir("/alice/data/2016/LHC16q"); // OK
+            alienHandler->SetGridWorkingDir(Form("%s/sub%d/",fname.Data(),sub)); // No idea
+            alienHandler->SetDataPattern("*pass1_CENT_wSDD/*/AliESDs.root"); // OK
+            alienHandler->SetAnalysisMacro(Form("TaskTrackAna%d.C",sub));
+            alienHandler->SetExecutable(Form("TaskTrackAna%d.sh",sub));
+            alienHandler->SetJDLName(Form("TaskTrackAna%d.jdl",sub));
+            alienHandler->SetRunPrefix("000");
+
+            Int_t runnumbers[] = {265338, 265525, 265521, 265501, 265500, 265499, 265435, 265427, 265426, 265425, 265424, // OK
+            265422, 265421, 265420, 265419, 265388, 265387, 265385, 265384, 265383, 265381, 265378, 265377,
+            265344, 265343, 265342, 265339, 265336, 265334, 265332, 265309}; // 31 runs in total
+
+            for(Int_t irun = 26; irun < 27; irun++)
+            {
+                Printf("%d %d",irun,runnumbers[irun]);
+                alienHandler->AddRunNumber(runnumbers[irun]);
+            }
+        }
+        if(sub == 800)
+        {
+            alienHandler->SetGridDataDir("/alice/data/2018/LHC18r"); // OK
+            alienHandler->SetGridWorkingDir(Form("%s/sub%d/",fname.Data(),sub)); // No idea
+            alienHandler->SetDataPattern("*filter_trd_pass3/*/AliESDs.root"); // OK
+            alienHandler->SetAnalysisMacro(Form("TaskTrackAna%d.C",sub));
+            alienHandler->SetExecutable(Form("TaskTrackAna%d.sh",sub));
+            alienHandler->SetJDLName(Form("TaskTrackAna%d.jdl",sub));
+            alienHandler->SetRunPrefix("000");
+
+            Int_t runnumbers[] = {296849,296850,297595}; // 3 runs in total
+
+            for(Int_t irun = 0; irun < 1; irun++)
+            {
+                Printf("%d %d",irun,runnumbers[irun]);
+                alienHandler->AddRunNumber(runnumbers[irun]);
+            }
+        }
     }
 
 
-    Int_t runnumbers[] = {265338, 265525, 265521, 265501, 265500, 265499, 265435, 265427, 265426, 265425, 265424, // OK
-    265422, 265421, 265420, 265419, 265388, 265387, 265385, 265384, 265383, 265381, 265378, 265377,
-    265344, 265343, 265342, 265339, 265336, 265334, 265332, 265309}; // 32 runs in total
-
-    for(Int_t irun = 0; irun < 1; irun++)
-    {
-        Printf("%d %d",irun,runnumbers[irun]);
-        alienHandler->AddRunNumber(runnumbers[irun]);
-    }
+   
 
 
     // number of files per subjob
