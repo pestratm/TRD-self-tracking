@@ -168,10 +168,11 @@ Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_
     HistName += out_file_name;
     printf("test printf: %s \n",HistName.Data());
 
-    TH2_vertex_photon_XY = new TH2D("TH2_vertex_photon_XY","TH2_vertex_photon_XY",400,-400,400,400,-400,400);
-    TH2D* h2D_dEdx_vs_mom = new TH2D("h2D_dEdx_vs_mom","h2D_dEdx_vs_mom",200,0,5,200,0,150.0);
+    TH2_vertex_photon_XY     = new TH2D("TH2_vertex_photon_XY","TH2_vertex_photon_XY",1600,-400,400,1600,-400,400);
+    TH1_vertex_photon_radius = new TH1D("TH1_vertex_photon_radius","TH1_vertex_photon_radius",1200,0,400.0);
+    TH2D* h2D_dEdx_vs_mom    = new TH2D("h2D_dEdx_vs_mom","h2D_dEdx_vs_mom",200,0,5,200,0,150.0);
 
-    TH1_mass_pi0 = new TH1D("TH1_mass_pi0","TH1_mass_pi0",400,0,1.5);
+    TH1_mass_pi0 = new TH1D("TH1_mass_pi0","TH1_mass_pi0",1200,0,1.5);
 
     TFile* pt_corr      = TFile::Open("./pt_corr.root");
     tg_pol2_par = (TGraph*)pt_corr->Get("tg_pol2_params");
@@ -466,13 +467,18 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         Float_t PhotonVertexY   = TRD_Photon ->get_vertex_point(1);
         Float_t PhotonVertexZ   = TRD_Photon ->get_vertex_point(2);
 
-        TV3_PhotonVertex.SetXYZ(PhotonVertexX,PhotonVertexY,PhotonVertexZ);
+        Double_t Photon_radius = TMath::Sqrt(PhotonVertexX*PhotonVertexX + PhotonVertexY*PhotonVertexY);
 
-        TH2_vertex_photon_XY ->Fill(PhotonVertexX,PhotonVertexY);
+        TV3_PhotonVertex.SetXYZ(PhotonVertexX,PhotonVertexY,PhotonVertexZ);
 
         vec_PhotonVertex.push_back(TV3_PhotonVertex);
 
         Float_t ph_TRD_layer_shared       = TRD_Photon ->get_bit_TRD_layer_shared(); // -1 for TPC track, for TRD it stores the information about independent and shared TRD layers between the two electrons
+
+        //printf("ph_TRD_layer_shared: %4.3f \n",ph_TRD_layer_shared);
+
+        if(ph_TRD_layer_shared < 0) continue;
+
         Float_t ph_pT_AB_raw 	          = TRD_Photon ->get_pT_AB();
         Float_t ph_AP_pT   		  = TRD_Photon ->get_AP_pT();
         Float_t ph_AP_alpha   		  = TRD_Photon ->get_AP_alpha();
@@ -493,8 +499,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
         TVector3 param;
 
-        Float_t pT_A_corr = correct_pT_according_to_correlation_plot(TLV_part_A.Pt(),par_pT_corr_pos);
-        Float_t pT_B_corr = correct_pT_according_to_correlation_plot(TLV_part_B.Pt(),par_pT_corr_pos);
+        Float_t pT_A_corr = fabs(1.3*correct_pT_according_to_correlation_plot(-TLV_part_A.Pt(),par_pT_corr_neg));
+        Float_t pT_B_corr = fabs(1.3*correct_pT_according_to_correlation_plot(-TLV_part_B.Pt(),par_pT_corr_neg));
 
         //printf("pT_A: {%4.3f, %4.3f} \n",TLV_part_A.Pt(),pT_A_corr);
 
@@ -502,7 +508,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         TLorentzVector TLV_part_B_corr;
         TLV_part_A_corr.SetPtEtaPhiM(pT_A_corr,TLV_part_A.Eta(),TLV_part_A.Phi(),TLV_part_A.M());
         TLV_part_B_corr.SetPtEtaPhiM(pT_B_corr,TLV_part_B.Eta(),TLV_part_B.Phi(),TLV_part_B.M());
-        TLorentzVector TLV_photon = TLV_part_A_corr + TLV_part_B_corr;
+        TLorentzVector TLV_photon = TLV_part_A_corr + TLV_part_B_corr; // TRD photon
+        if(ph_TRD_layer_shared < 0) TLV_photon = TLV_part_A + TLV_part_B; // TPC photon
 
         //printf("new ph_pT_AB: %4.3f \n",ph_pT_AB);
 
@@ -545,13 +552,13 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
                       (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2] + independent_layer_A[1]) > 2 &&
                       (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2] + independent_layer_B[1]) > 2 );
         conds.push_back(cond4);
-        
+
         Bool_t cond5=(
                       (shared_layer[0] + shared_layer[1] + shared_layer[2]) == 0 &&
                       (independent_layer_A[5] + independent_layer_A[4] + independent_layer_A[3] + independent_layer_A[2] + independent_layer_A[1] + independent_layer_A[0]) > 3 &&
                       (independent_layer_B[5] + independent_layer_B[4] + independent_layer_B[3] + independent_layer_B[2] + independent_layer_B[1] + independent_layer_B[0]) > 3 );
         conds.push_back(cond5);
-        
+
         Bool_t cond6=!(
                        (shared_layer[3] + shared_layer[4] + shared_layer[5]) > 0 &&
                        (independent_layer_A[0] + independent_layer_A[1] + independent_layer_A[2] ) > 0 &&
@@ -559,21 +566,26 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         conds.push_back(cond6);
 
 
-        if((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6)
+        if(
+           ((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6) // TRD photon
+           || ph_TRD_layer_shared < 0.0 // TPC photon
+          )
         {
             if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
             {
                 TVector3 TV3_dir;
                 TV3_dir = TLV_photon.Vect();
 
-                TVector3 TV3_sec_vertex(PhotonVertexX,PhotonVertexY,PhotonVertexZ); 
+                TVector3 TV3_sec_vertex(PhotonVertexX,PhotonVertexY,PhotonVertexZ);
+                TH2_vertex_photon_XY     ->Fill(PhotonVertexX,PhotonVertexY);
+                TH1_vertex_photon_radius ->Fill(Photon_radius);
 
                 //TVector3 point;
                 //point.SetXYZ(0.0,0.0,0.0);
 
                 Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_sec_vertex, TV3_dir, TV3_prim_vertex);
 
-                if (dist < dist_max) 
+                if (dist < dist_max)
                 {
 
                     UShort_t N_Kalman_tracks = TRD_Photon ->getNumKalman_Tracks(); //should be always 2 or 0
@@ -595,7 +607,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
                         }
 
-                        
+
                     }
 
                     UShort_t N_TPC_tracks = TRD_Photon ->getNumTPC_Tracks(); //should be always 2 or 0
@@ -615,22 +627,22 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
                     vec_TLV_photon.push_back(TLV_photon);
                     //printf("vec_TLV_photon size: %d \n",(Int_t)vec_TLV_photon.size());
 
-                    //#if defined (USEEVE) 
+                    //#if defined (USEEVE)
                     if(graphics)
                     {
-                    Double_t distance_to_prim_vertex = (TV3_prim_vertex - TV3_sec_vertex).Mag();
+                        Double_t distance_to_prim_vertex = (TV3_prim_vertex - TV3_sec_vertex).Mag();
 
-                    TEveLine_mother.resize(i_vertex_photon+1);
-                    TEveLine_mother[i_vertex_photon] = new TEveLine();
+                        TEveLine_mother.resize(i_vertex_photon+1);
+                        TEveLine_mother[i_vertex_photon] = new TEveLine();
 
-                    TEveLine_mother[i_vertex_photon] ->SetNextPoint(PhotonVertexX,PhotonVertexY,PhotonVertexZ);
-                    TEveLine_mother[i_vertex_photon] ->SetNextPoint(PhotonVertexX - distance_to_prim_vertex*TV3_dir[0],
-                        PhotonVertexY - distance_to_prim_vertex*TV3_dir[1],PhotonVertexZ - distance_to_prim_vertex*TV3_dir[2]);
+                        TEveLine_mother[i_vertex_photon] ->SetNextPoint(PhotonVertexX,PhotonVertexY,PhotonVertexZ);
+                        TEveLine_mother[i_vertex_photon] ->SetNextPoint(PhotonVertexX - distance_to_prim_vertex*TV3_dir[0],
+                                                                        PhotonVertexY - distance_to_prim_vertex*TV3_dir[1],PhotonVertexZ - distance_to_prim_vertex*TV3_dir[2]);
 
-                    //printf("photon vertex: {%4.3f, %4.3f, %4.3f}, second point: {%4.3f, %4.3f, %4.3f} \n",PhotonVertexX,PhotonVertexY,PhotonVertexZ,
-                    //PhotonVertexX - distance_to_prim_vertex*TV3_dir[0],PhotonVertexY - distance_to_prim_vertex*TV3_dir[1],PhotonVertexZ - distance_to_prim_vertex*TV3_dir[2]);
-                    i_vertex_photon++;
-                    //printf("i_vertex_photon: %d \n",i_vertex_photon);
+                        //printf("photon vertex: {%4.3f, %4.3f, %4.3f}, second point: {%4.3f, %4.3f, %4.3f} \n",PhotonVertexX,PhotonVertexY,PhotonVertexZ,
+                        //PhotonVertexX - distance_to_prim_vertex*TV3_dir[0],PhotonVertexY - distance_to_prim_vertex*TV3_dir[1],PhotonVertexZ - distance_to_prim_vertex*TV3_dir[2]);
+                        i_vertex_photon++;
+                        //printf("i_vertex_photon: %d \n",i_vertex_photon);
 
                     }
                     //#endif
@@ -801,8 +813,10 @@ void Ali_TRD_physics_analysis::Draw()
     TCanvas* can_TH1_mass_pi0 = Draw_1D_histo_and_canvas(TH1_mass_pi0,"can_TH1_mass_pi0",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
     //can_TH1_mass_pi0 ->SetLogz(1);
 
-    //TCanvas* can_TH2_vertex_photon_XY = Draw_2D_histo_and_canvas(TH2_vertex_photon_XY,"can_TH2_vertex_photon_XY",800,650,0,0,"COLZ"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
-    //can_TH1_mass_pi0 ->SetLogz(1);
+    TCanvas* can_TH2_vertex_photon_XY = Draw_2D_histo_and_canvas(TH2_vertex_photon_XY,"can_TH2_vertex_photon_XY",800,650,0,0,"COLZ"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
+    can_TH1_mass_pi0 ->SetLogz(1);
+
+    TCanvas* can_vertex_photon_radius = Draw_1D_histo_and_canvas(TH1_vertex_photon_radius,"can_vertex_photon_radius",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
 }
 //----------------------------------------------------------------------------------------
 #endif
