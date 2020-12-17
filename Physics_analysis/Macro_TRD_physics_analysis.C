@@ -42,7 +42,7 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
     output_dir = "./";
 #endif
     
-    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_Physics_analysis.h needs to be defined too)
+    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_Physics_analysis.h needs to be defined too)
 
     Double_t dist_max               = 30.0; //cm: maximum disctance between primary event vertex and photon origin according to TLV 
 
@@ -67,8 +67,8 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
     //Int_t stop_event  = 15;
 
 
-    //for(Long64_t event = start_event; event < stop_event; event++)
-    for(Long64_t event = start_event; event < 1000; event++)
+    for(Long64_t event = start_event; event < stop_event; event++)
+    //for(Long64_t event = start_event; event < 10; event++)
     {
         //-------> Tracklets = new Ali_TRD_ST_Tracklets*[NumTracklets]; what is this??
         //class _copy
