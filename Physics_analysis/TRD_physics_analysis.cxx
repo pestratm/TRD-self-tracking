@@ -149,7 +149,14 @@ TCanvas* Draw_1D_histo_and_canvas(TH1D* hist, TString name, Int_t x_size, Int_t 
 }
 //----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
+Float_t correct_pT_according_to_correlation_plot(Float_t pT_raw, TVector3 par)
+{
+    Float_t pT_new = par[0] + par[1]*pT_raw + par[2]*pT_raw*pT_raw;
 
+    return pT_new;
+}
+//----------------------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------------------
 Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_file_name, Int_t graphics)
@@ -165,6 +172,9 @@ Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_
     TH2D* h2D_dEdx_vs_mom = new TH2D("h2D_dEdx_vs_mom","h2D_dEdx_vs_mom",200,0,5,200,0,150.0);
 
     TH1_mass_pi0 = new TH1D("TH1_mass_pi0","TH1_mass_pi0",400,0,1.5);
+
+    TFile* pt_corr      = TFile::Open("./pt_corr.root");
+    tg_pol2_par = (TGraph*)pt_corr->Get("tg_pol2_params");
 
     #if defined(USEEVE)
     if(graphics)
@@ -452,12 +462,12 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
         TV3_PhotonVertex.SetXYZ(PhotonVertexX,PhotonVertexY,PhotonVertexZ);
 
-        TH2_vertex_photon_XY ->Fill(PhotonVertexY,PhotonVertexZ);
+        TH2_vertex_photon_XY ->Fill(PhotonVertexX,PhotonVertexY);
 
         vec_PhotonVertex.push_back(TV3_PhotonVertex);
 
         Float_t ph_TRD_layer_shared       = TRD_Photon ->get_bit_TRD_layer_shared(); // -1 for TPC track, for TRD it stores the information about independent and shared TRD layers between the two electrons
-        Float_t ph_pT_AB 		  = TRD_Photon ->get_pT_AB();
+        Float_t ph_pT_AB_raw 	  = TRD_Photon ->get_pT_AB();
         Float_t ph_AP_pT   		  = TRD_Photon ->get_AP_pT();
         Float_t ph_AP_alpha   		  = TRD_Photon ->get_AP_alpha();
         Float_t ph_dca_min   		  = TRD_Photon ->get_dca_min();
@@ -470,6 +480,19 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         Float_t ph_dcaAB   		  = TRD_Photon ->get_dcaAB();
         Float_t ph_Inv_mass_AB_Lambda     = TRD_Photon ->get_Inv_mass_AB_Lambda();
         Float_t ph_Inv_mass_AB_antiLambda = TRD_Photon ->get_Inv_mass_AB_antiLambda();
+
+        //TLoren
+        //printf("original ph_pT_AB: %4.3f \n",ph_pT_AB_raw);
+
+        TVector3 param;
+
+        if (ph_pT_AB_raw < 0.0) param.SetXYZ(tg_pol2_par->GetY()[0],tg_pol2_par->GetY()[1],tg_pol2_par->GetY()[2]); //set parameters for correction function
+        if (ph_pT_AB_raw > 0.0) param.SetXYZ(tg_pol2_par->GetY()[3],tg_pol2_par->GetY()[4],tg_pol2_par->GetY()[5]);
+
+        Float_t ph_pT_AB = correct_pT_according_to_correlation_plot(ph_pT_AB_raw,param);
+        //Float_t ph_pT_AB = ph_pT_AB_raw; 
+
+        //printf("new ph_pT_AB: %4.3f \n",ph_pT_AB);
 
         //------------------------------------------
         // Analyze the bit map
@@ -524,9 +547,9 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         conds.push_back(cond6);
 
 
-        //if((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6)
+        if((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6)
         {
-            //if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
+            if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
             {
                 TLorentzVector TLV_photon;
                 TLV_photon.SetPtEtaPhiM(ph_pT_AB,ph_Eta_AB,ph_Phi_AB,0.0);
@@ -541,8 +564,45 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
                 Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_sec_vertex, TV3_dir, TV3_prim_vertex);
 
-                //if (dist < dist_max) 
+                if (dist < dist_max) 
                 {
+
+                    UShort_t N_Kalman_tracks = TRD_Photon ->getNumKalman_Tracks(); //should be always 2 or 0
+
+                    if (N_Kalman_tracks > 0)
+                    {
+                        for (Int_t i_track = 0; i_track < N_Kalman_tracks; i_track++)
+                        {
+                            Kalman_Track_photon = TRD_Photon ->getKalman_Track(i_track);
+
+                            //Double_t Chi2 = Kalman_Track_photon ->get_Chi2();
+                            //vec_photon_kalman_chi2[i_photon].push_back(Chi2);
+
+                            vec_photon_kalman_helices[i_photon].push_back(new Ali_Helix_copy());
+
+                            vec_photon_kalman_helices[i_photon][(Int_t)vec_photon_kalman_helices[i_photon].size()-1] ->setHelix(Kalman_Track_photon->getKalmanHelix_param(0),
+                                                                                                                                Kalman_Track_photon->getKalmanHelix_param(1),Kalman_Track_photon->getKalmanHelix_param(2),
+                                                                                                                                Kalman_Track_photon->getKalmanHelix_param(3),Kalman_Track_photon->getKalmanHelix_param(4),Kalman_Track_photon->getKalmanHelix_param(5));
+
+                        }
+
+                        
+                    }
+
+                    UShort_t N_TPC_tracks = TRD_Photon ->getNumTPC_Tracks(); //should be always 2 or 0
+
+                    if (N_TPC_tracks > 0)
+                    {
+                        for (Int_t i_track = 0; i_track < N_TPC_tracks; i_track++)
+                        {
+                            TPC_Track_photon = TRD_Photon ->getTPC_Track(i_track);
+
+                            vec_photon_tpc_helices[i_photon].push_back(new Ali_Helix_copy());
+                            vec_photon_tpc_helices[i_photon][(Int_t)vec_photon_tpc_helices[i_photon].size()-1] ->setHelix(TPC_Track_photon->getHelix_param(0),
+                                                                                                                          TPC_Track_photon->getHelix_param(1),TPC_Track_photon->getHelix_param(2),
+                                                                                                                          TPC_Track_photon->getHelix_param(3),TPC_Track_photon->getHelix_param(4),TPC_Track_photon->getHelix_param(5));
+                        }
+                    }
                     vec_TLV_photon.push_back(TLV_photon);
                     //printf("vec_TLV_photon size: %d \n",(Int_t)vec_TLV_photon.size());
 
@@ -583,39 +643,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
         #if 0 //not needed right now
 
-        UShort_t N_Kalman_tracks = TRD_Photon ->getNumKalman_Tracks(); //should be always 2 or 0
 
-        if (N_Kalman_tracks > 0)
-        {
-            for (Int_t i_track = 0; i_track < N_Kalman_tracks; i_track++)
-            {
-                Kalman_Track_photon = TRD_Photon ->getKalman_Track(i_track);
-
-                Double_t Chi2 = Kalman_Track_photon ->get_Chi2();
-                vec_photon_kalman_chi2[i_photon].push_back(Chi2);
-
-                vec_photon_kalman_helices[i_photon].push_back(new Ali_Helix_copy());
-
-                vec_photon_kalman_helices[i_photon][(Int_t)vec_photon_kalman_helices[i_photon].size()-1] ->setHelix(Kalman_Track_photon->getKalmanHelix_param(0),
-                                                                                                                    Kalman_Track_photon->getKalmanHelix_param(1),Kalman_Track_photon->getKalmanHelix_param(2),
-                                                                                                                    Kalman_Track_photon->getKalmanHelix_param(3),Kalman_Track_photon->getKalmanHelix_param(4),Kalman_Track_photon->getKalmanHelix_param(5));
-            }
-        }
-
-        UShort_t N_TPC_tracks = TRD_Photon ->getNumTPC_Tracks(); //should be always 2 or 0
-
-        if (N_TPC_tracks > 0)
-        {
-            for (Int_t i_track = 0; i_track < N_TPC_tracks; i_track++)
-            {
-                TPC_Track_photon = TRD_Photon ->getTPC_Track(i_track);
-
-                vec_photon_tpc_helices[i_photon].push_back(new Ali_Helix_copy());
-                vec_photon_tpc_helices[i_photon][(Int_t)vec_photon_tpc_helices[i_photon].size()-1] ->setHelix(TPC_Track_photon->getHelix_param(0),
-                                                                                                              TPC_Track_photon->getHelix_param(1),TPC_Track_photon->getHelix_param(2),
-                                                                                                              TPC_Track_photon->getHelix_param(3),TPC_Track_photon->getHelix_param(4),TPC_Track_photon->getHelix_param(5));
-            }
-        }
 
         #endif
 
@@ -744,6 +772,8 @@ void Ali_TRD_physics_analysis::Calculate_pi0_mass() //loop over all good photons
         {
             if (i_photon_A == i_photon_B) continue;
             TLorentzVector TLV_pi0; 
+
+
             TLV_pi0 = vec_TLV_photon[i_photon_A]+vec_TLV_photon[i_photon_B];
             Double_t Mass_pi0 = TLV_pi0.M();
             TH1_mass_pi0 ->Fill(Mass_pi0);
@@ -762,7 +792,7 @@ void Ali_TRD_physics_analysis::Draw()
     TCanvas* can_TH1_mass_pi0 = Draw_1D_histo_and_canvas(TH1_mass_pi0,"can_TH1_mass_pi0",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
     //can_TH1_mass_pi0 ->SetLogz(1);
 
-    TCanvas* can_TH2_vertex_photon_XY = Draw_2D_histo_and_canvas(TH2_vertex_photon_XY,"can_TH2_vertex_photon_XY",800,650,0,0,"COLZ"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
+    //TCanvas* can_TH2_vertex_photon_XY = Draw_2D_histo_and_canvas(TH2_vertex_photon_XY,"can_TH2_vertex_photon_XY",800,650,0,0,"COLZ"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
     //can_TH1_mass_pi0 ->SetLogz(1);
 }
 //----------------------------------------------------------------------------------------

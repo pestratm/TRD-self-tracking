@@ -112,6 +112,8 @@ private:
 
     vector<TEveLine*> TEveLine_mother;
 
+    TGraph* tg_pol2_par;
+
 
     //things for Nuclear interactions
     TVector3 TV3_NIVertex;
