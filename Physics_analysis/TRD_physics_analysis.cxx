@@ -176,6 +176,12 @@ Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_
     TFile* pt_corr      = TFile::Open("./pt_corr.root");
     tg_pol2_par = (TGraph*)pt_corr->Get("tg_pol2_params");
 
+    for(Int_t i_par = 0; i_par < 3; i_par++)
+    {
+        par_pT_corr_neg[i_par] = tg_pol2_par->GetY()[i_par];
+        par_pT_corr_pos[i_par] = tg_pol2_par->GetY()[i_par+3];
+    }
+
     #if defined(USEEVE)
     if(graphics)
     {
@@ -467,7 +473,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         vec_PhotonVertex.push_back(TV3_PhotonVertex);
 
         Float_t ph_TRD_layer_shared       = TRD_Photon ->get_bit_TRD_layer_shared(); // -1 for TPC track, for TRD it stores the information about independent and shared TRD layers between the two electrons
-        Float_t ph_pT_AB_raw 	  = TRD_Photon ->get_pT_AB();
+        Float_t ph_pT_AB_raw 	          = TRD_Photon ->get_pT_AB();
         Float_t ph_AP_pT   		  = TRD_Photon ->get_AP_pT();
         Float_t ph_AP_alpha   		  = TRD_Photon ->get_AP_alpha();
         Float_t ph_dca_min   		  = TRD_Photon ->get_dca_min();
@@ -480,17 +486,23 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         Float_t ph_dcaAB   		  = TRD_Photon ->get_dcaAB();
         Float_t ph_Inv_mass_AB_Lambda     = TRD_Photon ->get_Inv_mass_AB_Lambda();
         Float_t ph_Inv_mass_AB_antiLambda = TRD_Photon ->get_Inv_mass_AB_antiLambda();
+        TLorentzVector TLV_part_A         = TRD_Photon ->get_TLV_part_A();
+        TLorentzVector TLV_part_B         = TRD_Photon ->get_TLV_part_B();
 
-        //TLoren
         //printf("original ph_pT_AB: %4.3f \n",ph_pT_AB_raw);
 
         TVector3 param;
 
-        if (ph_pT_AB_raw < 0.0) param.SetXYZ(tg_pol2_par->GetY()[0],tg_pol2_par->GetY()[1],tg_pol2_par->GetY()[2]); //set parameters for correction function
-        if (ph_pT_AB_raw > 0.0) param.SetXYZ(tg_pol2_par->GetY()[3],tg_pol2_par->GetY()[4],tg_pol2_par->GetY()[5]);
+        Float_t pT_A_corr = correct_pT_according_to_correlation_plot(TLV_part_A.Pt(),par_pT_corr_pos);
+        Float_t pT_B_corr = correct_pT_according_to_correlation_plot(TLV_part_B.Pt(),par_pT_corr_pos);
 
-        Float_t ph_pT_AB = correct_pT_according_to_correlation_plot(ph_pT_AB_raw,param);
-        //Float_t ph_pT_AB = ph_pT_AB_raw; 
+        //printf("pT_A: {%4.3f, %4.3f} \n",TLV_part_A.Pt(),pT_A_corr);
+
+        TLorentzVector TLV_part_A_corr;
+        TLorentzVector TLV_part_B_corr;
+        TLV_part_A_corr.SetPtEtaPhiM(pT_A_corr,TLV_part_A.Eta(),TLV_part_A.Phi(),TLV_part_A.M());
+        TLV_part_B_corr.SetPtEtaPhiM(pT_B_corr,TLV_part_B.Eta(),TLV_part_B.Phi(),TLV_part_B.M());
+        TLorentzVector TLV_photon = TLV_part_A_corr + TLV_part_B_corr;
 
         //printf("new ph_pT_AB: %4.3f \n",ph_pT_AB);
 
@@ -551,9 +563,6 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         {
             if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
             {
-                TLorentzVector TLV_photon;
-                TLV_photon.SetPtEtaPhiM(ph_pT_AB,ph_Eta_AB,ph_Phi_AB,0.0);
-
                 TVector3 TV3_dir;
                 TV3_dir = TLV_photon.Vect();
 
