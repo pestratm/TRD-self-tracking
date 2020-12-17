@@ -169,7 +169,13 @@ Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_
     printf("test printf: %s \n",HistName.Data());
 
     TH2_vertex_photon_XY     = new TH2D("TH2_vertex_photon_XY","TH2_vertex_photon_XY",1600,-400,400,1600,-400,400);
-    TH1_vertex_photon_radius = new TH1D("TH1_vertex_photon_radius","TH1_vertex_photon_radius",1200,0,400.0);
+    vec_TH1_vertex_photon_radius.resize(5);
+    for(Int_t i_hist = 0; i_hist < (Int_t)vec_TH1_vertex_photon_radius.size(); i_hist++)
+    {
+        HistName = "vec_TH1_vertex_photon_radius_";
+        HistName += i_hist;
+        vec_TH1_vertex_photon_radius[i_hist] = new TH1D(HistName.Data(),HistName.Data(),1200,0,400.0);
+    }
     TH2D* h2D_dEdx_vs_mom    = new TH2D("h2D_dEdx_vs_mom","h2D_dEdx_vs_mom",200,0,5,200,0,150.0);
 
     TH1_mass_pi0 = new TH1D("TH1_mass_pi0","TH1_mass_pi0",1200,0,1.5);
@@ -511,6 +517,21 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         TLorentzVector TLV_photon = TLV_part_A_corr + TLV_part_B_corr; // TRD photon
         if(ph_TRD_layer_shared < 0) TLV_photon = TLV_part_A + TLV_part_B; // TPC photon
 
+
+        //------------------------------------------
+        // Armenteros-Podolanski cuts
+        // AP cuts from https://www.physi.uni-heidelberg.de//Publications/PhDThesis_Leardini.pdf (eqn. 5.2)
+        Double_t AP_alpha_max = 0.95;
+        Double_t AP_qT_max    = 0.05;
+        Double_t AP_cut_value = 1.0;
+        Double_t AP_value = TMath::Power(ph_AP_alpha/AP_alpha_max,2.0) + TMath::Power(ph_AP_pT/AP_qT_max,2.0);
+
+        //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
+        //printf("AP_value: %4.3f, dot_product_dir_vertex: %4.3f, CA*CB: %4.3f, pTA: %4.3f, pTB: %4.3f \n",AP_value,dot_product_dir_vertex,CA*CB,pTA,pTB);
+        //if(AP_value < AP_cut_value);
+        //------------------------------------------
+
+
         //printf("new ph_pT_AB: %4.3f \n",ph_pT_AB);
 
         //------------------------------------------
@@ -578,7 +599,11 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
                 TVector3 TV3_sec_vertex(PhotonVertexX,PhotonVertexY,PhotonVertexZ);
                 TH2_vertex_photon_XY     ->Fill(PhotonVertexX,PhotonVertexY);
-                TH1_vertex_photon_radius ->Fill(Photon_radius);
+                if(AP_value < 1.0) vec_TH1_vertex_photon_radius[0] ->Fill(Photon_radius);
+                if(AP_value < 0.9) vec_TH1_vertex_photon_radius[1] ->Fill(Photon_radius);
+                if(AP_value < 0.8) vec_TH1_vertex_photon_radius[2] ->Fill(Photon_radius);
+                if(AP_value < 0.6) vec_TH1_vertex_photon_radius[3] ->Fill(Photon_radius);
+                if(AP_value < 0.4) vec_TH1_vertex_photon_radius[4] ->Fill(Photon_radius);
 
                 //TVector3 point;
                 //point.SetXYZ(0.0,0.0,0.0);
@@ -816,7 +841,12 @@ void Ali_TRD_physics_analysis::Draw()
     TCanvas* can_TH2_vertex_photon_XY = Draw_2D_histo_and_canvas(TH2_vertex_photon_XY,"can_TH2_vertex_photon_XY",800,650,0,0,"COLZ"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
     can_TH1_mass_pi0 ->SetLogz(1);
 
-    TCanvas* can_vertex_photon_radius = Draw_1D_histo_and_canvas(TH1_vertex_photon_radius,"can_vertex_photon_radius",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
+    TCanvas* can_vertex_photon_radius = Draw_1D_histo_and_canvas(vec_TH1_vertex_photon_radius[0],"can_vertex_photon_radius",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
+    can_vertex_photon_radius ->cd();
+    vec_TH1_vertex_photon_radius[1] ->Draw("same");
+    vec_TH1_vertex_photon_radius[2] ->Draw("same");
+    vec_TH1_vertex_photon_radius[3] ->Draw("same");
+    vec_TH1_vertex_photon_radius[4] ->Draw("same");
 }
 //----------------------------------------------------------------------------------------
 #endif

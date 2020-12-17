@@ -81,7 +81,7 @@ private:
     Ali_TRD_Nuclear_interaction* TRD_Nuclear_interaction;
 
     TH2D* TH2_vertex_photon_XY;
-    TH1D* TH1_vertex_photon_radius;
+    vector<TH1D*> vec_TH1_vertex_photon_radius;
 
     TFile* outputfile;
    
