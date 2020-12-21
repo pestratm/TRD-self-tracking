@@ -107,9 +107,15 @@ private:
     vector< vector< Ali_Helix_copy* >> vec_photon_kalman_helices; //[i_photon][i_track]
     vector< vector< Ali_Helix_copy* >> vec_photon_tpc_helices; //[i_photon][i_track]
 
-    vector <TLorentzVector> vec_TLV_photon;
+    vector<TLorentzVector> vec_TLV_photon;
+    vector<Double_t> vec_opening_angle_photon;
+    vector< vector<Double_t> > vec_nsigma_electron;
 
-    TH1D* TH1_mass_pi0;
+    vector<TH1D*> vec_TH1_mass_pi0;
+    TH1D* TH1_angle_between_photons;
+    TH2D* TH2D_angle_photons_vs_inv_mass;
+    TH2D* TH2D_phiA_vs_phiB;
+    TH1D* th1d_angle_between;
 
     vector<TEveLine*> TEveLine_mother;
 
