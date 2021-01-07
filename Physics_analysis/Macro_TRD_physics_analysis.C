@@ -43,8 +43,10 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
 #endif
     
     Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_Physics_analysis.h needs to be defined too)
+    Int_t ME                        = 1; // 0 = only photons from same event, 1 = mixed events too 
+    Int_t TRD_photon                = 1; // 0 = TPC_photon, 1 = TRD_photon
 
-    Double_t dist_max               = 30.0; //cm: maximum disctance between primary event vertex and photon origin according to TLV 
+    Double_t dist_max               = 100.0; //cm: maximum disctance between primary event vertex and photon origin according to TLV 
 
     Ali_TRD_physics_analysis*  TRD_physics_analysis = new Ali_TRD_physics_analysis(output_dir,out_file_name,graphics);
     //Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,"test.root",graphics);
@@ -66,9 +68,8 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
     Int_t stop_event  = (Int_t) N_Events;
     //Int_t stop_event  = 15;
 
-
     for(Long64_t event = start_event; event < stop_event; event++)
-    //for(Long64_t event = start_event; event < 10; event++)
+    //for(Long64_t event = start_event; event < 100000; event++)
     {
         //-------> Tracklets = new Ali_TRD_ST_Tracklets*[NumTracklets]; what is this??
         //class _copy
@@ -86,13 +87,16 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
     //printf("test 3 \n");
 
         
-        TRD_physics_analysis ->Loop_event(event,dist_max,graphics);
-        TRD_physics_analysis ->Calculate_pi0_mass();
+        TRD_physics_analysis ->Loop_event(event,dist_max,graphics,ME,TRD_photon);
+        TRD_physics_analysis ->Calculate_pi0_mass_SE();
 
         //printf("\n Event: %lld, Photons: %d, Nuclear interactions: %d \n",event,(Int_t)vec_PhotonVertex.size(),(Int_t)vec_NIVertex.size());
 
     }
 
-    TRD_physics_analysis ->Draw();
+    if (ME) TRD_physics_analysis ->Calculate_pi0_mass_SE_and_ME();
+
+    TRD_physics_analysis ->Draw(ME);
+
 }
 
