@@ -108,10 +108,14 @@ private:
     vector< vector< Ali_Helix_copy* >> vec_photon_tpc_helices; //[i_photon][i_track]
 
     vector<TLorentzVector> vec_TLV_photon;
+    vector<TLorentzVector> vec_TLV_photon_mixed_events;
+
     vector<Double_t> vec_opening_angle_photon;
     vector< vector<Double_t> > vec_nsigma_electron;
+    vector< vector<Double_t> > vec_nsigma_electron_mixed_events;
 
     vector<TH1D*> vec_TH1_mass_pi0;
+    vector<TH1D*> vec_TH1_mass_pi0_ME;
     TH1D* TH1_angle_between_photons;
     TH2D* TH2D_angle_photons_vs_inv_mass;
     TH2D* TH2D_phiA_vs_phiB;
@@ -139,16 +143,17 @@ public:
     //~Ali_TRD_ST_Analyze();
 
     void Init_tree(TString SEList);
-    Int_t Loop_event(Long64_t i_event, Double_t dist_max, Int_t graphics);
+    Int_t Loop_event(Long64_t i_event, Double_t dist_max, Int_t graphics, Int_t ME, Int_t TRD_photon);
 
 
     void set_input_lists(TString input_dir_lists_in) {input_dir_lists = input_dir_lists_in;}
     void set_input_dir(TString input_dir_in) {input_dir = input_dir_in;}
 
     Long64_t get_N_Events() {return N_Events;}
-    void Draw();
+    void Draw(Int_t ME);
 
-    void Calculate_pi0_mass();
+    void Calculate_pi0_mass_SE();
+    void Calculate_pi0_mass_SE_and_ME();
     
     ClassDef(Ali_TRD_physics_analysis, 1)
 };

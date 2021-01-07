@@ -179,6 +179,18 @@ Ali_TRD_physics_analysis::Ali_TRD_physics_analysis(TString out_dir, TString out_
     TH2D* h2D_dEdx_vs_mom    = new TH2D("h2D_dEdx_vs_mom","h2D_dEdx_vs_mom",200,0,5,200,0,150.0);
 
     vec_TH1_mass_pi0.resize(5);
+    vec_TH1_mass_pi0_ME.resize(5);
+
+    vec_TLV_photon_mixed_events.clear();
+    vec_nsigma_electron_mixed_events.clear();
+
+    for(Int_t i_hist = 0; i_hist < (Int_t)vec_TH1_mass_pi0_ME.size(); i_hist++)
+    {
+        HistName = "vec_TH1_mass_pi0_ME_";
+        HistName += i_hist;
+        vec_TH1_mass_pi0_ME[i_hist] = new TH1D(HistName.Data(),HistName.Data(),1200,0,6.0);
+    }
+
     for(Int_t i_hist = 0; i_hist < (Int_t)vec_TH1_mass_pi0.size(); i_hist++)
     {
         HistName = "vec_TH1_mass_pi0_";
@@ -435,7 +447,7 @@ void Ali_TRD_physics_analysis::Init_tree(TString SEList) // read data from files
 //----------------------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------------------
-Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, Int_t graphics) //get all info from each event
+Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, Int_t graphics, Int_t ME, Int_t TRD_photon) //get all info from each event
 {
     //printf("Ali_TRD_ST_Analyze::Loop_event \n");
 
@@ -500,7 +512,16 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
         //printf("ph_TRD_layer_shared: %4.3f \n",ph_TRD_layer_shared);
 
-        if(ph_TRD_layer_shared > 0) continue;
+        if (TRD_photon)
+        {
+            if(ph_TRD_layer_shared < 0) continue; //TRD photons
+        }
+
+        else
+        {
+            if(ph_TRD_layer_shared > 0) continue; //TPC photons
+        }
+
 
         Float_t ph_pT_AB_raw 	          = TRD_Photon ->get_pT_AB();
         Float_t ph_AP_pT   		  = TRD_Photon ->get_AP_pT();
@@ -698,8 +719,13 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
                         }
                     }
                     vec_TLV_photon.push_back(TLV_photon);
+
+                    if (ME) vec_TLV_photon_mixed_events.push_back(TLV_photon); //add all photons from all events
+                    
                     vec_opening_angle_photon.push_back(angle_between);
                     vec_nsigma_electron.push_back(nsigma_e_TPC);
+
+                    if (ME) vec_nsigma_electron_mixed_events.push_back(nsigma_e_TPC);
                     //printf("vec_TLV_photon size: %d \n",(Int_t)vec_TLV_photon.size());
 
                     //#if defined (USEEVE)
@@ -858,9 +884,9 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
 
 //----------------------------------------------------------------------------------------
-void Ali_TRD_physics_analysis::Calculate_pi0_mass() //loop over all good photons
+void Ali_TRD_physics_analysis::Calculate_pi0_mass_SE() //loop over all good photons
 {
-    //printf("Calculate_pi0_mass started \n");
+    //printf("Calculate_pi0_mass_SE started \n");
 
     for (Int_t i_photon_A = 0; i_photon_A < (Int_t)vec_TLV_photon.size(); i_photon_A++)
     {
@@ -914,28 +940,114 @@ void Ali_TRD_physics_analysis::Calculate_pi0_mass() //loop over all good photons
 }
 //----------------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------------
+void Ali_TRD_physics_analysis::Calculate_pi0_mass_SE_and_ME() //loop over all good photons
+{
+    //printf("Calculate_pi0_mass_SE_and_ME started \n");
+
+
+    Int_t photon_max = vec_TLV_photon_mixed_events.size();
+
+    printf("photon max: %d \n",photon_max);
+    
+    if (photon_max > 5000) photon_max = 5000;
+
+    printf("photon max: %d \n",photon_max);
+
+
+    for (Int_t i_photon_A = 0; i_photon_A < photon_max; i_photon_A++)
+    {
+        for (Int_t i_photon_B = 0; i_photon_B < photon_max; i_photon_B++)
+        {
+            if (i_photon_A == i_photon_B) continue;
+            TLorentzVector TLV_pi0; 
+
+
+            TLV_pi0 = vec_TLV_photon_mixed_events[i_photon_A] + vec_TLV_photon_mixed_events[i_photon_B];
+            Double_t pT_pi0 = TLV_pi0.Pt();
+            Double_t Mass_pi0 = TLV_pi0.M();
+            vec_TH1_mass_pi0_ME[0] ->Fill(Mass_pi0);
+
+            //Double_t angle_between_photons = TMath::RadToDeg()*vec_TLV_photon[i_photon_A].Angle(vec_TLV_photon[i_photon_B].Vect());
+
+            //TH1_angle_between_photons      ->Fill(angle_between_photons);
+            //TH2D_angle_photons_vs_inv_mass ->Fill(Mass_pi0,angle_between_photons);
+
+            if(fabs(vec_nsigma_electron_mixed_events[i_photon_A][0]) < 2.5 && fabs(vec_nsigma_electron_mixed_events[i_photon_A][1]) < 2.5)
+            {
+                vec_TH1_mass_pi0_ME[1] ->Fill(Mass_pi0);
+                if(fabs(vec_nsigma_electron_mixed_events[i_photon_B][0]) < 2.5 && fabs(vec_nsigma_electron_mixed_events[i_photon_B][1]) < 2.5)
+                {
+                    vec_TH1_mass_pi0_ME[2] ->Fill(Mass_pi0);
+                }
+            }
+
+            if(fabs(vec_nsigma_electron_mixed_events[i_photon_A][0]) > 2.5 && fabs(vec_nsigma_electron_mixed_events[i_photon_A][1]) > 2.5 &&
+               fabs(vec_nsigma_electron_mixed_events[i_photon_B][0]) > 2.5 && fabs(vec_nsigma_electron_mixed_events[i_photon_B][1]) > 2.5
+              )
+            {
+                vec_TH1_mass_pi0_ME[3] ->Fill(Mass_pi0);
+            }
+
+            //if(pT_pi0 > 0.2 && pT_pi0 <= 0.5) vec_TH1_mass_pi0[1] ->Fill(Mass_pi0);
+            //if(pT_pi0 > 0.5 && pT_pi0 <= 1.0) vec_TH1_mass_pi0[2] ->Fill(Mass_pi0);
+            //if(pT_pi0 > 1.0 && pT_pi0 <= 1.5) vec_TH1_mass_pi0[3] ->Fill(Mass_pi0);
+            //if(pT_pi0 > 1.5 && pT_pi0 <= 2.0) vec_TH1_mass_pi0[4] ->Fill(Mass_pi0);
+
+            //if(Mass_pi0 < 0.16)
+            //{
+            //    th1d_angle_between->Fill(vec_opening_angle_photon[i_photon_A]);
+            //    th1d_angle_between->Fill(vec_opening_angle_photon[i_photon_B]);
+            //}
+            //printf("number of entries: %d \n",TH1_mass_pi0->GetEntries());
+        }
+
+    }
+
+}
+//----------------------------------------------------------------------------------------
+
 #if 1
 //----------------------------------------------------------------------------------------
-void Ali_TRD_physics_analysis::Draw()
+void Ali_TRD_physics_analysis::Draw(Int_t ME)
 {
     TCanvas* can_angle_between_photons = Draw_1D_histo_and_canvas(TH1_angle_between_photons,"can_angle_between_photons",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
     TCanvas* can_angle_between         = Draw_1D_histo_and_canvas(th1d_angle_between,"can_angle_between",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
 
 
+    //Normalize hists with pi0 mass:
+
+    for (Int_t i_hist = 0; i_hist < (Int_t)vec_TH1_mass_pi0.size(); i_hist++)
+    {
+        vec_TH1_mass_pi0[i_hist] ->Scale(1.0/vec_TH1_mass_pi0[i_hist] ->GetEntries());
+    }
+
     TCanvas* can_TH1_mass_pi0 = Draw_1D_histo_and_canvas(vec_TH1_mass_pi0[0],"can_TH1_mass_pi0",800,650,0,0,""); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
     can_TH1_mass_pi0 ->cd();
 
     vec_TH1_mass_pi0[1] ->SetLineColor(kRed);
-    vec_TH1_mass_pi0[1] ->DrawCopy("same");
+    //vec_TH1_mass_pi0[1] ->DrawCopy("same");
 
-    vec_TH1_mass_pi0[2] ->SetLineColor(kBlue);
-    vec_TH1_mass_pi0[2] ->DrawCopy("same");
+    vec_TH1_mass_pi0[2] ->SetLineColor(kBlue); //2 TPC electons 
+    //vec_TH1_mass_pi0[2] ->DrawCopy("same");
 
     vec_TH1_mass_pi0[3] ->SetLineColor(kOrange);
-    vec_TH1_mass_pi0[3] ->DrawCopy("same");
+    //vec_TH1_mass_pi0[3] ->DrawCopy("same");
 
     //vec_TH1_mass_pi0[4] ->SetLineColor(kMagenta+2);
     //vec_TH1_mass_pi0[4] ->DrawCopy("same");
+
+    if (ME)
+    {
+        vec_TH1_mass_pi0_ME[0] ->Scale(1.0/vec_TH1_mass_pi0_ME[0] ->GetEntries());
+        vec_TH1_mass_pi0_ME[0] ->SetLineColor(kCyan);
+        vec_TH1_mass_pi0_ME[0] ->DrawCopy("same");
+    }
+
+    TH1D* TH1_mass_pi0_diff = (TH1D*)vec_TH1_mass_pi0[0] ->Clone("TH1_mass_pi0_diff");
+    TH1_mass_pi0_diff ->Add(vec_TH1_mass_pi0_ME[0],-1.0);
+    TH1_mass_pi0_diff ->SetLineColor(kMagenta);
+    TH1_mass_pi0_diff ->DrawCopy("same");
 
     TCanvas* can_TH2_vertex_photon_XY = Draw_2D_histo_and_canvas(TH2_vertex_photon_XY,"can_TH2_vertex_photon_XY",800,650,0,0,"COLZ"); // TH2D* hist, TString name, Int_t x_size, Int_t y_size,Double_t min_val, Double_t max_val, TString option
     can_TH1_mass_pi0 ->SetLogz(1);
