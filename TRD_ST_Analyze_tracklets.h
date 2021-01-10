@@ -39,6 +39,7 @@ using namespace std;
 #include "Math/SMatrix.h"
 #include "Math/MatrixFunctions.h"
 #include "TProfile.h"
+#include "TProfile2D.h"
 
 #if defined(USEEVE)
 #include "TEveBox.h"
@@ -142,6 +143,8 @@ private:
     TNtuple* NT_secondary_vertices;
     TNtuple* NT_secondary_vertex_cluster;
 
+
+
     //static vector< vector< vector<Double_t> > > vec_Dt_digit_pos_cluster;    // layer, merged time bin. xyzADC for circle fits in Calibrate()
     //vector< vector<Double_t> > vec_Dt_digit_pos_cluster;
 
@@ -223,6 +226,7 @@ private:
     vector<TProfile*> vec_tp_Delta_vs_impact_circle;
     vector<TH2D*> vec_TH2D_Delta_vs_impact_circle;
     vector< vector<TVector3*> >   vec_TV3_TRD_center;
+    vector <TVector3*> vec_TV3_TRD_offset;
 
     TProfile* vec_tp_pvdca_vs_sector;
     TH2D* vec_TH2D_pvdca_vs_sector;
@@ -231,7 +235,13 @@ private:
     vector<vector<Double_t>> ADC_rel;
     vector<TGraph*> tg_bethe_bloch; // [e mu pi K p]
     TProfile* tp_gain;
+    TProfile* tp_gain_uncor;
     TH2D* th2d_gain;
+    TProfile* tp_dEdx_length_det;
+    TH1D* h_dEdx_length_det_orig;
+    TH1D* h_dEdx_length_det;
+    vector<TProfile2D*> vec_tp2d_gain_vs_xz;
+
     //TFile* out_gain;
 
 public:

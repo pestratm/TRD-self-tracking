@@ -337,6 +337,18 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
             //vec_TV3_TRD_center[i_det][i_xyz] = file_TRD_geometry ->GetObject(Form("TVector3;%d",i_vec), TVector3);
         }
     }
+
+    vec_TV3_TRD_offset.clear();
+    TFile* file_TRD_offsets = TFile::Open("./TRD_center_offset.root");
+    vec_TV3_TRD_offset.resize(540);
+
+    for (Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        vec_TV3_TRD_offset[i_det] = (TVector3*)file_TRD_offsets ->Get(Form("TVector3;%d",i_det+1));
+    //printf("i_det: %d, vec_TV3_TRD_offset: {%4.3f, %4.3f, %4.3f} \n", i_det,(*vec_TV3_TRD_offset[i_det]).X(),(*vec_TV3_TRD_offset[i_det]).Y(),(*vec_TV3_TRD_offset[i_det]).Z());
+
+    }
+
 	       
     TFile* file_bethe_bloch = TFile::Open("Data/Bethe_Bloch.root");
     tg_bethe_bloch.resize(5);
@@ -346,8 +358,17 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     tg_bethe_bloch[3] = (TGraph*)file_bethe_bloch ->Get("TSPLINE3_DATA_KAON_LHC10H_PASS2_PBPB_MEAN");
     tg_bethe_bloch[4] = (TGraph*)file_bethe_bloch ->Get("TSPLINE3_DATA_PROTON_LHC10H_PASS2_PBPB_MEAN");
 
-    tp_gain = new TProfile("tp_gain","tp_gain",540,0,539);
+    tp_gain = new TProfile("tp_gain","tp_gain",540,0,539,0,10);
+    tp_gain_uncor = new TProfile("tp_gain_uncor","tp_gain_uncor",540,0,539,0,10);
     th2d_gain = new TH2D("th2d_gain","th2d_gain",540,0,539,50,0,20);
+
+    vec_tp2d_gain_vs_xz.clear();
+    vec_tp2d_gain_vs_xz.resize(540);
+
+    for(Int_t i_det = 0; i_det < 540; i_det++) 
+    {
+        vec_tp2d_gain_vs_xz[i_det] = new TProfile2D(Form("vec_tp2d_gain_vs_xz%d",i_det),Form("vec_tp2d_gain_vs_xz%d",i_det),10,-60.0,60.0,10,-60.0,60.0);
+    }
 
 }
 //----------------------------------------------------------------------------------------
@@ -1424,8 +1445,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                                         if(graphics && flag_close_TPC_photon) TEveP_close_TPC_photon ->SetPoint(i_close_TPC_photon,TV3_close_TPC_photon[0],TV3_close_TPC_photon[1],TV3_close_TPC_photon[2]);
 #endif
                                         i_close_TPC_photon++;
-                                        printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d}: dca_min: %4.3f, i_track_min: %d \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1],dca_min,i_track_min);
-                                        printf("      --> Found vertex for AP in event: %lld at radius: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,TV3_sec_vertex.X(),TV3_sec_vertex.Y(),TV3_sec_vertex.Z(),AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
+                                        //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d}: dca_min: %4.3f, i_track_min: %d \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1],dca_min,i_track_min);
+                                        //printf("      --> Found vertex for AP in event: %lld at radius: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,TV3_sec_vertex.X(),TV3_sec_vertex.Y(),TV3_sec_vertex.Z(),AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
                                     }
                                 }
                             }
@@ -3147,7 +3168,12 @@ TProfile* Ali_TRD_ST_Analyze::Calibrate_gain(Long64_t i_event, Int_t Bethe_flag)
 
     Int_t N_TPC_tracks = (Int_t)matched_tracks.size();
 
-    //printf("n TPC tracks: %d \n",NumTracks);
+    /*printf("det 0 vec_TV3_TRD_center[0]: {%4.3f,%4.3f,%4.3f}, vec_TV3_TRD_center[1]: {%4.3f,%4.3f,%4.3f},vec_TV3_TRD_center[2]: {%4.3f,%4.3f,%4.3f} \n",
+        (*vec_TV3_TRD_center[0][0]).X(),(*vec_TV3_TRD_center[0][0]).Y(),(*vec_TV3_TRD_center[0][0]).Z(),
+        (*vec_TV3_TRD_center[0][1]).X(),(*vec_TV3_TRD_center[0][1]).Y(),(*vec_TV3_TRD_center[0][1]).Z(),
+        (*vec_TV3_TRD_center[0][2]).X(),(*vec_TV3_TRD_center[0][2]).Y(),(*vec_TV3_TRD_center[0][2]).Z());
+*/
+
 
     ADC_rel.resize(540);  //relative ADC for each chamber
 
@@ -3207,29 +3233,6 @@ TProfile* Ali_TRD_ST_Analyze::Calibrate_gain(Long64_t i_event, Int_t Bethe_flag)
                     Int_t tb_count = 0;
 
                     Ali_TRD_ST_Tracklets* TRD_ST_Tracklet_adc = TRD_ST_Event    ->getTracklet((Int_t)matched_tracks[i_TPC_track][i_layer]->get_TRD_index());
-
-                    //TVector3 TV3_offset_matched = matched_tracks[i_TPC_track][i_layer] ->GetTV3_offset();
-                    TVector3 TV3_dir_matched    = matched_tracks[i_TPC_track][i_layer] ->get_TV3_dir();
-
-                    if (TV3_dir_matched.Dot((*vec_TV3_TRD_center[det][2])) == 0.0) continue;
-
-                Double_t scale_factor = 3.7*((*vec_TV3_TRD_center[det][2]).Mag())/((*vec_TV3_TRD_center[det][2]).Dot(TV3_dir_matched));
-                    // 3.7 divided by (dot product of vectors/length of norm vector)
-
-                    //Double_t tracklet_length = 3.7/TMath::Sin(((-1*(*vec_TV3_TRD_center[det][2])).Angle(TV3_dir_matched)));
-
-                    //TMath::Sqrt( TMath::Power(3.0*TV3_dir_matched[0],2) + TMath::Power(3.0*TV3_dir_matched[1],2))
-                Double_t tracklet_length = TMath::Sqrt( TMath::Power(scale_factor*TV3_dir_matched[0],2) + TMath::Power(scale_factor*TV3_dir_matched[1],2) + TMath::Power(scale_factor*TV3_dir_matched[2],2));
-                    //same as scale factor 
-
-                    //vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0],TV3_offset[1],TV3_offset[2]);
-                    //vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0] + scale_length_vec*TV3_dir[0],TV3_offset[1] + scale_length_vec*TV3_dir[1],TV3_offset[2] + scale_length_vec*TV3_dir[2]);
-                    //if (tracklet_length > 10.0) continue;
-    //printf("\ntracklet TV3_dir_matched[0]: %4.3f, TV3_dir_matched[1]: %4.3f, TV3_dir_matched[2]: %4.3f, dot: %4.3f, tracklet_length: %4.3f \n",TV3_dir_matched[0],TV3_dir_matched[1],TV3_dir_matched[2],TV3_dir_matched.Dot((*vec_TV3_TRD_center[det][2])),tracklet_length);
-    //printf("normZ[0]: %4.3f, normZ[1]: %4.3f, normZ[2]: %4.3f \n",(*vec_TV3_TRD_center[det][2]).X(),(*vec_TV3_TRD_center[det][2]).Y(),(*vec_TV3_TRD_center[det][2]).Z());
-    //printf("x2: %4.3f, y2: %4.3f,  z2: %4.3f, sum: %4.3f, sqrt: %4.3f \n",TMath::Power(3.0*TV3_dir_matched[0],2),TMath::Power(3.0*TV3_dir_matched[1],2),TMath::Power(3.0*TV3_dir_matched[2],2),
-        //TMath::Power(3.0*TV3_dir_matched[0],2) + TMath::Power(3.0*TV3_dir_matched[1],2) + TMath::Power(3.0*TV3_dir_matched[2],2),TMath::Sqrt( TMath::Power(3.0*TV3_dir_matched[0],2) + TMath::Power(3.0*TV3_dir_matched[1],2) + TMath::Power(3.0*TV3_dir_matched[2],2)));
-
                     for (Int_t i_time = 0; i_time < 24; i_time++) //24 time bins!
                     {
 
@@ -3238,8 +3241,45 @@ TProfile* Ali_TRD_ST_Analyze::Calibrate_gain(Long64_t i_event, Int_t Bethe_flag)
                         ADC += (TRD_ST_Tracklet_adc ->get_ADC_val(i_time) - 10.0);
                         tb_count++;
                     }
+
                     if (tb_count == 23) 
                     {
+
+                        TVector3 TV3_offset_matched = matched_tracks[i_TPC_track][i_layer] ->get_TV3_offset();
+                        TVector3 TV3_dir_matched    = matched_tracks[i_TPC_track][i_layer] ->get_TV3_dir();
+
+                        if (TV3_dir_matched.Dot((*vec_TV3_TRD_center[det][2])) == 0.0) continue;
+
+                        Double_t scale_factor = 3.7*((*vec_TV3_TRD_center[det][2]).Mag())/((*vec_TV3_TRD_center[det][2]).Dot(TV3_dir_matched));
+                        // 3.7 divided by (dot product of vectors/length of norm vector)
+
+                        //Double_t tracklet_length = 3.7/TMath::Sin(((-1*(*vec_TV3_TRD_center[det][2])).Angle(TV3_dir_matched)));
+
+                        //TMath::Sqrt( TMath::Power(3.0*TV3_dir_matched[0],2) + TMath::Power(3.0*TV3_dir_matched[1],2))
+                        Double_t tracklet_length = TMath::Sqrt( TMath::Power(scale_factor*TV3_dir_matched[0],2) + TMath::Power(scale_factor*TV3_dir_matched[1],2) + TMath::Power(scale_factor*TV3_dir_matched[2],2));
+                        //same as scale factor 
+
+                        //vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0],TV3_offset[1],TV3_offset[2]);
+                        //vec_TEveLine_tracklets[i_layer][N_tracklets_layers[i_layer]] ->SetNextPoint(TV3_offset[0] + scale_length_vec*TV3_dir[0],TV3_offset[1] + scale_length_vec*TV3_dir[1],TV3_offset[2] + scale_length_vec*TV3_dir[2]);
+                        //if (tracklet_length > 10.0) continue;
+        //printf("\ntracklet TV3_dir_matched[0]: %4.3f, TV3_dir_matched[1]: %4.3f, TV3_dir_matched[2]: %4.3f, dot: %4.3f, tracklet_length: %4.3f \n",TV3_dir_matched[0],TV3_dir_matched[1],TV3_dir_matched[2],TV3_dir_matched.Dot((*vec_TV3_TRD_center[det][2])),tracklet_length);
+        //printf("normZ[0]: %4.3f, normZ[1]: %4.3f, normZ[2]: %4.3f \n",(*vec_TV3_TRD_center[det][2]).X(),(*vec_TV3_TRD_center[det][2]).Y(),(*vec_TV3_TRD_center[det][2]).Z());
+        //printf("x2: %4.3f, y2: %4.3f,  z2: %4.3f, sum: %4.3f, sqrt: %4.3f \n",TMath::Power(3.0*TV3_dir_matched[0],2),TMath::Power(3.0*TV3_dir_matched[1],2),TMath::Power(3.0*TV3_dir_matched[2],2),
+            //TMath::Power(3.0*TV3_dir_matched[0],2) + TMath::Power(3.0*TV3_dir_matched[1],2) + TMath::Power(3.0*TV3_dir_matched[2],2),TMath::Sqrt( TMath::Power(3.0*TV3_dir_matched[0],2) + TMath::Power(3.0*TV3_dir_matched[1],2) + TMath::Power(3.0*TV3_dir_matched[2],2)));
+
+                        //---------------calculate local position here ----------------------
+
+//vec_TV3_TRD_center
+                        TVector3 local_little_vec = (*vec_TV3_TRD_offset[det]) - TV3_offset_matched; // pointing from center of the chamber to the datapoint?
+                        Double_t x_local = local_little_vec.Dot((*vec_TV3_TRD_center[det][0]))/(*vec_TV3_TRD_center[det][0]).Mag();
+                        Double_t z_local = local_little_vec.Dot((*vec_TV3_TRD_center[det][1]))/(*vec_TV3_TRD_center[det][1]).Mag();
+                        /*
+                        printf("i_det: %d, vec_TV3_TRD_offset: {%4.3f, %4.3f, %4.3f}, TV3_offset_matched: {%4.3f, %4.3f, %4.3f}, little vector: {%4.3f, %4.3f, %4.3f}, local coordinate (x,z): {%4.3f, %4.3f} \n",
+                            det,(*vec_TV3_TRD_offset[det]).X(),(*vec_TV3_TRD_offset[det]).Y(),(*vec_TV3_TRD_offset[det]).Z(),
+                            TV3_offset_matched.X(),TV3_offset_matched.Y(),TV3_offset_matched.Z(),
+                            local_little_vec.X(),local_little_vec.Y(),local_little_vec.Z(),x_local,z_local);
+                        */
+                        //-------------------------------------------------------------------
                         if(Bethe_flag == 1) //do via Bethe-Bloch
                         {
                             //vector<TGraph*> tg_bethe_bloch; // [e mu pi K p]
@@ -3251,8 +3291,8 @@ TProfile* Ali_TRD_ST_Analyze::Calibrate_gain(Long64_t i_event, Int_t Bethe_flag)
                             if (abs(nsigma_TPC_K) < 2.5 )  BB_val = tg_bethe_bloch[3] ->Eval(momentum); //p
 
                             if (BB_val == 0 || BB_val == -1.0) continue;
-                            ADC = ADC/(BB_val*abs(tracklet_length));
 
+                            ADC = ADC/(BB_val*abs(tracklet_length));
                         }
                         if(Bethe_flag == 0) // do via TPC dEdx
                         {
@@ -3262,7 +3302,12 @@ TProfile* Ali_TRD_ST_Analyze::Calibrate_gain(Long64_t i_event, Int_t Bethe_flag)
 
                         ADC_rel[det].push_back(ADC); 
                         tp_gain->Fill(det,ADC);
+                        tp_gain_uncor->Fill(det,ADC*abs(tracklet_length));
+
                         th2d_gain->Fill(det,ADC);
+
+                        vec_tp2d_gain_vs_xz[det]->Fill(x_local,z_local,ADC);
+
                         //printf("\ndet: %d, TP content: %4.3f, ADC: %4.3f, TPCdEdx: %4.3f, tracklet_length: %4.3f \n",det,tp_gain->GetBinContent(det),ADC,TPCdEdx,tracklet_length);
                     }
                 }
@@ -3317,16 +3362,105 @@ void Ali_TRD_ST_Analyze::Draw_Save_Gain_calib()
     h_dummy_TP_gain->GetXaxis()->SetRangeUser(0,539);
     //h_dummy_TP_gain->GetYaxis()->SetRangeUser(-24,24);
     #endif
+
+    TProfile* tp_gain_avg_sec = new TProfile("tp_gain_avg_sec","tp_gain_avg_sec",540,0,539);
+    TProfile* tp_gain_avg_sec_uncor = new TProfile("tp_gain_avg_sec_uncor","tp_gain_avg_sec_uncor",540,0,539);
+
+    for(Int_t bin = 1; bin <= 30; bin++)
+    {
+        for (Int_t i_sect = 0; i_sect < 18; i_sect++)
+        {
+            Double_t bin_cont = tp_gain ->GetBinContent(bin+30*i_sect);
+            if (bin_cont > 2.8 && bin_cont < 4.2) tp_gain_avg_sec ->Fill(bin,bin_cont);
+
+            Double_t bin_cont_uncor = tp_gain_uncor ->GetBinContent(bin+30*i_sect);
+            if (bin_cont_uncor > 7.0 && bin_cont_uncor < 9.0) tp_gain_avg_sec_uncor ->Fill(bin,bin_cont_uncor);
+        }
+    }
+
+    for (Int_t bin = 1; bin <= 30; bin++)
+    {
+        for (Int_t i_sect = 1; i_sect < 18; i_sect++)
+        {
+            Double_t bin_cont = tp_gain_avg_sec ->GetBinContent(bin);
+            tp_gain_avg_sec ->Fill(bin+30*i_sect,bin_cont);
+
+            Double_t bin_cont_uncor = tp_gain_avg_sec_uncor ->GetBinContent(bin);
+            tp_gain_avg_sec_uncor ->Fill(bin+30*i_sect,bin_cont_uncor);
+
+        }
+    }
+
+    //---------------------------------------
+
+    TFile* inputfile_dEdx_length = TFile::Open("./TRD_dEdx_length.root");
+    tp_dEdx_length_det = (TProfile*)inputfile_dEdx_length ->Get("tp_dEdx_length_det");
+    h_dEdx_length_det_orig = (TH1D*)tp_dEdx_length_det ->ProjectionX("h_dEdx_length_det_orig");
+    h_dEdx_length_det = (TH1D*)tp_dEdx_length_det ->ProjectionX("h_dEdx_length_det");
+
+
+
+    for(Int_t bin = 1; bin <= h_dEdx_length_det->GetNbinsX(); bin++)
+    {
+        Double_t bin_cont = h_dEdx_length_det ->GetBinContent(bin);
+        Double_t bin_cont_mod = bin_cont*0.375+2.23;
+        h_dEdx_length_det ->SetBinContent(bin,bin_cont_mod);
+    }
+
+    //----------------------------------------
     
     TCanvas *can_TP_gain = new TCanvas("can_TP_gain", "can_TP_gain",10,10,1500,500);
     can_TP_gain->cd();
     tp_gain->GetXaxis()->SetTitle("Chamber ID");
     tp_gain->GetYaxis()->SetTitle("<ADC/dEdx>");
+    tp_gain->GetYaxis()->SetRangeUser(1.5,5.5);
     tp_gain->SetStats(0);
     tp_gain->SetTitle("");
     //h_dummy_TP_gain->Draw("h");
     //tp_gain ->LabelsOption("");
     tp_gain ->DrawCopy("");
+
+    h_dEdx_length_det ->SetMarkerColor(kGreen+2);
+    h_dEdx_length_det ->SetMarkerSize(0.6);
+    h_dEdx_length_det ->SetMarkerStyle(20);
+    h_dEdx_length_det ->DrawCopy("same P");
+
+    tp_gain_avg_sec ->SetMarkerColor(kRed+2);
+    tp_gain_avg_sec ->SetMarkerSize(0.4);
+    tp_gain_avg_sec ->SetMarkerStyle(20);
+    tp_gain_avg_sec ->DrawCopy("same P");
+
+    //----------------------------------------
+
+    for(Int_t bin = 1; bin <= h_dEdx_length_det->GetNbinsX(); bin++)
+    {
+        Double_t bin_cont = h_dEdx_length_det_orig ->GetBinContent(bin);
+        Double_t bin_cont_mod = (bin_cont)*0.75 + 5.425;
+        h_dEdx_length_det ->SetBinContent(bin,bin_cont_mod);
+    }
+
+    TCanvas *can_TP_gain_uncor = new TCanvas("can_TP_gain_uncor", "can_TP_gain_uncor",10,10,1500,500);
+    can_TP_gain_uncor->cd();
+    tp_gain_uncor->GetXaxis()->SetTitle("Chamber ID");
+    tp_gain_uncor->GetYaxis()->SetTitle("<ADC/dEdx>");
+    tp_gain_uncor->GetYaxis()->SetRangeUser(6.0,10.0);
+    tp_gain_uncor->SetStats(0);
+    tp_gain_uncor->SetTitle("");
+    //h_dummy_TP_gain->Draw("h");
+    //tp_gain ->LabelsOption("");
+    tp_gain_uncor ->DrawCopy("");
+
+    h_dEdx_length_det ->SetMarkerColor(kGreen+2);
+    h_dEdx_length_det ->SetMarkerSize(0.6);
+    h_dEdx_length_det ->SetMarkerStyle(20);
+    h_dEdx_length_det ->DrawCopy("same P");
+
+
+    tp_gain_avg_sec_uncor ->SetMarkerColor(kRed+2);
+    tp_gain_avg_sec_uncor ->SetMarkerSize(0.4);
+    tp_gain_avg_sec_uncor ->SetMarkerStyle(20);
+    tp_gain_avg_sec_uncor ->DrawCopy("same P");
+    //----------------------------------------
 
     TCanvas *can_th2d_gain = new TCanvas("can_th2d_gain", "can_th2d_gain",10,10,1500,500);
     can_th2d_gain->cd();
@@ -3336,6 +3470,21 @@ void Ali_TRD_ST_Analyze::Draw_Save_Gain_calib()
     th2d_gain->SetStats(0);
     th2d_gain->SetTitle("");
     th2d_gain ->DrawCopy("COLZ");
+
+    vector <TCanvas*> can_vec_tp2d_gain_vs_xz;
+    can_vec_tp2d_gain_vs_xz.resize(540);
+
+    for (Int_t i_det = 0; i_det < 3; i_det++)
+    {
+        can_vec_tp2d_gain_vs_xz[i_det] = new TCanvas(Form("can_tp2d_gain_%d",i_det), Form("can_tp2d_gain_%d",i_det),10,10,1500,500);
+        can_vec_tp2d_gain_vs_xz[i_det] ->cd();
+        vec_tp2d_gain_vs_xz[i_det]->GetXaxis()->SetTitle("local x, cm");
+        vec_tp2d_gain_vs_xz[i_det]->GetYaxis()->SetTitle("local z, cm");
+        vec_tp2d_gain_vs_xz[i_det]->SetStats(0);
+        vec_tp2d_gain_vs_xz[i_det]->SetTitle("");
+        vec_tp2d_gain_vs_xz[i_det] ->DrawCopy("COLZ");
+
+    }
 
     TFile* out_gain = new TFile("out_gain.root","RECREATE");
     out_gain->cd();
