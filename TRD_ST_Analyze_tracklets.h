@@ -84,6 +84,8 @@ class Ali_TRD_ST_Analyze
 private:
     TChain* input_SE;
 
+    TString in_list_name;
+
     TString TRD_ST_TREE   = "Tree_TRD_ST_Event";
     TString TRD_ST_BRANCH = "Tree_TRD_ST_Event_branch";
     Long64_t file_entries_total;
@@ -124,6 +126,7 @@ private:
     vector<TH2D*> vec_TH2D_one_over_pT_TPC_vs_Kalman;
 
     TFile* outputfile;
+    TFile* out_gain;
     Double_t test;
 
     TString HistName;
