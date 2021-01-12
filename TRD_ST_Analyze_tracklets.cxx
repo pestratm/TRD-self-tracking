@@ -3499,6 +3499,11 @@ void Ali_TRD_ST_Analyze::Draw_Save_Gain_calib()
     tp_gain->Write();
     th2d_gain->Write();
 
+    for (Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        vec_tp2d_gain_vs_xz[i_det] ->Write();
+    }
+
 }
 //----------------------------------------------------------------------------------------
 
