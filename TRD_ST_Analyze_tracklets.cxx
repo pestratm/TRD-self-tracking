@@ -86,6 +86,14 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     HistName += "/";
     HistName += out_file_name;
     outputfile = new TFile(HistName.Data(),"RECREATE");
+
+    HistName = out_dir;
+    HistName += "/";
+    HistName += "gain_";
+    HistName += out_file_name;
+    
+    out_gain = new TFile(HistName.Data(),"RECREATE");
+
     //------------------------------------------------
     outputfile ->cd();
     // TRD self tracking output data containers
@@ -367,7 +375,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
 
     for(Int_t i_det = 0; i_det < 540; i_det++) 
     {
-        vec_tp2d_gain_vs_xz[i_det] = new TProfile2D(Form("vec_tp2d_gain_vs_xz%d",i_det),Form("vec_tp2d_gain_vs_xz%d",i_det),10,-60.0,60.0,10,-60.0,60.0);
+        vec_tp2d_gain_vs_xz[i_det] = new TProfile2D(Form("vec_tp2d_gain_vs_xz%d",i_det),Form("vec_tp2d_gain_vs_xz%d",i_det),20,-60.0,60.0,20,-60.0,60.0);
     }
 
 }
@@ -2501,7 +2509,7 @@ void Ali_TRD_ST_Analyze::Init_tree(TString SEList)
     printf("Ali_TRD_ST_Analyze::Init_tree \n");
     TString pinputdir = input_dir;
 
-    TString in_list_name = SEList;
+    in_list_name = SEList;
     SEList = input_dir_lists + SEList;
 
     TRD_ST_Tracklet   = new Ali_TRD_ST_Tracklets();
@@ -3398,7 +3406,7 @@ void Ali_TRD_ST_Analyze::Draw_Save_Gain_calib()
     h_dEdx_length_det_orig = (TH1D*)tp_dEdx_length_det ->ProjectionX("h_dEdx_length_det_orig");
     h_dEdx_length_det = (TH1D*)tp_dEdx_length_det ->ProjectionX("h_dEdx_length_det");
 
-
+#if 0 //draw gain hists
 
     for(Int_t bin = 1; bin <= h_dEdx_length_det->GetNbinsX(); bin++)
     {
@@ -3485,8 +3493,8 @@ void Ali_TRD_ST_Analyze::Draw_Save_Gain_calib()
         vec_tp2d_gain_vs_xz[i_det] ->DrawCopy("COLZ");
 
     }
-
-    TFile* out_gain = new TFile("out_gain.root","RECREATE");
+    #endif
+    
     out_gain->cd();
     tp_gain->Write();
     th2d_gain->Write();
