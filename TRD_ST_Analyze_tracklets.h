@@ -245,6 +245,8 @@ private:
     TH1D* h_dEdx_length_det;
     vector<TProfile2D*> vec_tp2d_gain_vs_xz;
 
+    vector <vector <Double_t>> vec_trd_TRD_pp_geom;
+
     //TFile* out_gain;
 
 public:
