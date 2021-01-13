@@ -349,11 +349,26 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     vec_TV3_TRD_offset.clear();
     TFile* file_TRD_offsets = TFile::Open("./TRD_center_offset.root");
     vec_TV3_TRD_offset.resize(540);
-
     for (Int_t i_det = 0; i_det < 540; i_det++)
     {
         vec_TV3_TRD_offset[i_det] = (TVector3*)file_TRD_offsets ->Get(Form("TVector3;%d",i_det+1));
     //printf("i_det: %d, vec_TV3_TRD_offset: {%4.3f, %4.3f, %4.3f} \n", i_det,(*vec_TV3_TRD_offset[i_det]).X(),(*vec_TV3_TRD_offset[i_det]).Y(),(*vec_TV3_TRD_offset[i_det]).Z());
+
+    }
+
+    vec_trd_TRD_pp_geom.clear();
+    TFile* TRD_pp_geom = TFile::Open("./geom_out.root");
+    vec_trd_TRD_pp_geom.resize(540);
+    for (Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        TGraph* geom = (TGraph*)TRD_pp_geom ->Get(Form("geom_param_%d;1",i_det));
+        vec_trd_TRD_pp_geom[i_det].resize(6);
+        for(Int_t i_param = 0; i_param < 6 ; i_param++)
+        {
+            vec_trd_TRD_pp_geom[i_det][i_param] = geom ->GetY()[i_param+1]; // n_col n_row col_start col_end row_start row_end
+        }
+
+        printf("i_det: %d, i_det from tg: %4.3f, n_cols: %4.3f, n_rows: %4.3f, col start: %4.3f, col end: %4.3frow start: %4.3f, row end: %4.3f \n", i_det,geom ->GetY()[0],vec_trd_TRD_pp_geom[i_det][0],vec_trd_TRD_pp_geom[i_det][1],vec_trd_TRD_pp_geom[i_det][2],vec_trd_TRD_pp_geom[i_det][3],vec_trd_TRD_pp_geom[i_det][4],vec_trd_TRD_pp_geom[i_det][5]);
 
     }
 
@@ -373,9 +388,26 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     vec_tp2d_gain_vs_xz.clear();
     vec_tp2d_gain_vs_xz.resize(540);
 
+    // n_col n_row col_start col_end row_start row_end
+
     for(Int_t i_det = 0; i_det < 540; i_det++) 
     {
-        vec_tp2d_gain_vs_xz[i_det] = new TProfile2D(Form("vec_tp2d_gain_vs_xz%d",i_det),Form("vec_tp2d_gain_vs_xz%d",i_det),20,-60.0,60.0,20,-60.0,60.0);
+        Double_t n_col = vec_trd_TRD_pp_geom[i_det][0]; // == x == 144
+        Double_t n_row = vec_trd_TRD_pp_geom[i_det][1]; // == z
+
+        if (n_row == 0 || n_col == 0) 
+        {
+            vec_tp2d_gain_vs_xz[i_det] = new TProfile2D(Form("vec_tp2d_gain_vs_xz%d",i_det),Form("vec_tp2d_gain_vs_xz%d",i_det),144,-60.0,60.0,16,-60.0,60.0);
+        }
+
+        else
+        {
+            Double_t half_x = fabs(vec_trd_TRD_pp_geom[i_det][3] - vec_trd_TRD_pp_geom[i_det][2])/2 + 0.5; //x == col
+            //Double_t half_x = 60.0;
+            Double_t half_z = fabs(vec_trd_TRD_pp_geom[i_det][5] - vec_trd_TRD_pp_geom[i_det][4])/2 + 5.0; //z == row
+
+            vec_tp2d_gain_vs_xz[i_det] = new TProfile2D(Form("vec_tp2d_gain_vs_xz%d",i_det),Form("vec_tp2d_gain_vs_xz%d",i_det),n_col,-half_x,half_x,n_row,-half_z,half_z);
+        }
     }
 
 }
