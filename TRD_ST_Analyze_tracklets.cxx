@@ -139,11 +139,12 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
 
         TPL3D_helix = new TEveLine();
         TEveLine_beam_axis = new TEveLine();
-        TEveLine_beam_axis ->SetNextPoint(0.0,0.0,-300.0);
-        TEveLine_beam_axis ->SetNextPoint(0.0,0.0,300.0);
+        TEveLine_beam_axis ->SetNextPoint(0.0,0.0,-650.0);
+        TEveLine_beam_axis ->SetNextPoint(0.0,0.0,650.0);
         TEveLine_beam_axis ->SetName("beam axis");
         TEveLine_beam_axis ->SetLineStyle(1);
         TEveLine_beam_axis ->SetLineWidth(4);
+        TEveLine_beam_axis ->SetMainAlpha(0.7);
         TEveLine_beam_axis ->SetMainColor(kBlue);
         gEve->AddElement(TEveLine_beam_axis);
 
@@ -154,6 +155,38 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
         TEveP_TRD_det_origin ->SetMarkerStyle(20);
         TEveP_TRD_det_origin ->SetMainColor(kMagenta+1);
         //gEve->AddElement(TEveP_TRD_det_origin);
+
+        Double_t tube_R = 1.0;
+        Int_t TPC_color = kGray;
+
+        auto TPC_A = new TEveArrow();
+        TPC_A ->SetVector(0.0,0.0,250.0);
+        TPC_A ->SetOrigin(0.0,0.0,-250.0);
+        TPC_A ->SetConeL(0);
+        //TPC_A ->SetConeR(50.0);
+        TPC_A ->SetDrawQuality(100);
+        TPC_A->SetMainColor(TPC_color);
+        TPC_A ->SetMainAlpha(0.6);
+        TPC_A->SetTubeR(tube_R);
+        TPC_A->SetPickable(kTRUE);
+
+        auto TPC_B = new TEveArrow();
+        TPC_B ->SetVector(0.0,0.0,-250.0);
+        TPC_B ->SetOrigin(0.0,0.0,250.0);
+        TPC_B ->SetConeL(0);
+        //TPC_B ->SetConeR(50.0);
+        TPC_B ->SetDrawQuality(100);
+        TPC_B->SetMainColor(TPC_color);
+        TPC_B ->SetMainAlpha(0.6);
+        TPC_B->SetTubeR(tube_R);
+        TPC_B->SetPickable(kTRUE);
+
+        //gEve->AddElement(TPC_A);
+        //gEve->AddElement(TPC_B);
+
+
+        TEveP_beamA = new TEvePointSet();
+        TEveP_beamB = new TEvePointSet();
     }
 #endif
 
@@ -699,11 +732,14 @@ pair<Double_t,Double_t> Ali_TRD_ST_Analyze::fpathLength(Double_t r,Ali_Helix* he
 
 
 //--------------------------------------------------------------------------------------------
-Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB)
+TVector3 Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB)
 {
 
     // Calculates the 2D crossing point, calculates the corresponding 3D point and returns pathA and pathB
+    // TV3_photon is a result of a second calculation which assumes its a photon conversion in TRD
 
+    TVector3 TV3_photon;
+    TV3_photon.SetXYZ(-999.0,-999.0,-999.0);
     Double_t helix_point[3];
 
     Double_t x1 = helixA->getHelix_param(5);
@@ -718,7 +754,7 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     {
         r1 = fabs(1.0/c1);
         r2 = fabs(1.0/c2);
-    } else return 0;
+    } else return TV3_photon;
 
     Double_t x1_c = 0.0;
     Double_t y1_c = 0.0;
@@ -839,6 +875,40 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     helixB ->Evaluate(path_lengthB_c2,helix_point);
     pointB2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
 
+    TVector3 TV3_pointC1;
+    TVector3 TV3_pointC2;
+
+    if((pointA1 - pointB1).Mag() < (pointA2 - pointB1).Mag())
+    {
+        TV3_pointC1 = pointA1 + pointB1;
+        TV3_pointC2 = pointA2 + pointB2;
+    }
+    else
+    {
+        TV3_pointC1 = pointA2 + pointB1;
+        TV3_pointC2 = pointA1 + pointB2;
+    }
+
+    TV3_pointC1 *= 0.5;
+    TV3_pointC2 *= 0.5;
+
+
+    TV3_photon = pointA1 + pointA2 + pointB1 + pointB2;
+    TV3_photon *= 0.25;
+
+    TVector3 TV3_dist_AB = TV3_pointC1 - TV3_pointC2;
+    if(TV3_dist_AB.Mag() > 50.0)
+    {
+        if(TV3_pointC1.Perp() < TV3_pointC2.Perp())
+        {
+            TV3_photon = TV3_pointC1;
+        }
+        else
+        {
+            TV3_photon = TV3_pointC2;
+        }
+    }
+
 
     Double_t dcaAB1 = (pointA1-pointB1).Mag();
     Double_t dcaAB2 = (pointA2-pointB2).Mag();
@@ -867,7 +937,7 @@ Int_t Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* heli
     }
 
 
-    return 1;
+    return TV3_photon;
 
 }
 //----------------------------------------------------------------------------------------
@@ -1109,6 +1179,10 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
         max_radius_cut = 85.0;
     }
 
+    // XALEX
+    //min_radius_cut = 0.0;
+    //max_radius_cut = 356.0;
+
     Int_t flag_found_good_AP_vertex = 0;
 
     Float_t Arr_seconary_params[26];
@@ -1142,6 +1216,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 #if defined(USEEVE)
     if(graphics)
     {
+        TEveP_photon_vertices     = new TEvePointSet();
         TEveP_sec_vertices        = new TEvePointSet();
         TEveP_close_TPC_photon    = new TEvePointSet();
         TEveP_nucl_int_vertices   = new TEvePointSet();
@@ -1162,7 +1237,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
         {            
             Float_t pathA_est, pathB_est, dcaAB_est;
             //printf("i_track_A: %d, i_track_B: %d, i_comb: %d \n",i_track_A,i_track_B,i_comb);
-            Int_t est_return = fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
+            TVector3 TV3_photon = fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
 
             //printf("track A,B: {%d, %d}, dcaAB_est: %4.3f \n",i_track_A,i_track_B,dcaAB_est);
             //printf(" \n");
@@ -1180,7 +1255,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
 
             Float_t pathA, pathB, dcaAB;
-            if(est_return == 0)
+            if(TV3_photon.Mag() > 1000)
             {
                 pathA_est = -9999.0;
                 pathB_est = -9999.0;
@@ -1190,6 +1265,21 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
             if(dcaAB < 5.0)
             {
+                //------------------------------------------------------------
+                // This is for photons, replaces the fHelixABdca calculation. It takes the average of all intersections.
+                Float_t pathA_photon, pathB_photon, dcaA_photon, dcaB_photon;
+                fHelixAtoPointdca(TV3_photon,vec_helices[i_track_A],pathA_photon,dcaA_photon); // new helix to point dca calculation
+                fHelixAtoPointdca(TV3_photon,vec_helices[i_track_B],pathB_photon,dcaB_photon); // new helix to point dca calculation
+                pathA = pathA_photon;
+                pathB = pathB_photon;
+                dcaAB = (dcaA_photon + dcaB_photon)/2.0;
+                vertex_point[0] = TV3_photon.X();
+                vertex_point[1] = TV3_photon.Y();
+                vertex_point[2] = TV3_photon.Z();
+                //------------------------------------------------------------
+
+
+
                 //------------------------------------------------------------
                 // Calculate number of shared and independent tracklets
                 Int_t N_independent_AB[2] = {0};
@@ -1408,6 +1498,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
                         //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                         //printf("AP_value: %4.3f, dot_product_dir_vertex: %4.3f, CA*CB: %4.3f, pTA: %4.3f, pTB: %4.3f \n",AP_value,dot_product_dir_vertex,CA*CB,pTA,pTB);
+
+                        // XALEX
                         if(AP_value < AP_cut_value && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.8 && pTB < 0.8 && dot_product_dir_vertex > 0.9)
                         {                            
                             Double_t dca_min  = 999.0;
@@ -1440,6 +1532,9 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                                 }
                             }
                             //------------
+
+                            // XALEX
+                            //flag_close_TPC_photon = 0;
 
                             //-----------------------------------
                             // Topology photon conversion cuts - for print out
@@ -1485,8 +1580,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                                         if(graphics && flag_close_TPC_photon) TEveP_close_TPC_photon ->SetPoint(i_close_TPC_photon,TV3_close_TPC_photon[0],TV3_close_TPC_photon[1],TV3_close_TPC_photon[2]);
 #endif
                                         i_close_TPC_photon++;
-                                        //printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d}: dca_min: %4.3f, i_track_min: %d \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1],dca_min,i_track_min);
-                                        //printf("      --> Found vertex for AP in event: %lld at radius: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",Global_Event,radius_vertex,TV3_sec_vertex.X(),TV3_sec_vertex.Y(),TV3_sec_vertex.Z(),AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
+                                        printf("%s Number of shared tracklets: %s %d, independent A,B: {%d, %d}: dca_min: %4.3f, i_track_min: %d \n",KGRN,KNRM,N_shared_AB, N_independent_AB[0], N_independent_AB[1],dca_min,i_track_min);
+                                        printf("      --> Found vertex for AP in %s event: %lld %s at radius: %4.3f, pos: {%4.3f, %4.3f, %4.3f}, AP_pT: %4.3f, AP_alpha: %4.3f, pTA: %4.3f, pTB: %4.3f, dot: %4.3f, Inv_mass_AB: %4.3f, Energy_AB: %4.3f, Momentum_AB: %4.3f \n",KBLU,Global_Event,KNRM,radius_vertex,TV3_sec_vertex.X(),TV3_sec_vertex.Y(),TV3_sec_vertex.Z(),AP_pT,AP_alpha,pTA,pTB,dot_product_dir_vertex,Inv_mass_AB,Energy_AB,Momentum_AB);
                                     }
                                 }
                             }
@@ -1616,15 +1711,17 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                                     if(graphics)
                                     {
                                         // Draw kalman tracks
-                                        
-                                        Draw_Kalman_Helix_Tracks(i_track_A,kGreen,280.0,500.0);
-                                        Draw_Kalman_Helix_Tracks(i_track_B,kRed,280.0,500.0);
+
+                                        // XALEX
+                                        Draw_Kalman_Helix_Tracks(i_track_A,kGreen,280.0,500.0); // 280.0, 500.0
+                                        Draw_Kalman_Helix_Tracks(i_track_B,kRed,280.0,500.0);   // 280.0, 500.0
 
                                         // Draw kalman tracklets
                                         Draw_matched_Kalman_Tracklets(i_track_A);
                                         Draw_matched_Kalman_Tracklets(i_track_B);
 
-                                        TEveP_sec_vertices ->SetPoint(i_vertex_acc,vertex_point[0],vertex_point[1],vertex_point[2]);
+                                        TEveP_sec_vertices    ->SetPoint(i_vertex_acc,vertex_point[0],vertex_point[1],vertex_point[2]);
+                                        TEveP_photon_vertices ->SetPoint(i_vertex_acc,TV3_photon.X(),TV3_photon.Y(),TV3_photon.Z());
                                         //printf("i_comb: %d, A p,pT,pz: {%4.3f, %4.3f, %4.3f}, B p,pT,pz: {%4.3f, %4.3f, %4.3f}, AP pT, alpha: {%4.3f, %4.3f}, TV3_dirAB: {%4.3f, %4.3f, %4.3f} \n",i_comb,pA,pTA,pzA,pB,pTB,pzB,AP_pT,AP_alpha,TV3_dirAB[0],TV3_dirAB[1],TV3_dirAB[2]);
 
 
@@ -1936,11 +2033,11 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[0][idx_acc_vtx_B[idx_B]]);
                         Draw_matched_Kalman_Tracklets(vec_idx_kalman_sec_vert[1][idx_acc_vtx_B[idx_B]]);
                     }
-                    if(idx_close_TPC_track >= 0) Draw_TPC_track(idx_close_TPC_track,kAzure-2,3);
+                    if(idx_close_TPC_track >= 0) Draw_TPC_track(idx_close_TPC_track,kAzure-2,3,1000.0);
 
                     //Float_t pathA_dca, dcaAB_dca;
                     //fHelixAtoPointdca(TV3_EventVertex,vec_helices[i_track],pathA_dca,dcaAB_dca); // new helix to point dca calculation
-                    //Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3);
+                    //Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3,1000.0);
                 }
 #endif
                 i_vertex_nucl_int++;
@@ -1959,6 +2056,11 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
             TEveP_sec_vertices  ->SetMarkerStyle(20);
             TEveP_sec_vertices  ->SetMarkerColor(kRed);
             gEve->AddElement(TEveP_sec_vertices);
+
+            TEveP_photon_vertices  ->SetMarkerSize(3);
+            TEveP_photon_vertices  ->SetMarkerStyle(20);
+            TEveP_photon_vertices  ->SetMarkerColor(kCyan+2);
+            gEve->AddElement(TEveP_photon_vertices);
 
             TEveP_nucl_int_vertices  ->SetMarkerSize(5);
             TEveP_nucl_int_vertices  ->SetMarkerStyle(20);
@@ -2349,8 +2451,8 @@ void Ali_TRD_ST_Analyze::Match_kalman_tracks_to_TPC_tracks(Int_t graphics, Int_t
 
                     if(graphics)
                     {
-                        if(draw_matched_TPC_track) Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3);
-                        //if(draw_matched_TPC_track) Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3,280.0,500.0);
+                        if(draw_matched_TPC_track) Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3,1000.0);
+                        //if(draw_matched_TPC_track) Draw_TPC_track(idx_matched_TPC_track,kAzure-2,3,280.0,500.0,1000.0);
                         if(draw_matched_TRD_track) Draw_Kalman_Helix_Tracks(i_kalm_track,color,0.0,500.0);
                     }
                     //printf("      >>>>> %s idx (Kalman): %d %s, %s idx (TPC): %d %s, pT (TPC): %4.3f, pT (kalman): %4.3f \n",KRED,i_kalm_track,KNRM,KBLU,idx_matched_TPC_track,KNRM,pT_track,pT_kalman);
@@ -2616,7 +2718,7 @@ Int_t Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event, Int_t graphics)
         TEveP_primary_vertex ->SetMarkerStyle(20);
         TEveP_primary_vertex ->SetMarkerSize(4);
         TEveP_primary_vertex ->SetMarkerColor(kYellow+1);
-        gEve ->AddElement(TEveP_primary_vertex);
+        //gEve ->AddElement(TEveP_primary_vertex);
     }
 #endif
     //--------------------------------------------------
@@ -2699,7 +2801,29 @@ Int_t Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event, Int_t graphics)
 
 
 //----------------------------------------------------------------------------------------
-void Ali_TRD_ST_Analyze::Draw_TPC_track(Int_t i_track, Int_t color, Double_t line_width)
+void Ali_TRD_ST_Analyze::Animate_beams(Double_t beam_path)
+{
+     TEveP_beamA ->SetPoint(0,0,0,-beam_path);
+     TEveP_beamA ->SetMarkerSize(3);
+     TEveP_beamA ->SetMarkerStyle(20);
+     TEveP_beamA ->SetMarkerColor(kRed);
+
+     TEveP_beamB ->SetPoint(0,0,0,beam_path);
+     TEveP_beamB ->SetMarkerSize(3);
+     TEveP_beamB ->SetMarkerStyle(20);
+     TEveP_beamB ->SetMarkerColor(kGreen+1);
+
+     gEve->AddElement(TEveP_beamA);
+     gEve->AddElement(TEveP_beamB);
+
+     if(beam_path <= 0.0) gEve ->AddElement(TEveP_primary_vertex);
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Draw_TPC_track(Int_t i_track, Int_t color, Double_t line_width, Double_t max_path)
 {
     Double_t track_pos[3];
     Double_t radius_helix;
@@ -2717,7 +2841,7 @@ void Ali_TRD_ST_Analyze::Draw_TPC_track(Int_t i_track, Int_t color, Double_t lin
     //for(Int_t i_param=0;i_param<6;i_param++)
     //    cout<<TRD_ST_TPC_Track ->getHelix_param(i_param)<<" ";
     //cout<<endl;
-    for(Double_t track_path = 0.0; track_path < 1000; track_path += 1.0)
+    for(Double_t track_path = 0.0; track_path < max_path; track_path += 1.0)
     {
         TRD_ST_TPC_Track ->Evaluate(track_path,track_pos);
         radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
@@ -2773,14 +2897,14 @@ void Ali_TRD_ST_Analyze::Draw_TPC_track(Int_t i_track, Int_t color, Double_t lin
     }
 #endif
 
-    //printf("%s Ali_TRD_ST_Analyze::Draw_TPC_track, i_track: %d %s \n",KRED,i_track,KNRM);
+    //printf("%s Ali_TRD_ST_Analyze::Draw_TPC_track, i_track: %d %s \n",KRED,i_track,KNRM,1000.0);
 }
 //----------------------------------------------------------------------------------------
 
 
 
 //----------------------------------------------------------------------------------------
-Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets)
+Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets, Double_t track_path)
 {
     //printf("Ali_TRD_ST_Analyze::Draw_event \n");
 
@@ -2830,7 +2954,7 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t dra
         if(momentum < 0.3) continue;
 
 
-        if(graphics && draw_tracks) Draw_TPC_track(i_track,track_color,3);
+        if(graphics && draw_tracks) Draw_TPC_track(i_track,track_color,3,track_path);
     }
 
     //--------------------------------------------------
@@ -3173,7 +3297,7 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
             if(matched_tracks[tracks_size][i_layer] != NULL) N_matched_tracklets++;
         }
         //printf("%s TPC track: %d %s, N_matched_tracklets: %d \n",KYEL,vec_idx_matched_TPC_track[tracks_size],KNRM,N_matched_tracklets);
-        //if(N_matched_tracklets >= 4 && vec_idx_matched_TPC_track[tracks_size] == 25) Draw_TPC_track(vec_idx_matched_TPC_track[tracks_size],kAzure-2,2);
+        //if(N_matched_tracklets >= 4 && vec_idx_matched_TPC_track[tracks_size] == 25) Draw_TPC_track(vec_idx_matched_TPC_track[tracks_size],kAzure-2,2,1000.0);
         //printf(" \n");
         //--------------------------------------------------
 

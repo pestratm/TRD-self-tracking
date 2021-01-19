@@ -43,6 +43,7 @@ using namespace std;
 
 #if defined(USEEVE)
 #include "TEveBox.h"
+#include "TEveArrow.h"
 #include <TEveManager.h>
 #include "TEveLine.h"
 #include "TEvePointSet.h"
@@ -171,12 +172,16 @@ private:
     TEvePointSet* TEveP_TPC_at_offset_points;
     vector<TEveBox*> vec_eve_TRD_detector_box;
     TEvePointSet* TEveP_sec_vertices;
+    TEvePointSet* TEveP_photon_vertices;
     TEvePointSet* TEveP_close_TPC_photon;
     TEvePointSet* TEveP_nucl_int_vertices;
     TEvePointSet* TEveP_primary_vertex;
     TEvePointSet* TEveP_first_point_helix;
     TEvePointSet* TEveP_second_point_helix;
     vector<TEveLine*> TEveLine_mother;
+    TEvePointSet* TEveP_beamA;
+    TEvePointSet* TEveP_beamB;
+
 #endif
 
     Int_t N_tracklets_layers[6] = {0};
@@ -255,7 +260,8 @@ public:
 
     void Init_tree(TString SEList);
     Int_t Loop_event(Long64_t i_event, Int_t graphics);
-    Int_t Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets);
+    Int_t Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets, Double_t track_path);
+    void Animate_beams(Double_t beam_path);
     Int_t Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window, Int_t graphics);
     void Draw_hist_TPC_tracklet_diffs();
     TH1I* get_h_good_bad_TRD_chambers();
@@ -281,13 +287,13 @@ public:
     void fHelixAtoPointdca(TVector3 space_vec, Ali_Helix* helixA, Float_t &pathA, Float_t &dcaAB);
     void fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB,Float_t pathA_in, Float_t pathB_in);
     Int_t fCross_points_Circles(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
-    Int_t fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
+    TVector3 fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
     Int_t Calculate_secondary_vertices(Int_t graphics, Int_t flag_TRD_TPC_tracks);
     pair<Double_t,Double_t>fpathLength(Double_t r,Ali_Helix* helixA) const;
     Int_t fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
     void Plot_AP();
     void Plot_pT_TPC_vs_Kalman();
-    void Draw_TPC_track(Int_t i_track, Int_t color, Double_t line_width);
+    void Draw_TPC_track(Int_t i_track, Int_t color, Double_t line_width, Double_t max_path);
     TH1D* get_layer_radii_hist() {return h_layer_radii_det;}
     Long64_t get_N_Events() {return N_Events;}
     void set_input_lists(TString input_dir_lists_in) {input_dir_lists = input_dir_lists_in;}
