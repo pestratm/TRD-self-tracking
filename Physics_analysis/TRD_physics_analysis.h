@@ -40,6 +40,7 @@ using namespace std;
 #include "Math/SMatrix.h"
 #include "Math/MatrixFunctions.h"
 #include "TProfile.h"
+#include "TGraphAsymmErrors.h"
 
 #include "TPolyLine.h"
 
@@ -108,6 +109,7 @@ private:
     vector< vector< Ali_Helix_copy* >> vec_photon_tpc_helices; //[i_photon][i_track]
 
     vector<TLorentzVector> vec_TLV_photon;
+    vector< vector<TLorentzVector> > vec_TLV_photon_daughters;
     vector<TLorentzVector> vec_TLV_photon_mixed_events;
 
     vector<Double_t> vec_opening_angle_photon;
@@ -120,6 +122,10 @@ private:
     TH2D* TH2D_angle_photons_vs_inv_mass;
     TH2D* TH2D_phiA_vs_phiB;
     TH1D* th1d_angle_between;
+
+    TH1D* h_angle_AB_raw;
+    TH1D* h_angle_AB_raw_cutA;
+    TH1D* h_angle_AB_raw_cutB;
 
     vector<TEveLine*> TEveLine_mother;
 
