@@ -6,11 +6,11 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 // Environment variables
-//#define ENV_PI
-#define ENV_ALEX
+#define ENV_PI
+//#define ENV_ALEX
 //#define ENV_PI_SVEN
 
-void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot = 55, Double_t track_path = 1000.0, Double_t beam_path = 0.0)
+void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot = -1, Double_t track_path = 1000.0, Double_t beam_path = 0.0)
 {
     // event_plot: -1 -> loop over all events, other wise plot or loop over single event
 
@@ -19,6 +19,8 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     // .L TRD_Kalman_Tracking.cxx++
     // .x Macro_TRD_tracking.cc("Split_tracklets_vD_1.546_LA_0.16133_V3_3-3.txt",-1,1000.0,0.0)
     // .x Macro_TRD_tracking.cc("run0_test.txt",-1,1000.0,0.0) -> calibrated run0 files
+
+    // .x Macro_TRD_tracking.cc("Split_tracklets_calib_A_V0_1681-1700.txt",-1,1000.0,0.0)
 
     gROOT->SetStyle("Plain");
     gStyle->SetOptFit(11);
@@ -71,7 +73,7 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     Int_t KF_tracker                = 1; // Kalman filter tracker
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 0; // Draw tracklets matched with TPC tracks
     Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
