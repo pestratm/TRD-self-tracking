@@ -16,11 +16,12 @@ private:
     ULong64_t      TRD_ADC_time_layer[6];
     Float_t        aliHelix_params[6]; //need
     Double_t       Chi_2;
+    Int_t          Id;
     //bitTRDlayer
 
 public:
     Ali_Kalman_Track() :
-    TLV_part(),TRD_ADC_time_layer(),aliHelix_params(),Chi_2(-1)
+    TLV_part(),TRD_ADC_time_layer(),aliHelix_params(),Chi_2(-1),Id(-1)
     {
         
     }
@@ -56,6 +57,10 @@ public:
     Float_t   getKalmanHelix_param(Int_t i_param) const              {return aliHelix_params[i_param]; }
 
     Double_t get_Chi2() const { return Chi_2;}
+
+    void set_Id(Int_t i) {Id = i;}
+    Int_t get_Id()  const {return Id;}
+
     /*
     Float_t   getTRD_ADC(Int_t i_layer, Int_t i_time_bin) const
     {

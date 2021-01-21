@@ -1288,7 +1288,11 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                 // number |= 1 << bit_to_set; // set bit bit_to_set to 1
                 // Int_t bit_status = (TRD_ADC_time_layer[i_layer] >> bitcheck) & 1; // check bit bitcheck
                 // Int_t     HasITShit_on_layer(Int_t ilayer) { return ((NITScls >> ilayer) & 1);}  // ITShit -> LOL
+
                 Int_t bit_TRD_layer_shared = 0;
+                // independent    independent    shared
+                // 0 0 0 0 0 0    1 1 1 1 1 1    0 0 0 0 0 0
+                // trackA         trackB         trackA+trackB
                 if(flag_TRD_TPC_tracks != 0) bit_TRD_layer_shared = -1; // TPC track
 
 
@@ -1646,9 +1650,9 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
                             //--------- fill TRD/TPC track info --------------------------
 
-                            if (flag_TRD_TPC_tracks == 0) //Kalman
+                            if(flag_TRD_TPC_tracks == 0) //Kalman
                             {
-                                for (Int_t i_trackAB = 0; i_trackAB < 2; i_trackAB++)
+                                for(Int_t i_trackAB = 0; i_trackAB < 2; i_trackAB++)
                                 {
                                     //printf("test1 \n");
                                     TRD_Kalman_track = TRD_Photon -> createKalman_Track();
@@ -1656,7 +1660,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
 
                                     if (i_trackAB == 0 ) { 
-                                        TRD_Kalman_track ->set_Chi2(Chi_2A); 
+                                        TRD_Kalman_track ->set_Chi2(Chi_2A);
+                                        TRD_Kalman_track ->set_Id(i_track_A);
                                         TRD_Kalman_track ->setKalmanHelix_param(vec_helices[i_track_A]->getHelix_param(0),vec_helices[i_track_A]->getHelix_param(1),
                                             vec_helices[i_track_A]->getHelix_param(2),vec_helices[i_track_A]->getHelix_param(3),
                                             vec_helices[i_track_A]->getHelix_param(4),vec_helices[i_track_A]->getHelix_param(5)); 
@@ -1664,6 +1669,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                                     }
                                     if (i_trackAB == 1 ) { 
                                         TRD_Kalman_track ->set_Chi2(Chi_2B);
+                                        TRD_Kalman_track ->set_Id(i_track_B);
                                         TRD_Kalman_track ->setKalmanHelix_param(vec_helices[i_track_B]->getHelix_param(0),vec_helices[i_track_B]->getHelix_param(1),
                                             vec_helices[i_track_B]->getHelix_param(2),vec_helices[i_track_B]->getHelix_param(3),
                                             vec_helices[i_track_B]->getHelix_param(4),vec_helices[i_track_B]->getHelix_param(5)); 
