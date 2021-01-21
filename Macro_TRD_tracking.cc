@@ -204,8 +204,8 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
 
         TRD_ST_Analyze ->set_self_event_info();
 
-        Int_t found_good_AP_vertex_TPC = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,0); // (0 = no graphics), (0 = TRD, 1 = TPC)
-        Int_t found_good_AP_vertex_TRD = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,1); // (0 = no graphics), (0 = TRD, 1 = TPC)
+        Int_t found_good_AP_vertex_TPC = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,0,0); // (0 = no graphics), (0 = TRD, 1 = TPC), flag_fill_tree (0 don't fill)
+        Int_t found_good_AP_vertex_TRD = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,1,1); // (0 = no graphics), (0 = TRD, 1 = TPC), flag_fill_tree (0 don't fill)
         //if(found_good_AP_vertex) printf(" ----> Good AP vertex found in event: %lld \n",event);
 
         //vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets=kalid.found_tracks;

@@ -1160,7 +1160,7 @@ void Ali_TRD_ST_Analyze::set_self_event_info()
 
 
 //----------------------------------------------------------------------------------------
-Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t flag_TRD_TPC_tracks)
+Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t flag_TRD_TPC_tracks, Int_t flag_fill_tree)
 {
     
 
@@ -2096,7 +2096,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 #endif
     }
 
-    Tree_TRD_Self_Event_out ->Fill();
+    if(flag_fill_tree) Tree_TRD_Self_Event_out ->Fill();
 
 
     return flag_found_good_AP_vertex;

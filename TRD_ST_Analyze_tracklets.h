@@ -292,7 +292,7 @@ public:
     void fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB,Float_t pathA_in, Float_t pathB_in);
     Int_t fCross_points_Circles(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
     TVector3 fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB);
-    Int_t Calculate_secondary_vertices(Int_t graphics, Int_t flag_TRD_TPC_tracks);
+    Int_t Calculate_secondary_vertices(Int_t graphics, Int_t flag_TRD_TPC_tracks, Int_t flag_fill_tree);
     pair<Double_t,Double_t>fpathLength(Double_t r,Ali_Helix* helixA) const;
     Int_t fCircle_Interception(Double_t x1, Double_t y1, Double_t r1, Double_t x2, Double_t y2, Double_t r2,Double_t &x1_c, Double_t &y1_c, Double_t &x2_c, Double_t &y2_c);
     void Plot_AP();
