@@ -182,6 +182,10 @@ private:
     TEvePointSet* TEveP_beamA;
     TEvePointSet* TEveP_beamB;
 
+    vector< vector<TEveLine*> > TEveLine_vec_dir_vec_circle;
+    vector< vector<TEveLine*> > TEveLine_vec_dir_vec_circle_circle;
+    vector<TEveLine*> TEveLine_circle;
+
 #endif
 
     Int_t N_tracklets_layers[6] = {0};

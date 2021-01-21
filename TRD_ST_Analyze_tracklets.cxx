@@ -2803,6 +2803,7 @@ Int_t Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event, Int_t graphics)
 //----------------------------------------------------------------------------------------
 void Ali_TRD_ST_Analyze::Animate_beams(Double_t beam_path)
 {
+#if defined(USEEVE)
      TEveP_beamA ->SetPoint(0,0,0,-beam_path);
      TEveP_beamA ->SetMarkerSize(3);
      TEveP_beamA ->SetMarkerStyle(20);
@@ -2817,6 +2818,7 @@ void Ali_TRD_ST_Analyze::Animate_beams(Double_t beam_path)
      gEve->AddElement(TEveP_beamB);
 
      if(beam_path <= 0.0) gEve ->AddElement(TEveP_primary_vertex);
+#endif
 }
 //----------------------------------------------------------------------------------------
 
@@ -3919,10 +3921,6 @@ void Ali_TRD_ST_Analyze::Calibrate(Int_t graphics)
     Int_t detector[6] = {0};
     Int_t counter = 0;
     Int_t counter_circ = 0;
-
-    vector< vector<TEveLine*> > TEveLine_vec_dir_vec_circle;
-    vector< vector<TEveLine*> > TEveLine_vec_dir_vec_circle_circle;
-    vector<TEveLine*> TEveLine_circle;
 
 #if defined(USEEVE)
     if(graphics)
