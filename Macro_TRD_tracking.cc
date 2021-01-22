@@ -157,7 +157,6 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
         if(KF_tracker)
         {
             tracker_found_tracklets_KF = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,use_prim_vertex); // 0 = no primary vertex, 1 = primary vertex used
-
             vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks; // TPC track matched tracklets
             vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
 
@@ -169,10 +168,9 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
             //add here chi2 or use different new class already? Ali_Helix replace with new?
 
             TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_tracker_KF);
-
             TRD_ST_Analyze ->set_Kalman_chi_2(mChi_2s_tracker_KF);
-
             TRD_ST_Analyze ->set_Kalman_TRD_tracklets(tracker_found_tracklets_KF);
+            TRD_ST_Analyze ->flag_TRD_tracks_with_shared_tracklets();
 
             if(graphics && draw_found_tracklets) TRD_ST_Analyze ->Draw_Kalman_Tracklets(tracker_found_tracklets_KF); // Draws the Kalman matched TRD tracklets
             if(graphics && draw_all_TRD_tracks)  TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kGreen,3.0,500.0); // -1 -> all kalman tracks drawn

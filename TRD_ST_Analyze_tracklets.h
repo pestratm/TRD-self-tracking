@@ -255,6 +255,7 @@ private:
     vector<TProfile2D*> vec_tp2d_gain_vs_xz;
 
     vector <vector <Double_t>> vec_trd_TRD_pp_geom;
+    vector<Int_t> vec_flag_good_photon_track;
 
     //TFile* out_gain;
 
@@ -283,6 +284,7 @@ public:
     Int_t set_TPC_helix_params(Long64_t i_event);
     void set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_in);
     void Calc_Kalman_efficiency();
+    void flag_TRD_tracks_with_shared_tracklets();
     void Match_kalman_tracks_to_TPC_tracks(Int_t graphics, Int_t draw_matched_TPC_track, Int_t draw_matched_TRD_track, Int_t color);
     void Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Double_t low_R, Double_t high_R);
     void set_single_helix_params(vector<Double_t> vec_params);

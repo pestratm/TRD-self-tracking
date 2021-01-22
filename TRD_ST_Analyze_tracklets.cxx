@@ -1059,6 +1059,7 @@ void Ali_TRD_ST_Analyze::fHelixABdca(Ali_Helix* helixA, Ali_Helix* helixB, Float
 
 
 //----------------------------------------------------------------------------------------
+// YALEX
 Float_t Ali_TRD_ST_Analyze::Calc_nuclev_bitmap(vector<Int_t> vec_idx_kalman_tracks_nuclev_in)
 {
     // Calculated how many independent tracklets are used for the nuclear interaction vertex candidate.
@@ -1157,6 +1158,65 @@ void Ali_TRD_ST_Analyze::set_self_event_info()
     TRD_Self_Event ->setcent_class_V0CEq( TRD_ST_Event->getcent_class_V0CEq() );
     //printf("Event information filled \n");
 }
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+// YALEX
+void Ali_TRD_ST_Analyze::flag_TRD_tracks_with_shared_tracklets()
+{
+    // Select the TRD tracks with best chi2 in case the share tracklets with other tracks, only for same charge
+
+    vec_flag_good_photon_track.clear();
+    vec_flag_good_photon_track.resize((Int_t)vec_helices_TRD.size());
+
+    for(Int_t i_track_A = 0; i_track_A < (Int_t)vec_helices_TRD.size(); i_track_A++) // TRD Kalman track A
+    {
+        vec_flag_good_photon_track[i_track_A] = 1;
+    }
+
+    for(Int_t i_lay = 0; i_lay < 6; i_lay++)
+    {
+        for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices_TRD.size() - 1); i_track_A++) // TRD Kalman track A
+        {
+            if(vec_kalman_TRD_trackets[i_track_A][i_lay] == NULL) continue;
+            if(!vec_flag_good_photon_track[i_track_A]) continue; // already flagged as bad
+
+            Double_t chi2_A = mChi_2s_kalman[i_track_A];
+            Double_t CA  = mHelices_kalman[i_track_A][4]; // curvature
+            Int_t idx_TRD_trackletA = vec_kalman_TRD_trackets[i_track_A][i_lay]->get_TRD_index();
+
+            for(Int_t i_track_B = (i_track_A+1); i_track_B < (Int_t)vec_helices_TRD.size(); i_track_B++) // TRD Kalman track B
+            {
+                if(vec_kalman_TRD_trackets[i_track_B][i_lay] == NULL) continue;
+                if(!vec_flag_good_photon_track[i_track_B]) continue; // already flagged as bad
+
+                Double_t CB  = mHelices_kalman[i_track_B][4]; // curvature
+                if(CA*CB < 0.0) continue; // look only at same charge
+                Double_t chi2_B = mChi_2s_kalman[i_track_B];
+
+                Int_t idx_TRD_trackletB = vec_kalman_TRD_trackets[i_track_B][i_lay]->get_TRD_index();
+
+                if(idx_TRD_trackletA == idx_TRD_trackletB)
+                {
+                    //printf("%s layer: %d, track A, B: {%d, %d} %s, idx A, B: {%d}, chi2 A, B: {%4.3f, %4.3f} \n",KRED,i_lay,i_track_A,i_track_B,KNRM,idx_TRD_trackletA,chi2_A,chi2_B);
+
+                    if(chi2_A > chi2_B)
+                    {
+                        vec_flag_good_photon_track[i_track_A] = 0;
+                    }
+                    else
+                    {
+                        vec_flag_good_photon_track[i_track_B] = 0;
+                    }
+                }
+            }
+        }
+    }
+}
+//----------------------------------------------------------------------------------------
+
 
 
 //----------------------------------------------------------------------------------------
@@ -1213,6 +1273,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
     vec_idx_kalman_sec_vert.resize(2);
     vec_TV3_secondary_vertices.clear();
 
+
 #if defined(USEEVE)
     if(graphics)
     {
@@ -1231,10 +1292,34 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
     Int_t i_close_TPC_photon = 0;
 
     //printf("N_helices: %d \n",(Int_t)vec_helices.size());
+    Double_t CA = 0;
+    Double_t CB = 0;
     for(Int_t i_track_A = 0; i_track_A < ((Int_t)vec_helices.size() - 1); i_track_A++) // TRD Kalman track A
-    {        
+    {
+        if(flag_TRD_TPC_tracks == 0) // TRD tracks
+        {
+            CA  = mHelices_kalman[i_track_A][4]; // curvature
+            if(!vec_flag_good_photon_track[i_track_A]) continue;
+        }
+        else // TPC tracks
+        {
+            CA  = mHelices_TPC[i_track_A][4]; // curvature
+        }
+
         for(Int_t i_track_B = (i_track_A+1); i_track_B < (Int_t)vec_helices.size(); i_track_B++) // TRD Kalman track B
-        {            
+        {
+            if(flag_TRD_TPC_tracks == 0) // TRD tracks
+            {
+                CB  = mHelices_kalman[i_track_B][4]; // curvature
+                if(!vec_flag_good_photon_track[i_track_B]) continue;
+            }
+            else // TPC tracks
+            {
+                CB  = mHelices_TPC[i_track_B][4]; // curvature
+            }
+
+            if(CA*CB > 0.0) continue; // same charge
+
             Float_t pathA_est, pathB_est, dcaAB_est;
             //printf("i_track_A: %d, i_track_B: %d, i_comb: %d \n",i_track_A,i_track_B,i_comb);
             TVector3 TV3_photon = fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
@@ -1386,7 +1471,7 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                     Int_t i_radius = (Int_t)(radius_vertex/Delta_AP_radius);
 
 
-                    Double_t pTA, pzA, pA, pTB, pzB, pB, CA, CB;
+                    Double_t pTA, pzA, pA, pTB, pzB, pB;
                     Double_t Chi_2A = -1.0;
                     Double_t Chi_2B = -1.0;
                     Double_t TPCdEdx_A = -1.0;
@@ -1404,8 +1489,6 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         pTB = mHelices_kalman[i_track_B][6]; // pT
                         pzB = mHelices_kalman[i_track_B][7]; // pz
                         pB  = TMath::Sqrt(pTB*pTB + pzB*pzB); // p
-                        CA  = mHelices_kalman[i_track_A][4]; // curvature
-                        CB  = mHelices_kalman[i_track_B][4]; // curvature
 
                         Chi_2A = mChi_2s_kalman[i_track_A];
                         Chi_2B = mChi_2s_kalman[i_track_B];
@@ -1504,8 +1587,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         //printf("AP_value: %4.3f, dot_product_dir_vertex: %4.3f, CA*CB: %4.3f, pTA: %4.3f, pTB: %4.3f \n",AP_value,dot_product_dir_vertex,CA*CB,pTA,pTB);
 
                         // XALEX
-                        if(AP_value < AP_cut_value && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.8 && pTB < 0.8 && dot_product_dir_vertex > 0.9)
-                        {                            
+                        if(AP_value < AP_cut_value && pTA > 0.04 && pTB > 0.04 && pTA < 0.8 && pTB < 0.8 && dot_product_dir_vertex > 0.9)
+                        {
                             Double_t dca_min  = 999.0;
                             Double_t path_min = -999.0;
                             Int_t    i_track_min = -1;
@@ -1661,18 +1744,18 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
                                     if (i_trackAB == 0 ) { 
                                         TRD_Kalman_track ->set_Chi2(Chi_2A);
-                                        TRD_Kalman_track ->set_Id(i_track_A);
+                                        TRD_Kalman_track ->set_Id((UShort_t)i_track_A);
                                         TRD_Kalman_track ->setKalmanHelix_param(vec_helices[i_track_A]->getHelix_param(0),vec_helices[i_track_A]->getHelix_param(1),
-                                            vec_helices[i_track_A]->getHelix_param(2),vec_helices[i_track_A]->getHelix_param(3),
-                                            vec_helices[i_track_A]->getHelix_param(4),vec_helices[i_track_A]->getHelix_param(5)); 
+                                                                                vec_helices[i_track_A]->getHelix_param(2),vec_helices[i_track_A]->getHelix_param(3),
+                                                                                vec_helices[i_track_A]->getHelix_param(4),vec_helices[i_track_A]->getHelix_param(5));
 
                                     }
-                                    if (i_trackAB == 1 ) { 
+                                    if (i_trackAB == 1 ) {
                                         TRD_Kalman_track ->set_Chi2(Chi_2B);
-                                        TRD_Kalman_track ->set_Id(i_track_B);
+                                        TRD_Kalman_track ->set_Id((UShort_t)i_track_B);
                                         TRD_Kalman_track ->setKalmanHelix_param(vec_helices[i_track_B]->getHelix_param(0),vec_helices[i_track_B]->getHelix_param(1),
-                                            vec_helices[i_track_B]->getHelix_param(2),vec_helices[i_track_B]->getHelix_param(3),
-                                            vec_helices[i_track_B]->getHelix_param(4),vec_helices[i_track_B]->getHelix_param(5)); 
+                                                                                vec_helices[i_track_B]->getHelix_param(2),vec_helices[i_track_B]->getHelix_param(3),
+                                                                                vec_helices[i_track_B]->getHelix_param(4),vec_helices[i_track_B]->getHelix_param(5));
                                     }
                                 }
                             }

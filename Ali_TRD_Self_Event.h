@@ -16,12 +16,14 @@ private:
     ULong64_t      TRD_ADC_time_layer[6];
     Float_t        aliHelix_params[6]; //need
     Double_t       Chi_2;
-    Int_t          Id;
+    UShort_t       Id; // Id of this TRD track
+    //UShort_t       Id_shared_tracklets[5]; // Id of other TRD tracks which share tracklets with this track, at maximum 5 allowed
+    //Int_t          bit_map_shared; // bitmap of shared tracklets, order as in Id_share_tracklets
     //bitTRDlayer
 
 public:
     Ali_Kalman_Track() :
-    TLV_part(),TRD_ADC_time_layer(),aliHelix_params(),Chi_2(-1),Id(-1)
+    TLV_part(),TRD_ADC_time_layer(),aliHelix_params(),Chi_2(-1),Id(0)
     {
         
     }
@@ -58,8 +60,8 @@ public:
 
     Double_t get_Chi2() const { return Chi_2;}
 
-    void set_Id(Int_t i) {Id = i;}
-    Int_t get_Id()  const {return Id;}
+    void set_Id(UShort_t i) {Id = i;}
+    UShort_t get_Id()  const {return Id;}
 
     /*
     Float_t   getTRD_ADC(Int_t i_layer, Int_t i_time_bin) const
