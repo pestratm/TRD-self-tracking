@@ -472,6 +472,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
     //--------------------------------------------------
 
+    //printf(" \n");
     //printf("\n Event: %lld, Photon conversions: %d, Nuclear interactions: %d \n",i_event,NumPhotons,NumNucInteractions);
 
     //--------------------------------------------------
@@ -676,10 +677,10 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         conds.push_back(cond6);
 
 
-        //if(
-           //((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6) // TRD photon
-           //|| ph_TRD_layer_shared < 0.0 // TPC photon
-        //  )
+        if(
+           ((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6) // TRD photon
+           || ph_TRD_layer_shared < 0.0 // TPC photon
+          )
         {
             vec_TLV_photons_cutB.push_back(TLV_photon_raw);
 
