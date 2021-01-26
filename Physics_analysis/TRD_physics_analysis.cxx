@@ -473,7 +473,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
     //--------------------------------------------------
 
     //printf(" \n");
-    //printf("\n Event: %lld, Photon conversions: %d, Nuclear interactions: %d \n",i_event,NumPhotons,NumNucInteractions);
+    if (i_event==950) printf("\n Event: %lld, Photon conversions: %d, Nuclear interactions: %d \n",i_event,NumPhotons,NumNucInteractions);
 
     //--------------------------------------------------
     // Photon loop
@@ -535,18 +535,26 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
             if(ph_TRD_layer_shared > 0) continue; //TPC photons
         }
 
+    if (i_event==950 || i_event==3592 || i_event==3447 || i_event==3305 || //cut
+    i_event==3270 || i_event==3115 || i_event==2930 || i_event==2904 || //cut
+     i_event==3498 || i_event==3304 || i_event==3298 || i_event==2904 || i_event==2904 || i_event==3270 //not cut 
+     || i_event==2930 || i_event==2373) printf("Event: %lld, Photon conversions: %d \n",i_event,NumPhotons); //not cut 
+
+
 
         Float_t ph_pT_AB_raw 	          = TRD_Photon ->get_pT_AB();
         Float_t ph_AP_pT   		  = TRD_Photon ->get_AP_pT();
         Float_t ph_AP_alpha   		  = TRD_Photon ->get_AP_alpha();
-        Float_t ph_dca_min   		  = TRD_Photon ->get_dca_min();
+        Float_t ph_dca_min_xy            = TRD_Photon ->get_dca_min_xy();
+        Float_t ph_dca_min_z   		  = TRD_Photon ->get_dca_min_z();
         Float_t ph_path_min   		  = TRD_Photon ->get_path_min();
         Float_t ph_Inv_mass_AB   	  = TRD_Photon ->get_Inv_mass_AB();
         Float_t ph_Eta_AB  		  = TRD_Photon ->get_Eta_AB();
         Float_t ph_Phi_AB   		  = TRD_Photon ->get_Phi_AB();
         Float_t ph_dot_product_dir_vertex = TRD_Photon ->get_dot_product_dir_vertex();
         Float_t ph_Inv_mass_AB_K0s   	  = TRD_Photon ->get_Inv_mass_AB_K0s();
-        Float_t ph_dcaAB   		  = TRD_Photon ->get_dcaAB();
+        Float_t ph_dcaAB_xy          = TRD_Photon ->get_dcaAB_xy();
+        Float_t ph_dcaAB_z   		  = TRD_Photon ->get_dcaAB_z();
         Float_t ph_Inv_mass_AB_Lambda     = TRD_Photon ->get_Inv_mass_AB_Lambda();
         Float_t ph_Inv_mass_AB_antiLambda = TRD_Photon ->get_Inv_mass_AB_antiLambda();
         TLorentzVector TLV_part_A         = TRD_Photon ->get_TLV_part_A();
@@ -570,10 +578,10 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
         //printf("i_event: %lld, pTA/B: {%4.3f, %4.3f}, ph_dcaAB: %4.3f, ph_TRD_layer_shared: %4.3f \n",i_event,TLV_part_A.Pt(),TLV_part_B.Pt(),ph_dcaAB,ph_TRD_layer_shared);
 
-        if(ph_dcaAB > 2.5) continue;
+        if(ph_dcaAB_xy > 2.0 && ph_dcaAB_xy > 15.0) continue;
         vec_TLV_photons_cutA.push_back(TLV_photon_raw);
 
-        //printf("original ph_pT_AB: %4.3f \n",ph_pT_AB_raw);
+        printf("original ph_pT_AB: %4.3f \n",ph_pT_AB_raw);
 
         TVector3 param;
 
@@ -675,7 +683,9 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
                        (independent_layer_A[0] + independent_layer_A[1] + independent_layer_A[2] ) > 0 &&
                        (independent_layer_B[0] + independent_layer_B[1] + independent_layer_B[2] ) > 0 );
         conds.push_back(cond6);
+printf("cut 1 \n");
 
+<<<<<<< HEAD
 
         //if(
            //((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6) // TRD photon
@@ -685,7 +695,21 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
             vec_TLV_photons_cutB.push_back(TLV_photon_raw);
 
             //if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
+=======
+        //if(
+        //   ((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6) // TRD photon
+        //   || ph_TRD_layer_shared < 0.0 // TPC photon
+        //  )
+        {
+            vec_TLV_photons_cutB.push_back(TLV_photon_raw);
+
+            if(ph_dca_min_xy > 10.0 || (ph_dca_min_xy <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
+>>>>>>> a502c19c6586453083ec09eebd32e22ff0ebc6dc
             {
+                
+
+printf("cut 2 \n");
+
                 TVector3 TV3_dir;
                 TV3_dir = TLV_photon.Vect();
 
@@ -704,6 +728,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
                 if(dist < dist_max)
                 {
+printf("cut 3 \n");
+
 
                     UShort_t N_Kalman_tracks = TRD_Photon ->getNumKalman_Tracks(); //should be always 2 or 0
 
@@ -750,7 +776,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
                     vec_nsigma_electron.push_back(nsigma_e_TPC);
 
                     if(ME) vec_nsigma_electron_mixed_events.push_back(nsigma_e_TPC);
-                    //printf("vec_TLV_photon size: %d \n",(Int_t)vec_TLV_photon.size());
+                    printf("vec_TLV_photon size: %d \n",(Int_t)vec_TLV_photon.size());
 
                     //#if defined (USEEVE)
                     if(graphics)
@@ -955,6 +981,8 @@ void Ali_TRD_physics_analysis::Calculate_pi0_mass_SE() //loop over all good phot
             Double_t ptB1 = vec_TLV_photon_daughters[0][i_photon_B].Pt();
             Double_t ptB2 = vec_TLV_photon_daughters[1][i_photon_B].Pt();
 
+            printf("ptA1: %4.5f, ptA2: %4.5f, ptB1: %4.5f, ptB2: %4.5f \n",ptA1,ptA2,ptB1,ptB2);
+            
             if(fabs(ptA1 - ptB1) < 0.001 || fabs(ptA1 - ptB2) < 0.001 || fabs(ptA2 - ptB1) < 0.001 || fabs(ptA2 - ptB2) < 0.001)
             {
                 //printf("ptA1: %4.5f, ptA2: %4.5f, ptB1: %4.5f, ptB2: %4.5f \n",ptA1,ptA2,ptB1,ptB2);
@@ -1076,6 +1104,8 @@ void Ali_TRD_physics_analysis::Calculate_pi0_mass_SE_and_ME() //loop over all go
 //----------------------------------------------------------------------------------------
 void Ali_TRD_physics_analysis::Draw(Int_t ME)
 {
+    printf("total: %d \n",(Int_t)vec_TH1_mass_pi0[0]->GetEntries());
+
     Double_t start_norm = 0.5;
     Double_t stop_norm  = 2.0;
 

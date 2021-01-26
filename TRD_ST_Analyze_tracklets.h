@@ -316,6 +316,11 @@ public:
     TProfile* Calibrate_gain(Long64_t i_event, Int_t Bethe_flag);
     void Draw_Save_Gain_calib();
 
+    TVector3 fDCA_Helix_Estimate_xy_z(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB_xy, Float_t &dcaAB_z);
+    void fHelixAtoPointdca_xy_z(TVector3 space_vec, Ali_Helix* helixA, Float_t &pathA, Float_t &dcaAB_xy,Float_t &dcaAB_z);
+
+
+
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
 //----------------------------------------------------------------------------------------
