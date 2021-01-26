@@ -46,7 +46,7 @@ void SetRootGraphicStyle()
 
 //----------------------------------------------------------------------------------------
 Double_t calculateMinimumDistanceStraightToPoint(TVector3 &base, TVector3 &dir,
-                                     TVector3 &point)
+									 TVector3 &point)
 {
   // calculates the minimum distance of a point to a straight given as parametric straight x = base + n * dir
 
@@ -60,32 +60,6 @@ Double_t calculateMinimumDistanceStraightToPoint(TVector3 &base, TVector3 &dir,
   TVector3 cross = dir.Cross(diff);
   
   return cross.Mag()/dir.Mag();
-}
-//----------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------
-Double_t calculateMinimumDistanceStraightToPoint_2D(TVector3 &base, TVector3 &dir,
-                                     TVector3 &point)
-{
-  // calculates the minimum distance of a point to a straight given as parametric straight x = base + n * dir
-
-  if (!(dir.Mag()>0))
-    {
-      return -1000000.;
-    }
-  
-  TVector3 diff = base-point;
-
-  TVector3 diff2D;
-  diff2D.SetXYZ(diff.X(),diff.Y(),0.0);
-  TVector3 dir2D;
-  dir2D.SetXYZ(dir.X(),dir.Y(),0.0);
-
-  TVector3 cross2D = dir2D.Cross(diff2D);
-
-  TVector3 cross = dir.Cross(diff);
-  
-  return cross2D.Mag()/dir2D.Mag();
 }
 //----------------------------------------------------------------------------------------
 
@@ -499,7 +473,7 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
     //--------------------------------------------------
 
     //printf(" \n");
-    //if (i_event==950) printf("\n Event: %lld, Photon conversions: %d, Nuclear interactions: %d \n",i_event,NumPhotons,NumNucInteractions);
+    if (i_event==950) printf("\n Event: %lld, Photon conversions: %d, Nuclear interactions: %d \n",i_event,NumPhotons,NumNucInteractions);
 
     //--------------------------------------------------
     // Photon loop
@@ -561,11 +535,10 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
             if(ph_TRD_layer_shared > 0) continue; //TPC photons
         }
 
-    /*if (i_event==950 || i_event==3592 || i_event==3447 || i_event==3305 || //cut
+    if (i_event==950 || i_event==3592 || i_event==3447 || i_event==3305 || //cut
     i_event==3270 || i_event==3115 || i_event==2930 || i_event==2904 || //cut
      i_event==3498 || i_event==3304 || i_event==3298 || i_event==2904 || i_event==2904 || i_event==3270 //not cut 
-     || i_event==2930 || i_event==2373) */
-     printf("Event: %lld, Photon conversions: %d \n",i_event,NumPhotons); //not cut 
+     || i_event==2930 || i_event==2373) printf("Event: %lld, Photon conversions: %d \n",i_event,NumPhotons); //not cut 
 
 
 
@@ -605,10 +578,10 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
 
         //printf("i_event: %lld, pTA/B: {%4.3f, %4.3f}, ph_dcaAB: %4.3f, ph_TRD_layer_shared: %4.3f \n",i_event,TLV_part_A.Pt(),TLV_part_B.Pt(),ph_dcaAB,ph_TRD_layer_shared);
 
-        if(ph_dcaAB_xy > 1.5 && ph_dcaAB_z > 5.0) continue;
+        if(ph_dcaAB_xy > 2.0 && ph_dcaAB_xy > 15.0) continue;
         vec_TLV_photons_cutA.push_back(TLV_photon_raw);
 
-        //printf("original ph_pT_AB: %4.3f \n",ph_pT_AB_raw);
+        printf("original ph_pT_AB: %4.3f \n",ph_pT_AB_raw);
 
         TVector3 param;
 
@@ -638,8 +611,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         //TLV_part_B_corr.SetPtEtaPhiM(pT_B_corr,TLV_part_B.Eta(),TLV_part_B.Phi(),0.0);
 
 
-        TLorentzVector TLV_photon = TLV_part_A_corr + TLV_part_B_corr; // TRD photon
-        //TLorentzVector TLV_photon = TLV_part_A + TLV_part_B; // TRD photon
+        //TLorentzVector TLV_photon = TLV_part_A_corr + TLV_part_B_corr; // TRD photon
+        TLorentzVector TLV_photon = TLV_part_A + TLV_part_B; // TRD photon
         if(ph_TRD_layer_shared < 0) TLV_photon = TLV_part_A + TLV_part_B; // TPC photon
 
 
@@ -712,6 +685,17 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         conds.push_back(cond6);
 printf("cut 1 \n");
 
+<<<<<<< HEAD
+
+        //if(
+           //((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6) // TRD photon
+           //|| ph_TRD_layer_shared < 0.0 // TPC photon
+          //)
+        {
+            vec_TLV_photons_cutB.push_back(TLV_photon_raw);
+
+            //if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
+=======
         //if(
         //   ((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6) // TRD photon
         //   || ph_TRD_layer_shared < 0.0 // TPC photon
@@ -719,7 +703,8 @@ printf("cut 1 \n");
         {
             vec_TLV_photons_cutB.push_back(TLV_photon_raw);
 
-            if(ph_dca_min_xy > 5.0 || (ph_dca_min_xy <= 5.0 && ph_path_min < 0.0) || ph_dca_min_z > 10.0) // no close by TPC track
+            if(ph_dca_min_xy > 10.0 || (ph_dca_min_xy <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
+>>>>>>> a502c19c6586453083ec09eebd32e22ff0ebc6dc
             {
                 
 
@@ -739,10 +724,9 @@ printf("cut 2 \n");
                 //TVector3 point;
                 //point.SetXYZ(0.0,0.0,0.0);
 
-                Double_t dist2D = calculateMinimumDistanceStraightToPoint_2D(TV3_sec_vertex, TV3_dir, TV3_prim_vertex);
                 Double_t dist = calculateMinimumDistanceStraightToPoint(TV3_sec_vertex, TV3_dir, TV3_prim_vertex);
 
-                if(dist2D < 10.0 && dist < dist_max)
+                if(dist < dist_max)
                 {
 printf("cut 3 \n");
 
@@ -792,7 +776,7 @@ printf("cut 3 \n");
                     vec_nsigma_electron.push_back(nsigma_e_TPC);
 
                     if(ME) vec_nsigma_electron_mixed_events.push_back(nsigma_e_TPC);
-                    //printf("vec_TLV_photon size: %d \n",(Int_t)vec_TLV_photon.size());
+                    printf("vec_TLV_photon size: %d \n",(Int_t)vec_TLV_photon.size());
 
                     //#if defined (USEEVE)
                     if(graphics)
@@ -806,10 +790,8 @@ printf("cut 3 \n");
                         TEveLine_mother[i_vertex_photon] ->SetNextPoint(PhotonVertexX - distance_to_prim_vertex*TV3_dir[0],
                                                                         PhotonVertexY - distance_to_prim_vertex*TV3_dir[1],PhotonVertexZ - distance_to_prim_vertex*TV3_dir[2]);
 
-                        
-                        //printf("photon vertex: {%4.3f, %4.3f, %4.3f}, second point: {%4.3f, %4.3f, %4.3f}, distance to prim vertex: %4.3f, TV3_dir: {%4.3f, %4.3f, %4.3f} \n",PhotonVertexX,PhotonVertexY,PhotonVertexZ,
-                        //PhotonVertexX - distance_to_prim_vertex*TV3_dir[0],PhotonVertexY - distance_to_prim_vertex*TV3_dir[1],PhotonVertexZ - distance_to_prim_vertex*TV3_dir[2],distance_to_prim_vertex,
-                        //TV3_dir.X(),TV3_dir.Y(),TV3_dir.Z());
+                        //printf("photon vertex: {%4.3f, %4.3f, %4.3f}, second point: {%4.3f, %4.3f, %4.3f} \n",PhotonVertexX,PhotonVertexY,PhotonVertexZ,
+                        //PhotonVertexX - distance_to_prim_vertex*TV3_dir[0],PhotonVertexY - distance_to_prim_vertex*TV3_dir[1],PhotonVertexZ - distance_to_prim_vertex*TV3_dir[2]);
                         i_vertex_photon++;
                         //printf("i_vertex_photon: %d \n",i_vertex_photon);
 

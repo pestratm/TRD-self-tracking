@@ -132,7 +132,7 @@ public:
         vector<TVector3> vec_TV3_TRD_center_offset; // 540 chambers
         vector< vector<TVector3> >     vec_TV3_TRD_center; // 540 chambers, 3 axes
         Float_t  helix_par[9];
-        Double_t ADC_val[24];
+        Double_t ADC_val[30];
         TVector3 TV3_trkl_offset;
         TVector3 TV3_trkl_dir;
 

@@ -13,16 +13,16 @@ private:
     TVector3 TV3_offset;
     TVector3 TV3_dir;
     Int_t    TRD_det;
-    Double_t ADC_val[24];
+    Double_t ADC_val[30];
     UShort_t TPC_match;
     Int_t    n_tracklets_around;
     Double_t min_dist_to_next_trkl;
-	Int_t index;
+    Int_t index;
 
 
 public:
     Ali_TRD_ST_Tracklets() :
-        TV3_offset(),TV3_dir(),TRD_det(-1),ADC_val(),TPC_match(0),n_tracklets_around(0),min_dist_to_next_trkl(-1.0)
+        TV3_offset(),TV3_dir(),TRD_det(-1),ADC_val(),TPC_match(0),n_tracklets_around(0),min_dist_to_next_trkl(-1.0),index(0)
     {}
         ~Ali_TRD_ST_Tracklets(){}
 
@@ -215,7 +215,7 @@ private:
     TString TriggerWord; // Trigger word
 
     UShort_t      fNumTracks; // number of tracks in event
-    UShort_t      fNumTracklets; // number of tracks in event
+    Int_t         fNumTracklets; // number of tracks in event
 
     TClonesArray* fTracks;      //->
     TClonesArray* fTracklets;      //->
@@ -224,7 +224,8 @@ public:
     Ali_TRD_ST_Event() :
 	x(-1),y(-1),z(-1),id(-1),N_tracks(0),N_TRD_tracklets(0),
 	cent_class_ZNA(0),cent_class_ZNC(0),cent_class_V0A(0),cent_class_V0C(0),cent_class_V0M(0),cent_class_CL0(0),cent_class_CL1(0),
-        cent_class_SPD(0),cent_class_V0MEq(0),cent_class_V0AEq(0),cent_class_V0CEq(0),BeamIntAA(-1),T0zVertex(-1),TriggerWord(),fNumTracks(0),fNumTracklets(0)
+        cent_class_SPD(0),cent_class_V0MEq(0),cent_class_V0AEq(0),cent_class_V0CEq(0),BeamIntAA(-1),T0zVertex(-1),
+        TriggerWord(),fNumTracks(0),fNumTracklets(0),fTracks(),fTracklets()
     {
         fTracks         = new TClonesArray( "Ali_TRD_ST_TPC_Track", 10 );
         fTracklets      = new TClonesArray( "Ali_TRD_ST_Tracklets", 10 );
@@ -303,9 +304,9 @@ public:
 	{
 	    if (fNumTracks == fTracks->GetSize())
 		fTracks->Expand( fNumTracks + 10 );
-	    if (fNumTracks >= 10000)
+	    if (fNumTracks >= 65000)
 	    {
-		Fatal( "Ali_TRD_ST_Event::createTrack()", "ERROR: Too many tracks (>10000)!" );
+		Fatal( "Ali_TRD_ST_Event::createTrack()", "ERROR: Too many tracks (>65000)!" );
 		exit( 2 );
 	    }
 
@@ -333,9 +334,9 @@ public:
 	{
 	    if (fNumTracklets == fTracklets->GetSize())
 		fTracklets->Expand( fNumTracklets + 10 );
-	    if (fNumTracklets >= 65000)
+	    if (fNumTracklets >= 650000)
 	    {
-		Fatal( "Ali_TRD_ST_Event::createTracklet()", "ERROR: Too many tracklets (>100000)!" );
+		Fatal( "Ali_TRD_ST_Event::createTracklet()", "ERROR: Too many tracklets (>650000)!" );
 		exit( 2 );
 	    }
 
@@ -347,11 +348,11 @@ public:
 	    fNumTracklets   = 0;
 	    fTracklets      ->Clear();
 	}
-	UShort_t getNumTracklets() const
+	Int_t getNumTracklets() const
 	{
 	    return fNumTracklets;
 	}
-	Ali_TRD_ST_Tracklets* getTracklet(UShort_t i) const
+	Ali_TRD_ST_Tracklets* getTracklet(Int_t i) const
 	{
 	    return i < fNumTracklets ? (Ali_TRD_ST_Tracklets*)((*fTracklets)[i]) : NULL;
         }
