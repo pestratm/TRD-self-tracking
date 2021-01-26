@@ -1,1 +1,1 @@
-Merge_photons_nucl_A_V1.root
+Merge_photons_nucl_A_V2.root

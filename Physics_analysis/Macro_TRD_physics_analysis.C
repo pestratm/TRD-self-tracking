@@ -13,7 +13,8 @@ R__LOAD_LIBRARY(TRD_physics_analysis_cxx.so);
 #define ENV_ALEX
 //#define ENV_PI_SVEN
 
-void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
+void Macro_TRD_physics_analysis(TString input_list = "List_physics_xyz.txt")
+//void Macro_TRD_physics_analysis(TString input_list = "List_physics_test_nocut.txt")
 {
 // load the shared libraries here gSystem ->Load("...
     gSystem ->Load("TRD_physics_analysis_cxx.so");
@@ -46,7 +47,7 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
     Int_t flag_ME                   = 1; // 0 = only photons from same event, 1 = mixed events too
     Int_t TRD_photon                = 1; // 0 = TPC_photon, 1 = TRD_photon
 
-    Double_t dist_max               = 20.0; //cm: maximum disctance between primary event vertex and photon origin according to TLV
+    Double_t dist_max               = 50.0; //cm: maximum disctance between primary event vertex and photon origin according to TLV
 
     Ali_TRD_physics_analysis*  TRD_physics_analysis = new Ali_TRD_physics_analysis(output_dir,out_file_name,graphics);
     //Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,"test.root",graphics);
@@ -69,7 +70,7 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
     //Int_t stop_event  = 15;
 
     for(Long64_t event = start_event; event < stop_event; event++)
-    //for(Long64_t event = start_event; event < 100000; event++)
+    //for(Long64_t event = 0; event < 100; event++)
     {
         //-------> Tracklets = new Ali_TRD_ST_Tracklets*[NumTracklets]; what is this??
         //class _copy
@@ -86,11 +87,13 @@ void Macro_TRD_physics_analysis(TString input_list = "List_physics.txt")
 
     //printf("test 3 \n");
 
+        //printf("\n Event: %lld \n",event);
         
         TRD_physics_analysis ->Loop_event(event,dist_max,graphics,flag_ME,TRD_photon);
+
         TRD_physics_analysis ->Calculate_pi0_mass_SE();
 
-        //printf("\n Event: %lld, Photons: %d, Nuclear interactions: %d \n",event,(Int_t)vec_PhotonVertex.size(),(Int_t)vec_NIVertex.size());
+        //printf("\n Event: %lld, Photons: %d \n",event,(Int_t)vec_PhotonVertex.size());
 
     }
 
