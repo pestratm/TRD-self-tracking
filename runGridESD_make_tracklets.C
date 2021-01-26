@@ -32,7 +32,7 @@ void runGridESD_make_tracklets()
 
     TString fname="TRD_tracklets";
 
-    Int_t beamtime = 0; // 0: p-Pb 2016, 1: Pb-Pb 2018
+    Int_t beamtime = 1; // 0: p-Pb 2016, 1: Pb-Pb 2018
 
     Int_t sub=702;
     TString sRunPeriod;
@@ -57,7 +57,7 @@ void runGridESD_make_tracklets()
     const char *cGridMode = "full";                          // grid mode; test, full or terminate (for merging)
     Bool_t useJDL = kTRUE;
     const char *cTaskName = "TRD_Make_Tracklets"; // name of the task
-    Bool_t local = kFALSE;                                    // kTRUE for local analysis, kFALSE for grid analysis
+    Bool_t local = kTRUE;                                    // kTRUE for local analysis, kFALSE for grid analysis
 
 
     /// since we will compile a class, tell root where to look for headers
@@ -77,7 +77,7 @@ void runGridESD_make_tracklets()
   AliAnalysisManager *mgr = new AliAnalysisManager(cTaskName);
   AliESDInputHandler *esdH = new AliESDInputHandler();
   esdH->SetFriendFileName("AliESDfriends.root");
-  esdH->SetReadFriends(kTRUE);
+  esdH->SetReadFriends(kFALSE);
   mgr->SetInputEventHandler(esdH);
 
   //AliAnalysisManager *mgr = new AliAnalysisManager(cTaskName);
@@ -122,16 +122,17 @@ void runGridESD_make_tracklets()
       return;
     }
     else{
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1804/AliESDs.root");
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1805/AliESDs.root");
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1806/AliESDs.root");
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1807/AliESDs.root");
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1808/AliESDs.root");
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1809/AliESDs.root");
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1810/AliESDs.root");
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1811/AliESDs.root");
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1900/AliESDs.root");
-      pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1901/AliESDs.root");
+      //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1804/AliESDs.root");
+      //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1805/AliESDs.root");
+      //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1806/AliESDs.root");
+      //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1807/AliESDs.root");
+      //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1808/AliESDs.root");
+      //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1809/AliESDs.root");
+      //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1810/AliESDs.root");
+      //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1811/AliESDs.root");
+      //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1900/AliESDs.root");
+        //pChain->Add("/misc/alidata131/alice/data/2016/LHC16q/265338/pass1_CENT_wSDD/16000265338030.1901/AliESDs.root");
+        pChain->Add("/misc/alidata120/alice_u/schmah/TRD_self_tracking/AliESDs.root");
     }
     
     mgr->StartAnalysis("local",pChain);

@@ -769,6 +769,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     Double_t Sign_magnetic_field = (magF/fabs(magF));
     //cout << "Trigger: " <<  fESD->GetFiredTriggerClasses() << endl;
 
+    Int_t digit_counter = 0;
 
     //------------------------------------------
     // For space points (digits) tree
@@ -989,7 +990,8 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     {
 	Int_t N_columns   = fDigMan->GetDigits(i_det)->GetNcol();
 	Int_t N_rows      = fDigMan->GetDigits(i_det)->GetNrow();
-	Int_t N_times     = fDigMan->GetDigits(i_det)->GetNtime();
+        Int_t N_times     = fDigMan->GetDigits(i_det)->GetNtime();
+        //printf("N_times: %d \n",N_times);
 	Int_t N_detectors = fDigMan->GetDigits(i_det)->GetNdet();
 
 	Int_t i_sector = fGeo->GetSector(i_det);
@@ -1029,7 +1031,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
                 std::vector<TVector3> vec_points_time_bins_uncalib;
                 vec_points_time_bins_uncalib.resize(N_times);
 		//cout << "i_column: " << i_column << ", i_row: " << i_row << ", N_times: " << N_times << endl;
-                Double_t arr[24] = {0.0};
+                Double_t arr[30] = {0.0};
 
 		for(Int_t i_time = 0; i_time < N_times; i_time++)
 		{
@@ -1044,6 +1046,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 		    {
                         sum_full_ADC_digit_det[i_det] += ADC_amplitude - fBaseline;
 
+                        //if(i_time == 0) printf("sector: %d \n",i_sector);
                         //printf("i_time: %d, ADC: %f \n",i_time,ADC_amplitude);
 			arr[i_time] = ADC_amplitude;
 			//cout << "i_time: " << i_time << ", fill arr: " << arr[i_time] << endl;
@@ -1293,17 +1296,44 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
                     vec_TRD_hits_points_time.push_back(vec_points_time_bins);
                     vec_TRD_hits_points_time_uncalib.push_back(vec_points_time_bins_uncalib);
 
-
+                    //if(digit_counter > 66652) continue;
                     AS_Digit = AS_Event ->createTRD_digit();
                     AS_Digit ->sethit_ids(x_TRD,y_TRD);
                     AS_Digit ->setdca_to_track(0.0,0.0,0.0,0.0);
                     AS_Digit ->setImpactAngle(0.0);
                     for(Int_t i_time = 0; i_time < (Int_t)vec_ADC_time_bins.size(); i_time++)
+                    //for(Int_t i_time = 0; i_time < 2; i_time++)
                     {
                         Double_t ADC_value  = vec_ADC_time_bins[i_time];
+                        //printf("i_time: %d, ADC: %4.3f \n",i_time,ADC_value);
                         AS_Digit ->setADC_time_value(i_time,(Short_t)ADC_value);
                         AS_Digit ->set_pos(i_time,vec_points_time_bins_uncalib[i_time].X(),vec_points_time_bins_uncalib[i_time].Y(),vec_points_time_bins_uncalib[i_time].Z());
+                        //if(i_time == 0)
+                        //{
+                            //printf("1st i_time: %d, counter: %d, i_sector: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_time,digit_counter,i_sector,AS_Digit->get_pos(i_time,0),AS_Digit->get_pos(i_time,1),AS_Digit->get_pos(i_time,2));
+                            //AS_Digit              = AS_Event ->getTRD_digit(digit_counter);
+                            //printf("2nd i_time: %d, counter: %d, i_sector: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_time,digit_counter,i_sector,AS_Digit->get_pos(i_time,0),AS_Digit->get_pos(i_time,1),AS_Digit->get_pos(i_time,2));
+                        //}
                     }
+
+
+
+                    //-------------
+                    // Test
+                    AS_Digit              = AS_Event ->getTRD_digit(digit_counter);
+                    Int_t    bsector      = AS_Digit ->get_sector();
+
+                    //for(Int_t i_time = 0; i_time < (Int_t)vec_ADC_time_bins.size(); i_time++)
+                    //for(Int_t i_time = 0; i_time < 1; i_time++)
+                    //{
+                    //    printf("test i_time: %d, i_digit: %d, i_sector: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_time,digit_counter,bsector,AS_Digit->get_pos(i_time,0),AS_Digit->get_pos(i_time,1),AS_Digit->get_pos(i_time,2));
+                    //}
+                    //-------------
+                    //printf(" \n");
+
+
+
+                    digit_counter++;
 		}
 		//------------------------------------------------------------
 
@@ -1311,6 +1341,9 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 	    } // end of row loop
 	} // end of column loop
     } // end of detector loop
+
+
+    //printf("digit_counter: %d \n",digit_counter);
 
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
@@ -1497,7 +1530,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
         //printf("i_det: %d \n",i_det);
         for(Int_t i_trkl = 0; i_trkl < (Int_t)vec_self_tracklet_fit_points[i_det].size(); i_trkl++)
         {
-            for (Int_t i_tbn = 0; i_tbn < 24; i_tbn++)
+            for (Int_t i_tbn = 0; i_tbn < 30; i_tbn++)
             {
                 ADC_val[i_tbn] = {-999.0};
             }
@@ -1528,7 +1561,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
         } // end tracklet loop
     } // end detector loop
 
-    //printf("Tracklet information filled \n");
+    printf("Tracklet information filled \n");
     //-----------------------------------
 
 
@@ -1569,7 +1602,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
         TRD_ST_TPC_Track ->setHelix(helix_par[0],helix_par[1],helix_par[2],helix_par[3],helix_par[4],helix_par[5],helix_par[6],helix_par[7],helix_par[8]);
     }
 
-    //printf("Track information filled \n");
+    printf("Track information filled \n");
     //------------------------------------------
 
 
@@ -1579,6 +1612,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     Tree_TRD_ST_Event ->Fill(); // new tracklets tree to be filled
     //Long64_t size_of_tree = Tree_TRD_ST_Event ->GetEntries();
     //printf("Event: %d, tree filled, size of tree: %lld \n",N_good_events,size_of_tree);
+    printf("Tree filled \n");
     //-----------------------------------
 
 
@@ -1722,9 +1756,9 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
 
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
-        vec_all_TRD_digits[i_det].resize(24); // time bins
-        vec_all_TRD_digits_clusters[i_det].resize(24); // time bins
-    	vec_used_clusters[i_det].resize(24); // time bins
+        vec_all_TRD_digits[i_det].resize(30); // time bins
+        vec_all_TRD_digits_clusters[i_det].resize(30); // time bins
+    	vec_used_clusters[i_det].resize(30); // time bins
     }
     vector<Double_t> vec_digit_data; // x,y,z,ADC
     vector<Double_t> vec_digit_cluster_data; // x,y,z,ADC,N_digits
@@ -1745,14 +1779,22 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
         Int_t    row          = AS_Digit ->get_row();
         Int_t    detector     = AS_Digit ->get_detector(layer,stack,sector);
 
+        //printf("i_digit: %d, out of %d, sector: %d \n",i_digit,N_TRD_digits,sector);
+
+
         Double_t radius_prev = 0.0;
-        for(Int_t i_time = 0; i_time < 24; i_time++)
+        for(Int_t i_time = 0; i_time < 30; i_time++)
         {
             Float_t ADC = (Float_t)AS_Digit ->getADC_time_value(i_time);
+            //if(i_time == 0) printf("read i_time: %d, counter: %d, i_sector: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_time,i_digit,sector,AS_Digit->get_pos(i_time,0),AS_Digit->get_pos(i_time,1),AS_Digit->get_pos(i_time,2));
+
+
             if(ADC < 0.0) continue;
+            //if(i_time == 0 ) printf("i_digit: %d, i_sector: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_digit,sector,AS_Digit->get_pos(i_time,0),AS_Digit->get_pos(i_time,1),AS_Digit->get_pos(i_time,2));
             for(Int_t i_xyz = 0; i_xyz < 3; i_xyz++)
             {
                 digit_pos[i_xyz] = AS_Digit ->get_pos(i_time,i_xyz);
+               
                 vec_digit_data[i_xyz] = digit_pos[i_xyz];
             }
             vec_digit_data[3] = ADC;
@@ -1779,7 +1821,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
         //Int_t i_det = layer + 6*stack + 30*sector;
 
         //printf("i_det: %d \n",i_det);
-        for(Int_t i_time = 0; i_time < 24; i_time++)
+        for(Int_t i_time = 0; i_time < 30; i_time++)
         {
             //if(!(i_det == 0 && i_time == 0)) continue;
             //for(Int_t i_digit = 0; i_digit < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit++)
@@ -1942,7 +1984,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
     for(Int_t i_det = 0; i_det < 540; i_det++) // is done chamber wise
     {
 
-        for(Int_t i_time = 0; i_time < 24 - min_nbr_cls; i_time++) // is done chamber wise
+        for(Int_t i_time = 0; i_time < 30 - min_nbr_cls; i_time++) // is done chamber wise
         //for(Int_t i_time = 0; i_time < 1; i_time++) // is done chamber wise  ALEX
         {
             Int_t N_clusters = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time].size();
@@ -1988,7 +2030,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
                 Double_t radius_prev     = 0.0;
 
                 Double_t sum_cluster_quality = 0.0;
-                for(Int_t i_time_sub = i_time_start; i_time_sub < 24; i_time_sub++)
+                for(Int_t i_time_sub = i_time_start; i_time_sub < 30; i_time_sub++)
                 {
                     Double_t scale_fac = 1.0*scale_fac_add;
                     //printf("i_time_sub: %d, scale_fac: %4.3f \n",i_time_sub,scale_fac);
@@ -2100,7 +2142,6 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
             }
         }
     }
-
 
 
     Int_t trkl_index_layer[6] = {0};

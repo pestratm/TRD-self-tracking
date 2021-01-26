@@ -12,10 +12,10 @@ class Ali_AS_TRD_digit : public TObject
 private:
     // Digit data
     UShort_t hit_ids[2]; // contains the full information of the TRD hit position (sector, stack, layer, row, column), definition see below
-    Short_t ADC_time_values[24]; // raw ADC values for all 24 time bins of a single pad
-    Short_t arr_pos[3][24];
-    //Short_t arr_pos_uncalib[3][24]
-    //Short_t ADC_time_values_corrected_tc[24]; // raw ADC values for all 24 time bins of a single pad
+    Short_t ADC_time_values[30]; // raw ADC values for all 24 time bins of a single pad
+    Short_t arr_pos[3][30];
+    //Short_t arr_pos_uncalib[3][30]
+    //Short_t ADC_time_values_corrected_tc[30]; // raw ADC values for all 30 time bins of a single pad
     Short_t  dca_to_track; // distance of closest approach of digit TRD hit to TPC track
     Short_t  dca_x;
     Short_t  dca_y;
@@ -212,7 +212,7 @@ public:
     Ali_AS_Track() :
 	nsigma_e_TPC(-1),nsigma_e_TOF(-1),nsigma_pi_TPC(-1),nsigma_pi_TOF(-1),nsigma_K_TPC(-1),nsigma_K_TOF(-1),nsigma_p_TPC(-1),nsigma_p_TOF(-1),TRD_signal(-1),
         TRDsumADC(-1),dca(-1),TLV_part(),NTPCcls(-1),NTRDcls(-1),NITScls(-1),status(-1),TPCchi2(-1),TRD_ADC_time_layer(),
-        impact_angle_on_TRD(-1),TPCdEdx(-1),TOFsignal(-1),Track_length(-1),aliHelix_params(),fNumTRDdigits(0),fNumOfflineTracklets(0)
+        impact_angle_on_TRD(-1),TPCdEdx(-1),TOFsignal(-1),Track_length(-1),aliHelix_params(),fNumTRDdigits(0),fNumOfflineTracklets(0),fTRD_digits(),fOfflineTracklets()
     {
         fTRD_digits       = new TClonesArray( "Ali_AS_TRD_digit", 10 );
         fOfflineTracklets = new TClonesArray( "Ali_AS_offline_Tracklet", 10 );
@@ -311,7 +311,7 @@ public:
 		fOfflineTracklets->Expand( fNumOfflineTracklets + 10 );
 	    if (fNumOfflineTracklets >= 65000)
 	    {
-		Fatal( "Ali_AS_Event::createOfflineTracklet()", "ERROR: Too many tracklets (>100000)!" );
+		Fatal( "Ali_AS_Event::createOfflineTracklet()", "ERROR: Too many tracklets (>65000)!" );
 		exit( 2 );
 	    }
 
@@ -340,9 +340,9 @@ public:
 	{
 	    if (fNumTRDdigits == fTRD_digits->GetSize())
 		fTRD_digits->Expand( fNumTRDdigits + 10 );
-	    if (fNumTRDdigits >= 10000)
+	    if (fNumTRDdigits >= 50000)
 	    {
-		Fatal( "Ali_AS_Track::createTRD_digit()", "ERROR: Too many TRD digits (>10000)!" );
+		Fatal( "Ali_AS_Track::createTRD_digit()", "ERROR: Too many TRD digits (>50000)!" );
 		exit( 2 );
 	    }
 
@@ -440,8 +440,8 @@ private:
     TString TriggerWord; // Trigger word
 
     UShort_t      fNumTracks; // number of tracks in event
-    UShort_t      fNumTracklets; // number of tracks in event
-    UShort_t      fNumTRDdigits; // number of TRD digits for this track
+    Int_t         fNumTracklets; // number of tracks in event
+    Int_t         fNumTRDdigits; // number of TRD digits for this track
 
     TClonesArray* fTracks;      //->
     TClonesArray* fTracklets;      //->
@@ -451,8 +451,9 @@ public:
     Ali_AS_Event() :
 	eventNumber(-1),x(-1),y(-1),z(-1),id(-1),N_tracks(0),N_TRD_tracklets(0),
 	cent_class_ZNA(0),cent_class_ZNC(0),cent_class_V0A(0),cent_class_V0C(0),cent_class_V0M(0),cent_class_CL0(0),cent_class_CL1(0),
-        cent_class_SPD(0),cent_class_V0MEq(0),cent_class_V0AEq(0),cent_class_V0CEq(0),BeamIntAA(-1),T0zVertex(-1),TriggerWord(),fNumTracks(0),fNumTracklets(0),fNumTRDdigits(0),
-        ADC_sum_det()
+        cent_class_SPD(0),cent_class_V0MEq(0),cent_class_V0AEq(0),cent_class_V0CEq(0),ADC_sum_det(),BeamIntAA(-1),T0zVertex(-1),TriggerWord(),
+        fNumTracks(0),fNumTracklets(0),fNumTRDdigits(0),fTracks(),fTracklets(),fTRD_digits()
+        
     {
         fTracks         = new TClonesArray( "Ali_AS_Track", 10 );
         fTracklets      = new TClonesArray( "Ali_AS_Tracklet", 10 );
@@ -540,9 +541,9 @@ public:
 	{
 	    if (fNumTracks == fTracks->GetSize())
 		fTracks->Expand( fNumTracks + 10 );
-	    if (fNumTracks >= 10000)
+	    if (fNumTracks >= 50000)
 	    {
-		Fatal( "Ali_AS_Event::createTrack()", "ERROR: Too many tracks (>10000)!" );
+		Fatal( "Ali_AS_Event::createTrack()", "ERROR: Too many tracks (>50000)!" );
 		exit( 2 );
 	    }
 
@@ -570,9 +571,9 @@ public:
 	{
 	    if (fNumTracklets == fTracklets->GetSize())
 		fTracklets->Expand( fNumTracklets + 10 );
-	    if (fNumTracklets >= 65000)
+	    if (fNumTracklets >= 650000)
 	    {
-		Fatal( "Ali_AS_Event::createTracklet()", "ERROR: Too many tracklets (>100000)!" );
+		Fatal( "Ali_AS_Event::createTracklet()", "ERROR: Too many tracklets (>65000)!" );
 		exit( 2 );
 	    }
 
@@ -584,11 +585,11 @@ public:
 	    fNumTracklets   = 0;
 	    fTracklets      ->Clear();
 	}
-	UShort_t getNumTracklets() const
+	Int_t getNumTracklets() const
 	{
 	    return fNumTracklets;
 	}
-	Ali_AS_Tracklet* getTracklet(UShort_t i) const
+	Ali_AS_Tracklet* getTracklet(Int_t i) const
 	{
 	    return i < fNumTracklets ? (Ali_AS_Tracklet*)((*fTracklets)[i]) : NULL;
         }
@@ -601,9 +602,9 @@ public:
 	{
 	    if (fNumTRDdigits == fTRD_digits->GetSize())
 		fTRD_digits->Expand( fNumTRDdigits + 10 );
-	    if (fNumTRDdigits >= 65000)
+	    if (fNumTRDdigits >= 650000)
 	    {
-		Fatal( "Ali_AS_Track::createTRD_digit()", "ERROR: Too many TRD digits (>10000)!" );
+		Fatal( "Ali_AS_Track::createTRD_digit()", "ERROR: Too many TRD digits (>650000)!" );
 		exit( 2 );
 	    }
 
@@ -615,11 +616,11 @@ public:
 	    fNumTRDdigits   = 0;
 	    fTRD_digits      ->Clear();
 	}
-	UShort_t getNumTRD_digits() const
+	Int_t getNumTRD_digits() const
 	{
 	    return fNumTRDdigits;
 	}
-	Ali_AS_TRD_digit* getTRD_digit(UShort_t i) const
+	Ali_AS_TRD_digit* getTRD_digit(Int_t i) const
 	{
             return i < fNumTRDdigits ? (Ali_AS_TRD_digit*)((*fTRD_digits)[i]) : NULL;
         }
