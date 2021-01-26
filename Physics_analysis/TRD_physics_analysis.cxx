@@ -603,8 +603,8 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         //TLV_part_B_corr.SetPtEtaPhiM(pT_B_corr,TLV_part_B.Eta(),TLV_part_B.Phi(),0.0);
 
 
-        TLorentzVector TLV_photon = TLV_part_A_corr + TLV_part_B_corr; // TRD photon
-        //TLorentzVector TLV_photon = TLV_part_A + TLV_part_B; // TRD photon
+        //TLorentzVector TLV_photon = TLV_part_A_corr + TLV_part_B_corr; // TRD photon
+        TLorentzVector TLV_photon = TLV_part_A + TLV_part_B; // TRD photon
         if(ph_TRD_layer_shared < 0) TLV_photon = TLV_part_A + TLV_part_B; // TPC photon
 
 
@@ -677,14 +677,14 @@ Int_t Ali_TRD_physics_analysis::Loop_event(Long64_t i_event, Double_t dist_max, 
         conds.push_back(cond6);
 
 
-        if(
-           ((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6) // TRD photon
-           || ph_TRD_layer_shared < 0.0 // TPC photon
-          )
+        //if(
+           //((cond1 || cond2 || cond3 ||cond4 || cond5) && cond6) // TRD photon
+           //|| ph_TRD_layer_shared < 0.0 // TPC photon
+          //)
         {
             vec_TLV_photons_cutB.push_back(TLV_photon_raw);
 
-            if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
+            //if(ph_dca_min > 10.0 || (ph_dca_min <= 10.0 && ph_path_min < 0.0)) // no close by TPC track
             {
                 TVector3 TV3_dir;
                 TV3_dir = TLV_photon.Vect();
