@@ -29,6 +29,7 @@ ClassImp(Ali_AS_Tracklet)
 ClassImp(Ali_AS_offline_Tracklet)
 ClassImp(Ali_AS_Event)
 ClassImp(Ali_TRD_ST_Tracklets)
+ClassImp(Ali_MC_particle)
 ClassImp(Ali_TRD_ST_TPC_Track)
 ClassImp(Ali_TRD_ST_Event)
 
@@ -44,9 +45,12 @@ class Ali_make_tracklets_from_digits : public AliAnalysisTaskSE
 public:
     Ali_make_tracklets_from_digits()
 	: AliAnalysisTaskSE(),
-	fDigitsInputFileName("TRD.FltDigits.root"), fDigitsInputFile(0),
+        //fDigitsInputFileName("TRD.FltDigits.root"),
+        fDigitsInputFileName("TRD.Digits.root"),
+        fDigitsInputFile(0),
 	fDigitsOutputFileName(""), fDigitsOutputFile(0),
-        fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),TRD_ST_Tracklet(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0),fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),
+        fMCEvent(0),fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),
+        TRD_ST_Tracklet(0),TRD_ST_MC_particle(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0),fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),N_time_bins(24),
         aliHelix(),fListOfHistos(),fTree(),fPIDResponse(),EsdTrackCuts(),TV3_SVD_tracklet_offset(),TV3_SVD_tracklet_dir(),
         vec_self_tracklet_fit_points(),vec_ADC_val(),vec_TV3_TRD_center_offset(),vec_TV3_TRD_center(),TV3_trkl_offset(),TV3_trkl_dir()
     {
@@ -98,14 +102,16 @@ public:
 
     private:
 
-  Bool_t fLocalMode;  // flag for running mode: default kFALSE (GRID mode)
+        Bool_t fLocalMode;  // flag for running mode: default kFALSE (GRID mode)
 	TFile* OpenDigitsFile(TString inputfile, TString digfile, TString opt);
+
 
 	TString fDigitsInputFileName;         //! Name of digits file for reading
 	TFile*  fDigitsInputFile;             //! Digits file for reading
 	TString fDigitsOutputFileName;        //! Name of digits file for writing
 	TFile*  fDigitsOutputFile;            //! Digits file for writing
 
+        AliMCEvent*             fMCEvent;       //! corresponding MC event
 	AliTRDdigitsManager* fDigMan; //! digits manager
 	AliTRDgeometry* fGeo; //! TRD geometry
 	Ali_AS_Event* AS_Event;
@@ -115,6 +121,7 @@ public:
         Ali_AS_TRD_digit* AS_Digit;
         TTree       *Tree_AS_Event;
 
+        Ali_MC_particle*      TRD_ST_MC_particle;
         Ali_TRD_ST_Tracklets* TRD_ST_Tracklet;
         Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track;
         Ali_TRD_ST_Event*     TRD_ST_Event;
@@ -122,7 +129,8 @@ public:
 
 	Int_t fEventNoInFile;
 	Int_t N_good_events;
-	Int_t fDigitsLoadedFlag;
+        Int_t fDigitsLoadedFlag;
+        Int_t N_time_bins;
 
 
         TVector3 TV3_SVD_tracklet_offset;

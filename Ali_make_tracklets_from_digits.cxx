@@ -55,6 +55,8 @@
 #include "AliTRDCalOnlineGainTable.h"
 #include "AliTRDCalROC.h"
 #include "TPolyMarker.h"
+#include "AliMCEvent.h"
+#include "AliAODMCParticle.h"
 
 #include "AliTRDCommonParam.h"
 
@@ -153,9 +155,12 @@ bool sortcol_first( const vector<Double_t>& v1,
 Ali_make_tracklets_from_digits::Ali_make_tracklets_from_digits(const char *name)
 : AliAnalysisTaskSE(name),
 fLocalMode(kFALSE),
-fDigitsInputFileName("TRD.FltDigits.root"), fDigitsInputFile(0),
+//fDigitsInputFileName("TRD.FltDigits.root"),
+fDigitsInputFileName("TRD.Digits.root"),
+fDigitsInputFile(0),
 fDigitsOutputFileName(""), fDigitsOutputFile(0),
-fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),TRD_ST_Tracklet(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0), fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),
+fMCEvent(0),fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),
+TRD_ST_Tracklet(0),TRD_ST_MC_particle(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0), fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),N_time_bins(24),
 fListOfHistos(0x0),fTree(0x0), fPIDResponse(0), EsdTrackCuts(0),aliHelix(),TV3_SVD_tracklet_offset(),TV3_SVD_tracklet_dir(),
 vec_self_tracklet_fit_points(),vec_ADC_val(),vec_TV3_TRD_center_offset(),vec_TV3_TRD_center(),TV3_trkl_offset(),TV3_trkl_dir()
 {
@@ -227,6 +232,8 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
         fDigMan = new AliTRDdigitsManager;
         fDigMan->CreateArrays();
     }
+
+
     if(!h_v_fit_vs_det)         h_v_fit_vs_det         = new TH1D("h_v_fit_vs_det","h_v_fit_vs_det",540,0,540);
     if(!h_LA_factor_fit_vs_det) h_LA_factor_fit_vs_det = new TH1D("h_LA_factor_fit_vs_det","h_LA_factor_fit_vs_det",540,0,540);
 
@@ -667,9 +674,10 @@ void Ali_make_tracklets_from_digits::UserCreateOutputObjects()
     Tree_AS_Event  ->Branch("Tree_AS_Event_branch"  , "AS_Event", AS_Event );
 
 
-    TRD_ST_Tracklet   = new Ali_TRD_ST_Tracklets();
-    TRD_ST_TPC_Track  = new Ali_TRD_ST_TPC_Track();
-    TRD_ST_Event      = new Ali_TRD_ST_Event();
+    TRD_ST_MC_particle = new Ali_MC_particle();
+    TRD_ST_Tracklet    = new Ali_TRD_ST_Tracklets();
+    TRD_ST_TPC_Track   = new Ali_TRD_ST_TPC_Track();
+    TRD_ST_Event       = new Ali_TRD_ST_Event();
 
     Tree_TRD_ST_Event  = NULL;
     Tree_TRD_ST_Event  = new TTree("Tree_TRD_ST_Event" , "TRD_ST_Events" );
@@ -722,7 +730,6 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     //-----------------------------------------------------------------
 
 
-
     //-----------------------------------------------------------------------------------------------------
     //-----------------------------------------------------------------------------------------------------
     // prepare event data structures
@@ -736,7 +743,72 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     //-----------------------------------------------------------------
     // Check if TRD digits (raw data) are available for this ESD event
     if(!ReadDigits()) return;
+
+    for(Int_t i_det = 0; i_det < 540; i_det++)
+    {
+        Int_t N_times     = fDigMan->GetDigits(i_det)->GetNtime();
+        //printf("i_det: %d, N_times: %d \n",i_det,N_times);
+        if(N_times > 0)
+        {
+            N_time_bins = N_times;
+            break;
+        }
+    }
     //-----------------------------------------------------------------
+
+
+
+    //-----------------------------------------------------------------
+    // Monte Carlo
+    // https://alice-doc.github.io/alice-analysis-tutorial/analysis/MC.html
+    TRD_ST_Event ->clearMCparticleList();
+    fMCEvent = MCEvent();
+    Int_t N_MC_tracks = fMCEvent->GetNumberOfTracks();
+    //printf("N_MC_track: %d \n",N_MC_tracks);
+    for(Int_t i_MC_track = 0; i_MC_track < N_MC_tracks; i_MC_track++)
+    {
+        TParticle* particle = (TParticle*)fMCEvent->Particle(i_MC_track);
+        Int_t    MC_PDG_code = particle ->GetPdgCode();
+        if(!(MC_PDG_code == 990 || MC_PDG_code == 9990 || MC_PDG_code == 110 || MC_PDG_code == 41
+             || MC_PDG_code == 41 || MC_PDG_code == 39))
+        {
+            Double_t MC_PDGmass       = particle ->GetMass();
+            Double_t MC_Px            = particle ->Px();
+            Double_t MC_Py            = particle ->Py();
+            Double_t MC_Pz            = particle ->Pz();
+            Double_t MC_Vx            = particle ->Vx();
+            Double_t MC_Vy            = particle ->Vy();
+            Double_t MC_Vz            = particle ->Vz();
+
+
+            Int_t    MC_First_Mother  = particle ->GetFirstMother();
+            Int_t    MC_Second_Mother = particle ->GetSecondMother();
+            Int_t    MC_N_daughters   = particle ->GetNDaughters();
+         
+            TVector3 TV3_MC_particle_vertex(MC_Vx,MC_Vy,MC_Vz);
+            TLorentzVector TLV_MC_particle;
+            TLV_MC_particle.SetXYZM(MC_Px,MC_Py,MC_Pz,MC_PDGmass);
+
+            //printf("i_MC_track: %d, PDG_code: %d, mass: %4.3f, momentum: {%4.3f, %4.3f, %4.3f}, vertex: {%4.3f, %4.3f, %4.3f}, 1st mother: %d, 2nd mother: %d, N_dauthers: %d \n",i_MC_track,MC_PDG_code,MC_PDGmass,MC_Px,MC_Py,MC_Pz,MC_Vx,MC_Vy,MC_Vz,MC_First_Mother,MC_Second_Mother,MC_N_daughters);
+
+            TRD_ST_MC_particle = TRD_ST_Event ->createMCparticle(); // Monte Carlo particles
+            TRD_ST_MC_particle ->set_TV3_particle_vertex(TV3_MC_particle_vertex);
+            TRD_ST_MC_particle ->set_TLV_particle(TLV_MC_particle);
+            TRD_ST_MC_particle ->set_PDGcode(MC_PDG_code);
+            TRD_ST_MC_particle ->set_index_mother(MC_First_Mother);
+            TRD_ST_MC_particle ->set_index_particle(i_MC_track);
+            TRD_ST_MC_particle ->set_N_daughters(MC_N_daughters);
+            for(Int_t i_daughter = 0; i_daughter < MC_N_daughters; i_daughter++)
+            {
+                TRD_ST_MC_particle ->set_arr_index_daughters(i_daughter,particle->GetDaughter(i_daughter));
+            }
+
+
+        }
+    }
+    //-----------------------------------------------------------------
+
+
 
     AliAnalysisManager *man = AliAnalysisManager::GetAnalysisManager();
     if(man)
@@ -814,7 +886,9 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     TRD_ST_Event ->clearTrackletList();
 
     TRD_ST_Event ->setTriggerWord( AS_Event->getTriggerWord() );
+    TRD_ST_Event ->setN_TRD_time_bins(N_time_bins);
     TRD_ST_Event ->setx( AS_Event->getx() );
+
     TRD_ST_Event ->sety( AS_Event->gety() );
     TRD_ST_Event ->setz( AS_Event->getz() );
     TRD_ST_Event ->setid( AS_Event->getid() );
@@ -991,7 +1065,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 	Int_t N_columns   = fDigMan->GetDigits(i_det)->GetNcol();
 	Int_t N_rows      = fDigMan->GetDigits(i_det)->GetNrow();
         Int_t N_times     = fDigMan->GetDigits(i_det)->GetNtime();
-        //printf("N_times: %d \n",N_times);
+        //printf("i_det: %d, N_times: %d \n",i_det,N_times);
 	Int_t N_detectors = fDigMan->GetDigits(i_det)->GetNdet();
 
 	Int_t i_sector = fGeo->GetSector(i_det);
@@ -1320,8 +1394,8 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 
                     //-------------
                     // Test
-                    AS_Digit              = AS_Event ->getTRD_digit(digit_counter);
-                    Int_t    bsector      = AS_Digit ->get_sector();
+                    //AS_Digit              = AS_Event ->getTRD_digit(digit_counter);
+                    //Int_t    bsector      = AS_Digit ->get_sector();
 
                     //for(Int_t i_time = 0; i_time < (Int_t)vec_ADC_time_bins.size(); i_time++)
                     //for(Int_t i_time = 0; i_time < 1; i_time++)
@@ -1525,6 +1599,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     Make_clusters_and_get_tracklets_fit(Delta_x,Delta_z,factor_missing);
     //printf("Make_clusters_and_get_tracklets_fit done \n");
 
+    Int_t N_tracklets_store = 0;
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
         //printf("i_det: %d \n",i_det);
@@ -1550,14 +1625,35 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 
             TRD_ST_Tracklet = TRD_ST_Event ->createTracklet(); // online tracklet
             TRD_ST_Tracklet  ->set_TRD_det(i_det);
-            TRD_ST_Tracklet  ->set_TV3_offset(TV3_trkl_offset);
+            TRD_ST_Tracklet  ->set_TV3_offset(TV3_trkl_offset); //
             TRD_ST_Tracklet  ->set_TV3_dir(TV3_trkl_dir);
+
+            //TRD_ST_Tracklet  ->set_TPC_match(7);
+            //TRD_ST_Tracklet  ->set_n_tracklets_around(8);
+            //TRD_ST_Tracklet  ->set_min_dist_to_next_trkl((Double_t)N_tracklets_store);
+            //TRD_ST_Tracklet  ->set_TRD_index(11);
+
+            //if(N_good_events == 0 && N_tracklets_store == 2)
+            //{
+            //    printf("Event: %d, i_tracklet: %d, pos: {%4.3f, %4.3f, %4.3f} \n",N_good_events,N_tracklets_store,TV3_trkl_offset.X(),TV3_trkl_offset.Y(),TV3_trkl_offset.Z());
+            //    printf("  --> pos: {%4.3f, %4.3f, %4.3f} \n",TRD_ST_Tracklet->get_TV3_offset().X(),TRD_ST_Tracklet->get_TV3_offset().Y(),TRD_ST_Tracklet->get_TV3_offset().Z());
+            //}
+
+
             for(Int_t i_timebin = 0; i_timebin < (Int_t)vec_ADC_val[i_det][i_trkl].size(); i_timebin++) // ALEX
             {
                 ADC_val[i_timebin] = vec_ADC_val[i_det][i_trkl][i_timebin];
                 TRD_ST_Tracklet  ->set_ADC_val(i_timebin,ADC_val[i_timebin]);
+                //if(N_good_events == 0 && N_tracklets_store == 2) printf("i_time: %d, ADC: %4.3f \n",i_timebin,ADC_val[i_timebin]);
+            }
+            for(Int_t i_timebin = (Int_t)vec_ADC_val[i_det][i_trkl].size(); i_timebin < 30; i_timebin++) // ALEX
+            {
+                TRD_ST_Tracklet  ->set_ADC_val(i_timebin,-777.0);
+                //if(N_good_events == 0 && N_tracklets_store == 2) printf("i_time: %d, ADC: %4.3f \n",i_timebin,-777.0);
             }
 
+         
+            N_tracklets_store++;
         } // end tracklet loop
     } // end detector loop
 
@@ -1570,12 +1666,14 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     // Loop over all tracks -> fill tree for tracklets tree
     UShort_t NumTracks = AS_Event ->getNumTracks(); // number of tracks in this event
 
+
     for(UShort_t i_track = 0; i_track < NumTracks; ++i_track) // loop over all tracks of the actual event
     {
         TRD_ST_TPC_Track = TRD_ST_Event ->createTrack(); // TPC track
         //cout << "i_track: " << i_track << ", of " << NumTracks << endl;
         AS_Track      = AS_Event ->getTrack( i_track ); // take the track
         TRD_ST_TPC_Track ->setnsigma_e_TPC( AS_Track ->getnsigma_e_TPC() );
+
         TRD_ST_TPC_Track ->setnsigma_pi_TPC( AS_Track ->getnsigma_pi_TPC() );
         TRD_ST_TPC_Track ->setnsigma_p_TPC( AS_Track ->getnsigma_p_TPC() );
         TRD_ST_TPC_Track ->setnsigma_K_TPC( AS_Track ->getnsigma_K_TPC() );
@@ -1600,8 +1698,8 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
         }
 
         TRD_ST_TPC_Track ->setHelix(helix_par[0],helix_par[1],helix_par[2],helix_par[3],helix_par[4],helix_par[5],helix_par[6],helix_par[7],helix_par[8]);
-    }
 
+    }
     printf("Track information filled \n");
     //------------------------------------------
 
@@ -1783,7 +1881,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
 
 
         Double_t radius_prev = 0.0;
-        for(Int_t i_time = 0; i_time < 30; i_time++)
+        for(Int_t i_time = 0; i_time < N_time_bins; i_time++)
         {
             Float_t ADC = (Float_t)AS_Digit ->getADC_time_value(i_time);
             //if(i_time == 0) printf("read i_time: %d, counter: %d, i_sector: %d, pos: {%4.3f, %4.3f, %4.3f} \n",i_time,i_digit,sector,AS_Digit->get_pos(i_time,0),AS_Digit->get_pos(i_time,1),AS_Digit->get_pos(i_time,2));
@@ -1821,7 +1919,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
         //Int_t i_det = layer + 6*stack + 30*sector;
 
         //printf("i_det: %d \n",i_det);
-        for(Int_t i_time = 0; i_time < 30; i_time++)
+        for(Int_t i_time = 0; i_time < N_time_bins; i_time++)
         {
             //if(!(i_det == 0 && i_time == 0)) continue;
             //for(Int_t i_digit = 0; i_digit < (Int_t)vec_all_TRD_digits[i_det][i_time].size(); i_digit++)
@@ -1984,7 +2082,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
     for(Int_t i_det = 0; i_det < 540; i_det++) // is done chamber wise
     {
 
-        for(Int_t i_time = 0; i_time < 30 - min_nbr_cls; i_time++) // is done chamber wise
+        for(Int_t i_time = 0; i_time < (N_time_bins - min_nbr_cls); i_time++) // is done chamber wise
         //for(Int_t i_time = 0; i_time < 1; i_time++) // is done chamber wise  ALEX
         {
             Int_t N_clusters = (Int_t)vec_all_TRD_digits_clusters[i_det][i_time].size();
@@ -2030,7 +2128,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
                 Double_t radius_prev     = 0.0;
 
                 Double_t sum_cluster_quality = 0.0;
-                for(Int_t i_time_sub = i_time_start; i_time_sub < 30; i_time_sub++)
+                for(Int_t i_time_sub = i_time_start; i_time_sub < N_time_bins; i_time_sub++)
                 {
                     Double_t scale_fac = 1.0*scale_fac_add;
                     //printf("i_time_sub: %d, scale_fac: %4.3f \n",i_time_sub,scale_fac);
