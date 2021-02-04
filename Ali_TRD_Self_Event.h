@@ -200,16 +200,14 @@ private:
     Float_t pT_AB;
     Float_t AP_pT;
     Float_t AP_alpha;
-    Float_t dca_min_xy;
-    Float_t dca_min_z;
+    Float_t dca_min;
     Float_t path_min;
     Float_t Inv_mass_AB;
     Float_t Eta_AB;
     Float_t Phi_AB;
     Float_t dot_product_dir_vertex;
     Float_t Inv_mass_AB_K0s;
-    Float_t dcaAB_xy;
-    Float_t dcaAB_z;
+    Float_t dcaAB;
     Float_t Inv_mass_AB_Lambda;
     Float_t Inv_mass_AB_antiLambda;
 
@@ -224,8 +222,8 @@ private:
 
 public:
     Ali_TRD_Photon() :
-        vertex_point(),bit_TRD_layer_shared(-1),pT_AB(-1),AP_pT(-1),AP_alpha(-1),dca_min_xy(-1),dca_min_z(-1),path_min(-1),Inv_mass_AB(-1),Eta_AB(-1),Phi_AB(-1),
-        dot_product_dir_vertex(-1),Inv_mass_AB_K0s(-1),dcaAB_xy(-1),dcaAB_z(-1),Inv_mass_AB_Lambda(-1),Inv_mass_AB_antiLambda(-1),
+        vertex_point(),bit_TRD_layer_shared(-1),pT_AB(-1),AP_pT(-1),AP_alpha(-1),dca_min(-1),path_min(-1),Inv_mass_AB(-1),Eta_AB(-1),Phi_AB(-1),
+        dot_product_dir_vertex(-1),Inv_mass_AB_K0s(-1),dcaAB(-1),Inv_mass_AB_Lambda(-1),Inv_mass_AB_antiLambda(-1),
         fNumTPC_Tracks(0),fNumKalman_Tracks(0),TLV_part_A(),TLV_part_B()
     {
         fTPC_Tracks             = new TClonesArray( "Ali_TPC_Track", 10 );
@@ -245,16 +243,14 @@ public:
         void set_pT_AB(Float_t pt_ab)                                  {    pT_AB = pt_ab;                                                  }
         void set_AP_pT(Float_t ap_pt)                                  {    AP_pT = ap_pt;                                                  }
         void set_AP_alpha(Float_t ap_alpha)                            {    AP_alpha = ap_alpha;                                            }
-        void set_dca_min_xy(Float_t dca_xy)                               {    dca_min_xy = dca_xy;                                               }
-        void set_dca_min_z(Float_t dca_z)                                {    dca_min_z = dca_z;                                                }
+        void set_dca_min(Float_t dca)                                  {    dca_min = dca;                                                  }
         void set_path_min(Float_t path)                                {    path_min = path;                                                }
         void set_Inv_mass_AB(Float_t mass_ab)                          {    Inv_mass_AB = mass_ab;                                          }
         void set_Eta_AB(Float_t eta_ab)                                {    Eta_AB = eta_ab;                                                }
         void set_Phi_AB(Float_t phi_ab)                                {    Phi_AB = phi_ab;                                                }
         void set_dot_product_dir_vertex(Float_t product)               {    dot_product_dir_vertex = product;                               }
         void set_Inv_mass_AB_K0s(Float_t mass_k0)                      {    Inv_mass_AB_K0s = mass_k0;                                      }
-        void set_dcaAB_xy(Float_t dca_ab_xy)                                 {    dcaAB_xy = dca_ab_xy;                                                 }
-        void set_dcaAB_z(Float_t dca_ab_z)                                 {    dcaAB_z = dca_ab_z;                                                 }
+        void set_dcaAB(Float_t dca_ab)                                 {    dcaAB = dca_ab;                                                 }
         void set_Inv_mass_AB_Lambda(Float_t mass_l)                    {    Inv_mass_AB_Lambda = mass_l;                                    }
         void set_Inv_mass_AB_antiLambda(Float_t mass_al)               {    Inv_mass_AB_antiLambda = mass_al;                               }
         void set_TLV_part_A(TLorentzVector tlv)                        {    TLV_part_A = tlv;                                               }
@@ -267,16 +263,14 @@ public:
         Float_t get_pT_AB() const                      {    return pT_AB;   }
         Float_t get_AP_pT() const                      {    return AP_pT; }
         Float_t get_AP_alpha() const                   {    return AP_alpha; }
-        Float_t get_dca_min_xy() const                                 {    return dca_min_xy; }
-        Float_t get_dca_min_z() const                                 {    return dca_min_z; }
+        Float_t get_dca_min() const                                 {    return dca_min; }
         Float_t get_path_min() const                               {    return path_min; }
         Float_t get_Inv_mass_AB() const                         {    return Inv_mass_AB; }
         Float_t get_Eta_AB() const                               {    return Eta_AB; }
         Float_t get_Phi_AB() const                               {    return Phi_AB;  }
         Float_t get_dot_product_dir_vertex() const              {    return dot_product_dir_vertex; }
         Float_t get_Inv_mass_AB_K0s() const                     {    return Inv_mass_AB_K0s; }
-        Float_t get_dcaAB_xy() const                                {    return dcaAB_xy; }
-        Float_t get_dcaAB_z() const                                {    return dcaAB_z; }
+        Float_t get_dcaAB() const                                {    return dcaAB; }
         Float_t get_Inv_mass_AB_Lambda() const                   {    return Inv_mass_AB_Lambda; }
         Float_t get_Inv_mass_AB_antiLambda() const              {    return Inv_mass_AB_antiLambda; }
         TLorentzVector get_TLV_part_A() const       { return TLV_part_A;   }
@@ -507,7 +501,7 @@ private:
 
     TString TriggerWord; // Trigger word
 
-    UShort_t      fNumTRD_Photons; // number of photon conversions
+    Int_t      fNumTRD_Photons; // number of photon conversions
     UShort_t      fNumTRD_Nuclear_interactions; // number of nuclear interactions
     
     TClonesArray* fPhotons;                 //->
@@ -613,9 +607,9 @@ public:
     {
         if (fNumTRD_Photons == fPhotons->GetSize())
         fPhotons->Expand( fNumTRD_Photons + 10 );
-        if (fNumTRD_Photons >= 10000)
+        if (fNumTRD_Photons >= 100000)
         {
-        Fatal( "Ali_TRD_Self_Event::createPhoton()", "ERROR: Too many photons (>10000)!" );
+        Fatal( "Ali_TRD_Self_Event::createPhoton()", "ERROR: Too many photons (>100000)!" );
         exit( 2 );
         }
 
@@ -627,11 +621,11 @@ public:
         fNumTRD_Photons   = 0;
         fPhotons      ->Clear();
     }
-    UShort_t getNumPhotons() const
+    Int_t getNumPhotons() const
     {
         return fNumTRD_Photons;
     }
-    Ali_TRD_Photon* getPhoton(UShort_t i) const
+    Ali_TRD_Photon* getPhoton(Int_t i) const
     {
         return i < fNumTRD_Photons ? (Ali_TRD_Photon*)((*fPhotons)[i]) : NULL;
         }

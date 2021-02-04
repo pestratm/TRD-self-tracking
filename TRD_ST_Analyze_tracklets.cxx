@@ -519,99 +519,6 @@ void Ali_TRD_ST_Analyze::fHelixAtoPointdca(TVector3 space_vec, Ali_Helix* helixA
 }
 //----------------------------------------------------------------------------------------
 
-void Ali_TRD_ST_Analyze::fHelixAtoPointdca_xy_z(TVector3 space_vec, Ali_Helix* helixA, Float_t &pathA, Float_t &dcaAB_xy,Float_t &dcaAB_z)
-{
-    // V1.1
-    Float_t pA[2] = {100.0,-100.0}; // the two start values for pathB, 0.0 is the origin of the helix at the first measured point
-    Float_t distarray[2];
-    Float_t distarray_xy[2];
-    Float_t distarray_z[2];
-    TVector3 testA,testA_xy,testA_z,space_vec_xy,space_vec_z;
-    Double_t helix_point[3];
-
-    space_vec_xy.SetXYZ(space_vec.X(),space_vec.Y(),0.0);
-    space_vec_z.SetXYZ(0.0,0.0,space_vec.Z());
-
-    for(Int_t r = 0; r < 2; r++)
-    {
-        helixA ->Evaluate(pA[r],helix_point);  // 3D-vector of helixB point at path pB[r]
-        testA.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-
-        testA_xy.SetXYZ(testA.X(),testA.Y(),0.0);
-        testA_z.SetXYZ(0.0,0.0,testA.Z());
-
-        distarray[r] = (testA-space_vec).Mag(); // dca between helixA and helixB
-        distarray_xy[r] = (testA_xy-space_vec_xy).Mag(); // dca between helixA and helixB
-        distarray_z [r] = (testA_z-space_vec_z).Mag(); // dca between helixA and helixB
-    }
-    Int_t loopcounter = 0;
-    Float_t scale = 1.0;
-    Float_t flip  = 1.0; // checks if the minimization direction changed
-    Float_t scale_length = 100.0;
-    while(fabs(scale_length) > 0.01 && loopcounter < 100) // stops when the length is too small
-    {
-        //cout << "n = " << loopcounter << ", pA[0] = " << pA[0]
-        //    << ", pA[1] = " << pA[1] << ", d[0] = " << distarray[0]
-        //    << ", d[1] = " << distarray[1] << ", flip = " << flip
-        //    << ", scale_length = " << scale_length << endl;
-        if(distarray[0] > distarray[1])
-        {
-            if(loopcounter != 0)
-            {
-                if(flip == 1.0) scale = 0.4; // if minimization direction changes -> go back, but only the way * 0.4
-                else scale = 0.7; // go on in this direction but only by the way * 0.7
-            }
-            scale_length = (pA[1]-pA[0])*scale; // the next length interval
-            pA[0]     = pA[1] + scale_length; // the new path
-
-            helixA ->Evaluate(pA[0],helix_point);  // 3D-vector of helixB point at path pB[r]
-            testA.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-            testA_xy.SetXYZ(helix_point[0],helix_point[1],0.0);
-            testA_z.SetXYZ(0.0,0.0,helix_point[2]);
-
-            distarray[0] = (testA-space_vec).Mag(); // new dca
-            distarray_xy[0] = (testA_xy-space_vec_xy).Mag(); // dca between helixA and helixB
-            distarray_z [0] = (testA_z-space_vec_z).Mag(); // dca between helixA and helixB
-
-            flip = 1.0;
-        }
-        else
-        {
-            if(loopcounter != 0)
-            {
-                if(flip == -1.0) scale = 0.4;
-                else scale = 0.7;
-            }
-            scale_length = (pA[0]-pA[1])*scale;
-            pA[1]     = pA[0] + scale_length;
-            helixA ->Evaluate(pA[1],helix_point);  // 3D-vector of helixB point at path pB[r]
-            testA.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-            testA_xy.SetXYZ(helix_point[0],helix_point[1],0.0);
-            testA_z.SetXYZ(0.0,0.0,helix_point[2]);
-            
-            distarray[1] = (testA-space_vec).Mag();
-            distarray_xy[1] = (testA_xy-space_vec_xy).Mag(); // dca between helixA and helixB
-            distarray_z [1] = (testA_z-space_vec_z).Mag(); // dca between helixA and helixB
-
-            flip = -1.0;
-        }
-        loopcounter++;
-    }
-    if(distarray[0] < distarray[1])
-    {
-        pathA = pA[0];
-        dcaAB_xy = distarray_xy[0];
-        dcaAB_z = distarray_z[0];
-    }
-    else
-    {
-        pathA = pA[1];
-        dcaAB_xy = distarray_xy[1];
-        dcaAB_z = distarray_z[1];
-    }
-    //cout << "pathA = " << pathA << ", dcaAB = " << dcaAB << endl;
-}
-//----------------------------------------------------------------------------------------
 
 
 //----------------------------------------------------------------------------------------
@@ -1035,238 +942,6 @@ TVector3 Ali_TRD_ST_Analyze::fDCA_Helix_Estimate(Ali_Helix* helixA, Ali_Helix* h
 }
 //----------------------------------------------------------------------------------------
 
-//--------------------------------------------------------------------------------------------
-TVector3 Ali_TRD_ST_Analyze::fDCA_Helix_Estimate_xy_z(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB_xy, Float_t &dcaAB_z)
-{
-
-    // Calculates the 2D crossing point, calculates the corresponding 3D point and returns pathA and pathB
-    // TV3_photon is a result of a second calculation which assumes its a photon conversion in TRD
-
-    TVector3 TV3_photon;
-    TV3_photon.SetXYZ(-999.0,-999.0,-999.0);
-    Double_t helix_point[3];
-
-    Double_t x1 = helixA->getHelix_param(5);
-    Double_t y1 = helixA->getHelix_param(0);
-    Double_t x2 = helixB->getHelix_param(5);
-    Double_t y2 = helixB->getHelix_param(0);
-    Double_t c1 = helixA->getHelix_param(4);
-    Double_t c2 = helixB->getHelix_param(4);
-    Double_t r1 = 0.0;
-    Double_t r2 = 0.0;
-    if(c1 != 0 && c2 != 0)
-    {
-        r1 = fabs(1.0/c1);
-        r2 = fabs(1.0/c2);
-    } else return TV3_photon;
-
-    Double_t x1_c = 0.0;
-    Double_t y1_c = 0.0;
-    Double_t x2_c = 0.0;
-    Double_t y2_c = 0.0;
-
-    //Int_t bCross_points = fCross_points_Circles(x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c);
-    //printf("2D circle cross points (Alex): {%4.3f, %4.3f}, {%4.3f, %4.3f} \n",x1_c,y1_c,x2_c,y2_c);
-
-    pathA = 0.0;
-    pathB = 0.0;
-    Float_t dcaAB = 0.0;
-
-
-    Int_t cCross_points = fCircle_Interception(x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c);
-    //printf("2D circle cross points, circle: {x1: %4.3f, y1: %4.3f, r1: %4.3f} {x2: %4.3f, y2: %4.3f, r2: %4.3f} (Sven): {%4.3f, %4.3f}, {%4.3f, %4.3f}, return: %d \n",x1,y1,r1,x2,y2,r2,x1_c,y1_c,x2_c,y2_c,cCross_points);
-
-    Double_t radiusA = sqrt(x1_c*x1_c+y1_c*y1_c);
-    Double_t radiusB = sqrt(x2_c*x2_c+y2_c*y2_c);
-    //printf("radiusA: %4.3f, radiusB: %4.3f \n",radiusA,radiusB);
-
-    //cout << "bCross_points = " << bCross_points << ", xyr(1) = {" << x1 << ", " << y1 << ", " << r1
-    //    << "}, xyr(2) = {"  << x2 << ", " << y2 << ", " << r2 << "}, p1 = {" << x1_c << ", " << y1_c << "}, p2 = {" << x2_c << ", " << y2_c << "}" << endl;
-
-    //if(bCross_points == 0) return 0;
-
-    TVector3 pointA,pointB,pointA1,pointB1,pointA2,pointB2,pointA1_xy,pointA1_z,pointA2_xy,pointA2_z,pointB1_xy,pointB1_z,pointB2_xy,pointB2_z;
-
-    Double_t path_lengthA_c1,path_lengthA_c2,path_lengthB_c1,path_lengthB_c2;
-
-    // first crossing point for helix A
-    pair< double, double > path_lengthA = fpathLength(radiusA,helixA);
-    Double_t path_lengthA1 = path_lengthA.first;
-    Double_t path_lengthA2 = path_lengthA.second;
-
-    helixA ->Evaluate(path_lengthA1,helix_point);
-    pointA1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-    helixA ->Evaluate(path_lengthA2,helix_point);
-    pointA2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-
-    if( ((x1_c-pointA1.x())*(x1_c-pointA1.x()) + (y1_c-pointA1.y())*(y1_c-pointA1.y())) <
-       ((x1_c-pointA2.x())*(x1_c-pointA2.x()) + (y1_c-pointA2.y())*(y1_c-pointA2.y())))
-    {
-        path_lengthA_c1 = path_lengthA1;
-    }
-    else
-    {
-        path_lengthA_c1 = path_lengthA2;
-    }
-
-    // second crossing point for helix A
-    path_lengthA = fpathLength(radiusB,helixA);
-    path_lengthA1 = path_lengthA.first;
-    path_lengthA2 = path_lengthA.second;
-
-    helixA ->Evaluate(path_lengthA1,helix_point);
-    pointA1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-    helixA ->Evaluate(path_lengthA2,helix_point);
-    pointA2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-
-    if( ((x2_c-pointA1.x())*(x2_c-pointA1.x()) + (y2_c-pointA1.y())*(y2_c-pointA1.y())) <
-       ((x2_c-pointA2.x())*(x2_c-pointA2.x()) + (y2_c-pointA2.y())*(y2_c-pointA2.y())))
-    {
-        path_lengthA_c2 = path_lengthA1;
-    }
-    else
-    {
-        path_lengthA_c2 = path_lengthA2;
-    }
-
-    // first crossing point for helix B
-    pair< double, double > path_lengthB = fpathLength(radiusA,helixB);
-    Double_t path_lengthB1 = path_lengthB.first;
-    Double_t path_lengthB2 = path_lengthB.second;
-
-    helixB ->Evaluate(path_lengthB1,helix_point);
-    pointB1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-    helixB ->Evaluate(path_lengthB2,helix_point);
-    pointB2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-
-    if( ((x1_c-pointB1.x())*(x1_c-pointB1.x()) + (y1_c-pointB1.y())*(y1_c-pointB1.y())) <
-       ((x1_c-pointB2.x())*(x1_c-pointB2.x()) + (y1_c-pointB2.y())*(y1_c-pointB2.y())))
-    {
-        path_lengthB_c1 = path_lengthB1;
-    }
-    else
-    {
-        path_lengthB_c1 = path_lengthB2;
-    }
-
-    // second crossing point for helix B
-    path_lengthB = fpathLength(radiusB,helixB);
-    path_lengthB1 = path_lengthB.first;
-    path_lengthB2 = path_lengthB.second;
-
-    helixB ->Evaluate(path_lengthB1,helix_point);
-    pointB1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-    helixB ->Evaluate(path_lengthB2,helix_point);
-    pointB2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-
-    if( ((x2_c-pointB1.x())*(x2_c-pointB1.x()) + (y2_c-pointB1.y())*(y2_c-pointB1.y())) <
-       ((x2_c-pointB2.x())*(x2_c-pointB2.x()) + (y2_c-pointB2.y())*(y2_c-pointB2.y())))
-    {
-        path_lengthB_c2 = path_lengthB1;
-    }
-    else
-    {
-        path_lengthB_c2 = path_lengthB2;
-    }
-
-    helixA ->Evaluate(path_lengthA_c1,helix_point);
-    pointA1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-    helixA ->Evaluate(path_lengthA_c2,helix_point);
-    pointA2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-
-    helixB ->Evaluate(path_lengthB_c1,helix_point);
-    pointB1.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-    helixB ->Evaluate(path_lengthB_c2,helix_point);
-    pointB2.SetXYZ(helix_point[0],helix_point[1],helix_point[2]);
-
-    TVector3 TV3_pointC1;
-    TVector3 TV3_pointC2;
-
-    if((pointA1 - pointB1).Mag() < (pointA2 - pointB1).Mag())
-    {
-        TV3_pointC1 = pointA1 + pointB1;
-        TV3_pointC2 = pointA2 + pointB2;
-    }
-    else
-    {
-        TV3_pointC1 = pointA2 + pointB1;
-        TV3_pointC2 = pointA1 + pointB2;
-    }
-
-    TV3_pointC1 *= 0.5;
-    TV3_pointC2 *= 0.5;
-
-
-    TV3_photon = pointA1 + pointA2 + pointB1 + pointB2;
-    TV3_photon *= 0.25;
-
-    TVector3 TV3_dist_AB = TV3_pointC1 - TV3_pointC2;
-    if(TV3_dist_AB.Mag() > 50.0)
-    {
-        if(TV3_pointC1.Perp() < TV3_pointC2.Perp())
-        {
-            TV3_photon = TV3_pointC1;
-        }
-        else
-        {
-            TV3_photon = TV3_pointC2;
-        }
-    }
-
-
-    pointA1_xy.SetXYZ(pointA1.X(),pointA1.Y(),0.0);
-    pointA1_z.SetXYZ(0.0,0.0,pointA1.Z());
-
-    pointA2_xy.SetXYZ(pointA2.X(),pointA2.Y(),0.0);
-    pointA2_z.SetXYZ(0.0,0.0,pointA2.Z());
-
-    pointB1_xy.SetXYZ(pointB1.X(),pointB1.Y(),0.0);
-    pointB1_z.SetXYZ(0.0,0.0,pointB1.Z());
-
-    pointB2_xy.SetXYZ(pointB2.X(),pointB2.Y(),0.0);
-    pointB2_z.SetXYZ(0.0,0.0,pointB2.Z());
-
-    Double_t dcaAB1 = (pointA1-pointB1).Mag();
-    Double_t dcaAB1_xy = (pointA1_xy-pointB1_xy).Mag();
-    Double_t dcaAB1_z = (pointA1_z-pointB1_z).Mag();
-
-    Double_t dcaAB2 = (pointA2-pointB2).Mag();
-    Double_t dcaAB2_xy = (pointA2_xy-pointB2_xy).Mag();
-    Double_t dcaAB2_z = (pointA2_z-pointB2_z).Mag();
-
-    Double_t dcaAB3 = (pointA1-pointB2).Mag();
-    Double_t dcaAB4 = (pointA2-pointB1).Mag();
-
-#if 0
-    printf("pointA1: {%4.3f, %4.3f, %4.3f} \n",pointA1.X(),pointA1.Y(),pointA1.Z());
-    printf("pointA2: {%4.3f, %4.3f, %4.3f} \n",pointA2.X(),pointA2.Y(),pointA2.Z());
-    printf("pointB1: {%4.3f, %4.3f, %4.3f} \n",pointB1.X(),pointB1.Y(),pointB1.Z());
-    printf("pointB2: {%4.3f, %4.3f, %4.3f} \n",pointB2.X(),pointB2.Y(),pointB2.Z());
-    printf("dcaAB1: %4.3f, dcaAB2: %4.3f, dcaAB3: %4.3f, dcaAB4: %4.3f \n",dcaAB1,dcaAB2,dcaAB3,dcaAB4);
-#endif
-
-    if(dcaAB1 < dcaAB2)
-    {
-        pathA = path_lengthA_c1;
-        pathB = path_lengthB_c1;
-        //dcaAB = dcaAB1;
-        dcaAB_xy = dcaAB1_xy;
-        dcaAB_z  = dcaAB1_z;
-    }
-    else
-    {
-        pathA = path_lengthA_c2;
-        pathB = path_lengthB_c2;
-        //dcaAB = dcaAB2;
-        dcaAB_xy = dcaAB2_xy;
-        dcaAB_z  = dcaAB2_z;
-    }
-
-
-    return TV3_photon;
-
-}
-//----------------------------------------------------------------------------------------
 
 
 //----------------------------------------------------------------------------------------
@@ -1645,14 +1320,14 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
 
             if(CA*CB > 0.0) continue; // same charge
 
-            Float_t pathA_est, pathB_est, dcaAB_est_xy, dcaAB_est_z;
+            Float_t pathA_est, pathB_est, dcaAB_est;
             //printf("i_track_A: %d, i_track_B: %d, i_comb: %d \n",i_track_A,i_track_B,i_comb);
-            TVector3 TV3_photon = fDCA_Helix_Estimate_xy_z(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est_xy,dcaAB_est_z);
+            TVector3 TV3_photon = fDCA_Helix_Estimate(vec_helices[i_track_A],vec_helices[i_track_B],pathA_est,pathB_est,dcaAB_est);
 
             //printf("track A,B: {%d, %d}, dcaAB_est: %4.3f \n",i_track_A,i_track_B,dcaAB_est);
             //printf(" \n");
 
-            if(dcaAB_est_xy > 2.0 && dcaAB_est_z > 15.0) continue;
+            if(dcaAB_est > 15.0) continue;
 
             vec_helices[i_track_A] ->Evaluate(pathA_est,helix_pointA_est);
             vec_helices[i_track_B] ->Evaluate(pathB_est,helix_pointB_est);
@@ -1673,18 +1348,16 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
             fHelixABdca(vec_helices[i_track_A],vec_helices[i_track_B],pathA,pathB,dcaAB,pathA_est,pathB_est);
             //printf("  --> track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
 
-            //if(dcaAB < 5.0)
-            //if(dcaAB < 10.0)
+            if(dcaAB < 5.0)
             {
                 //------------------------------------------------------------
                 // This is for photons, replaces the fHelixABdca calculation. It takes the average of all intersections.
-                Float_t pathA_photon, pathB_photon, dcaA_photon, dcaB_photon, dcaA_photon_xy, dcaB_photon_xy, dcaA_photon_z, dcaB_photon_z, dcaAB_xy, dcaAB_z;
-                fHelixAtoPointdca_xy_z(TV3_photon,vec_helices[i_track_A],pathA_photon,dcaA_photon_xy,dcaA_photon_z); // new helix to point dca calculation
-                fHelixAtoPointdca_xy_z(TV3_photon,vec_helices[i_track_B],pathB_photon,dcaB_photon_xy,dcaB_photon_z); // new helix to point dca calculation
+                Float_t pathA_photon, pathB_photon, dcaA_photon, dcaB_photon;
+                fHelixAtoPointdca(TV3_photon,vec_helices[i_track_A],pathA_photon,dcaA_photon); // new helix to point dca calculation
+                fHelixAtoPointdca(TV3_photon,vec_helices[i_track_B],pathB_photon,dcaB_photon); // new helix to point dca calculation
                 pathA = pathA_photon;
                 pathB = pathB_photon;
-                dcaAB_xy = (dcaA_photon_xy + dcaB_photon_xy)/2.0;
-                dcaAB_z = (dcaA_photon_z + dcaB_photon_z)/2.0;
+                dcaAB = (dcaA_photon + dcaB_photon)/2.0;
                 vertex_point[0] = TV3_photon.X();
                 vertex_point[1] = TV3_photon.Y();
                 vertex_point[2] = TV3_photon.Z();
@@ -1907,19 +1580,16 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         // AP cuts from https://www.physi.uni-heidelberg.de//Publications/PhDThesis_Leardini.pdf (eqn. 5.2)
                         Double_t AP_alpha_max = 0.95;
                         Double_t AP_qT_max    = 0.05;
-                        Double_t AP_cut_value = 1.5;
+                        Double_t AP_cut_value = 1.0;
                         Double_t AP_value = TMath::Power(AP_alpha/AP_alpha_max,2.0) + TMath::Power(AP_pT/AP_qT_max,2.0);
 
                         //if(fabs(AP_alpha) < 0.2 && AP_pT > 0.0 && AP_pT < 0.02 && CA*CB < 0.0 && pTA > 0.04 && pTB > 0.04 && pTA < 0.5 && pTB < 0.5 && dot_product_dir_vertex > 0.9) // TRD photon conversion
                         //printf("AP_value: %4.3f, dot_product_dir_vertex: %4.3f, CA*CB: %4.3f, pTA: %4.3f, pTB: %4.3f \n",AP_value,dot_product_dir_vertex,CA*CB,pTA,pTB);
 
                         // XALEX
-                        //if(AP_value < AP_cut_value && pTA > 0.04 && pTB > 0.04 && pTA < 0.8 && pTB < 0.8 && dot_product_dir_vertex > 0.9)
-                        if(AP_value < AP_cut_value && dot_product_dir_vertex > 0.7)
+                        if(AP_value < AP_cut_value && pTA > 0.04 && pTB > 0.04 && pTA < 0.8 && pTB < 0.8 && dot_product_dir_vertex > 0.9)
                         {
                             Double_t dca_min  = 999.0;
-                            Double_t dca_min_xy  = 999.0;
-                            Double_t dca_min_z  = 999.0;
                             Double_t path_min = -999.0;
                             Int_t    i_track_min = -1;
 
@@ -1931,22 +1601,18 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                                 {
                                     Float_t pathA_dca = -1.0;
                                     Float_t dcaAB_dca = -1.0;
-                                    Float_t dcaAB_dca_xy = -1.0;
-                                    Float_t dcaAB_dca_z = -1.0;
-
                                     TRD_ST_TPC_Track = TRD_ST_Event ->getTrack(i_track);
                                     TPC_single_helix ->setHelix(TRD_ST_TPC_Track->getHelix_param(0),TRD_ST_TPC_Track->getHelix_param(1),TRD_ST_TPC_Track->getHelix_param(2),TRD_ST_TPC_Track->getHelix_param(3),TRD_ST_TPC_Track->getHelix_param(4),TRD_ST_TPC_Track->getHelix_param(5));
-                                    fHelixAtoPointdca_xy_z(TV3_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca_xy,dcaAB_dca_z); // new helix to point dca calculation
+                                    fHelixAtoPointdca(TV3_sec_vertex,TPC_single_helix,pathA_dca,dcaAB_dca); // new helix to point dca calculation
 
                                     Double_t helix_point_TPC_photon[3];
                                     TPC_single_helix ->Evaluate(pathA_dca,helix_point_TPC_photon);  // 3D-vector of helixB point at path pB[r]
                                     TV3_close_TPC_photon.SetXYZ(helix_point_TPC_photon[0],helix_point_TPC_photon[1],helix_point_TPC_photon[2]);
                                     flag_close_TPC_photon = 1;
 
-                                    if(dcaAB_dca_xy*dcaAB_dca_xy + dcaAB_dca_z*dcaAB_dca_z < dca_min*dca_min)
+                                    if(dcaAB_dca < dca_min)
                                     {
-                                        dca_min_xy     = dcaAB_dca_xy;
-                                        dca_min_z     = dcaAB_dca_z;
+                                        dca_min     = dcaAB_dca;
                                         path_min    = pathA_dca;
                                         i_track_min = i_track;
                                     }
@@ -2052,22 +1718,18 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                             TRD_Photon ->set_pT_AB((Float_t)pT_AB);
                             TRD_Photon ->set_AP_pT((Float_t)AP_pT);
                             TRD_Photon ->set_AP_alpha((Float_t)AP_alpha);
-                            TRD_Photon ->set_dca_min_xy((Float_t)dca_min_xy);  //dist to tpc
-                            TRD_Photon ->set_dca_min_z((Float_t)dca_min_z);  //dist to tpc
-                            TRD_Photon ->set_path_min((Float_t)path_min); //also dist to tpc
+                            TRD_Photon ->set_dca_min((Float_t)dca_min);
+                            TRD_Photon ->set_path_min((Float_t)path_min);
                             TRD_Photon ->set_Inv_mass_AB((Float_t)Inv_mass_AB);
                             TRD_Photon ->set_Eta_AB((Float_t)Eta_AB);
                             TRD_Photon ->set_Phi_AB((Float_t)Phi_AB);
                             TRD_Photon ->set_dot_product_dir_vertex((Float_t)dot_product_dir_vertex);
                             TRD_Photon ->set_Inv_mass_AB_K0s((Float_t)Inv_mass_AB_K0s);
-                            TRD_Photon ->set_dcaAB_xy((Float_t)dcaAB_xy);  //dist between tracks
-                            TRD_Photon ->set_dcaAB_z((Float_t)dcaAB_z);  //dist between tracks
+                            TRD_Photon ->set_dcaAB((Float_t)dcaAB);
                             TRD_Photon ->set_Inv_mass_AB_Lambda((Float_t)Inv_mass_AB_Lambda);
                             TRD_Photon ->set_Inv_mass_AB_antiLambda((Float_t)Inv_mass_AB_antiLambda);
                             TRD_Photon ->set_TLV_part_A(TLV_A);
                             TRD_Photon ->set_TLV_part_B(TLV_B);
-
-                            printf("dca_min_xy: %4.3f, dca_min_z: %4.3f, dcaAB_xy: %4.3f, dcaAB_z: %4.3f \n",dca_min_xy,dca_min_z,dcaAB_xy,dcaAB_z);
 
                             //--------- fill TRD/TPC track info --------------------------
 
@@ -2940,7 +2602,7 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Do
         i_track_stop  = n_track + 1;
     }
 
-    printf("Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks, track: %d, start: %d, stop: %d \n",n_track,i_track_start,i_track_stop);
+    //printf("Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks, track: %d, start: %d, stop: %d \n",n_track,i_track_start,i_track_stop);
 
 #if 1 // for calib tracks
 
@@ -2953,8 +2615,6 @@ void Ali_TRD_ST_Analyze::Draw_Kalman_Helix_Tracks(Int_t n_track, Int_t color, Do
 
     for(Int_t i_track = i_track_start; i_track < i_track_stop; i_track++)
     {
-
-        //if(!vec_flag_good_photon_track[i_track]) continue;
         
 
 #if 1 //for calib tracks
@@ -3154,6 +2814,7 @@ Int_t Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event, Int_t graphics)
 
     //printf("Event: %lld, TPC tracks: %d, TRD tracklets: %d \n",i_event,NumTracks,NumTracklets);
 
+
     //--------------------------------------------------
     // TPC track loop
     for(Int_t i_track = 0; i_track < NumTracks; i_track++)
@@ -3195,8 +2856,9 @@ Int_t Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event, Int_t graphics)
 
     Tracklets = new Ali_TRD_ST_Tracklets*[NumTracklets];
     Number_Tracklets=NumTracklets;
-	
+
     for(Int_t i_tracklet = 0; i_tracklet < NumTracklets; i_tracklet++)
+    //for(Int_t i_tracklet = 0; i_tracklet < 10; i_tracklet++)
     {
         TRD_ST_Tracklet = TRD_ST_Event    ->getTracklet(i_tracklet);
         TRD_ST_Tracklet->set_TRD_index(i_tracklet);
@@ -3204,7 +2866,16 @@ Int_t Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event, Int_t graphics)
         TV3_offset      = TRD_ST_Tracklet ->get_TV3_offset();
         TV3_dir         = TRD_ST_Tracklet ->get_TV3_dir();
         i_det           = TRD_ST_Tracklet ->get_TRD_det();
-		
+
+        //printf("i_tracklet: %d,  pos A: {%4.2f, %4.2f, %4.2f} \n",i_tracklet,TV3_offset[0],TV3_offset[1],TV3_offset[2]);
+
+        //for(Int_t i_time = 0; i_time < 30; i_time++)
+        //{
+        //    Double_t ADC_val = TRD_ST_Tracklet ->get_ADC_val(i_time);
+        //    printf("i_time: %d, ADC: %4.3f, i_tracklet: %d,  pos A: {%4.2f, %4.2f, %4.2f} \n",i_time,ADC_val,i_tracklet,TV3_offset[0],TV3_offset[1],TV3_offset[2]);
+        //}
+
+        /*
         //create "tracklets"
         Int_t i_sector = (Int_t)(i_det/30);
         Int_t i_stack  = (Int_t)(i_det%30/6);
@@ -3215,6 +2886,8 @@ Int_t Ali_TRD_ST_Analyze::Loop_event(Long64_t i_event, Int_t graphics)
 
         th1d_TRD_layer_radii ->Fill(radius);
         vec_th1d_TRD_layer_radii_det[i_det] ->Fill(radius);
+
+        */
     }
     //--------------------------------------------------
 
@@ -3337,9 +3010,9 @@ void Ali_TRD_ST_Analyze::Draw_TPC_track(Int_t i_track, Int_t color, Double_t lin
 //----------------------------------------------------------------------------------------
 Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets, Double_t track_path)
 {
-    //printf("Ali_TRD_ST_Analyze::Draw_event \n");
+    printf("Ali_TRD_ST_Analyze::Draw_event \n");
 
-    if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
+    //if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
 
     //--------------------------------------------------
@@ -3391,12 +3064,13 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t dra
     //--------------------------------------------------
 
 
-
     //--------------------------------------------------
     // TRD tracklet loop
     TVector3 TV3_offset;
     TVector3 TV3_dir;
     Int_t    i_det;
+
+    printf("NumTracklets: %d \n",NumTracklets);
 
     for(Int_t i_tracklet = 0; i_tracklet < NumTracklets; i_tracklet++)
     {
@@ -3448,6 +3122,8 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t dra
 #endif
     //--------------------------------------------------
 
+
+    printf("End of Draw_event() \n");
     return 1;
 }
 //----------------------------------------------------------------------------------------
@@ -3457,7 +3133,7 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t dra
 //----------------------------------------------------------------------------------------
 Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window, Int_t graphics)
 {
-    //printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching \n");
+    printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching \n");
 
     if (!input_SE->GetEntry( i_event )) return 0; // take the event -> information is stored in event
 
@@ -3748,11 +3424,12 @@ Int_t Ali_TRD_ST_Analyze::Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matc
         gEve->Redraw3D(kTRUE);
     }
 #endif
-    //printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching, N TPC Tracks: %d, matched_tracks: %d \n",NumTracks,(Int_t)matched_tracks.size());
+    printf("Ali_TRD_ST_Analyze::Do_TPC_TRD_matching, N TPC Tracks: %d, matched_tracks: %d \n",NumTracks,(Int_t)matched_tracks.size());
 
     return 1;
 }
 //----------------------------------------------------------------------------------------
+
 
 //----------------------------------------------------------------------------------------
 TProfile* Ali_TRD_ST_Analyze::Calibrate_gain(Long64_t i_event, Int_t Bethe_flag)
@@ -3763,12 +3440,7 @@ TProfile* Ali_TRD_ST_Analyze::Calibrate_gain(Long64_t i_event, Int_t Bethe_flag)
 
     Int_t N_TPC_tracks = (Int_t)matched_tracks.size();
 
-    /*printf("det 0 vec_TV3_TRD_center[0]: {%4.3f,%4.3f,%4.3f}, vec_TV3_TRD_center[1]: {%4.3f,%4.3f,%4.3f},vec_TV3_TRD_center[2]: {%4.3f,%4.3f,%4.3f} \n",
-        (*vec_TV3_TRD_center[0][0]).X(),(*vec_TV3_TRD_center[0][0]).Y(),(*vec_TV3_TRD_center[0][0]).Z(),
-        (*vec_TV3_TRD_center[0][1]).X(),(*vec_TV3_TRD_center[0][1]).Y(),(*vec_TV3_TRD_center[0][1]).Z(),
-        (*vec_TV3_TRD_center[0][2]).X(),(*vec_TV3_TRD_center[0][2]).Y(),(*vec_TV3_TRD_center[0][2]).Z());
-*/
-
+  
 
     ADC_rel.resize(540);  //relative ADC for each chamber
 
@@ -3868,13 +3540,7 @@ TProfile* Ali_TRD_ST_Analyze::Calibrate_gain(Long64_t i_event, Int_t Bethe_flag)
                         TVector3 local_little_vec = (*vec_TV3_TRD_offset[det]) - TV3_offset_matched; // pointing from center of the chamber to the datapoint?
                         Double_t x_local = local_little_vec.Dot((*vec_TV3_TRD_center[det][0]))/(*vec_TV3_TRD_center[det][0]).Mag();
                         Double_t z_local = local_little_vec.Dot((*vec_TV3_TRD_center[det][1]))/(*vec_TV3_TRD_center[det][1]).Mag();
-                        /*
-                        printf("i_det: %d, vec_TV3_TRD_offset: {%4.3f, %4.3f, %4.3f}, TV3_offset_matched: {%4.3f, %4.3f, %4.3f}, little vector: {%4.3f, %4.3f, %4.3f}, local coordinate (x,z): {%4.3f, %4.3f} \n",
-                            det,(*vec_TV3_TRD_offset[det]).X(),(*vec_TV3_TRD_offset[det]).Y(),(*vec_TV3_TRD_offset[det]).Z(),
-                            TV3_offset_matched.X(),TV3_offset_matched.Y(),TV3_offset_matched.Z(),
-                            local_little_vec.X(),local_little_vec.Y(),local_little_vec.Z(),x_local,z_local);
-                        */
-                        //-------------------------------------------------------------------
+                            //-------------------------------------------------------------------
                         if(Bethe_flag == 1) //do via Bethe-Bloch
                         {
                             //vector<TGraph*> tg_bethe_bloch; // [e mu pi K p]
@@ -5102,7 +4768,7 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_Calibration(TString out_dir, TString out_fi
     }
     #endif 
     #endif//--------------------------------------------------
-    
+
 
     HistName = out_dir;
     HistName += "/";
@@ -5160,23 +4826,7 @@ void Ali_TRD_ST_Analyze::hists_pv_dca()
 {
     //printf("Ali_TRD_ST_Analyze::Calibrate() \n");
 	//cout<<"the init variable is "<<inits_vec_tp_pvdca_vs_sector<<endl;
-    /*if(inits_vec_tp_pvdca_vs_sector == 0)
     
-	//if(vec_tp_pvdca_vs_sector == NULL)
-    {	*/
-    /*    vec_tp_pvdca_vs_sector.resize(90);
-        vec_TH2D_pvdca_vs_sector.resize(90);
-        
-        for (Int_t i_det = 0; i_det < 90; i_det++)
-        {
-		vec_tp_pvdca_vs_sector = new TProfile("vec_th1d_pvdca_vs_sector","vec_th1d_pvdca_vs_sector_%d",90,0,89);
-    	vec_TH2D_pvdca_vs_sector = new TH2D("vec_th2d_pvdca_vs_sector","vec_th2d_pvdca_vs_sector_%d",90,0,89,100,0,50);
-          //#
-		//cout<<"initialized"<<endl;
-		inits_vec_tp_pvdca_vs_sector++;
-        //}	
-		
-   }*/
 	 	
 	Int_t detector;
 	Int_t sector;
@@ -5216,25 +4866,7 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_hists_pv_dca(TString out_dir, TString out_f
 
     //vec_can_Delta_vs_impact.resize(6); // 6 sector blocks with 3 sectors each (18)
 
-  /*  TH1D* h_dummy_Delta_vs_impact = new TH1D("h_dummy_Delta_vs_impact","h_dummy_Delta_vs_impact",90,50,140);
-    h_dummy_Delta_vs_impact->SetStats(0);
-    h_dummy_Delta_vs_impact->SetTitle("");
-    h_dummy_Delta_vs_impact->GetXaxis()->SetTitleOffset(0.85);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetTitleOffset(0.78);
-    h_dummy_Delta_vs_impact->GetXaxis()->SetLabelOffset(0.0);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetLabelOffset(0.01);
-    h_dummy_Delta_vs_impact->GetXaxis()->SetLabelSize(0.08);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetLabelSize(0.08);
-    h_dummy_Delta_vs_impact->GetXaxis()->SetTitleSize(0.08);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetTitleSize(0.08);
-    h_dummy_Delta_vs_impact->GetXaxis()->SetNdivisions(505,'N');
-    h_dummy_Delta_vs_impact->GetYaxis()->SetNdivisions(505,'N');
-    h_dummy_Delta_vs_impact->GetXaxis()->CenterTitle();
-    h_dummy_Delta_vs_impact->GetYaxis()->CenterTitle();
-    h_dummy_Delta_vs_impact->GetXaxis()->SetTitle("impact angle");
-    h_dummy_Delta_vs_impact->GetYaxis()->SetTitle("#Delta #alpha");
-    h_dummy_Delta_vs_impact->GetXaxis()->SetRangeUser(70,110);
-    h_dummy_Delta_vs_impact->GetYaxis()->SetRangeUser(-24,24);*/
+  
 
     //#if 1
     Int_t arr_color_layer[6] = {kBlack,kRed,kBlue,kGreen,kMagenta,kCyan};
@@ -5247,12 +4879,7 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_hists_pv_dca(TString out_dir, TString out_f
 
         //vec_can_Delta_vs_impact[i_sec_block] ->Divide(5,3); // x = stack, y = sector
 
-       /* for(Int_t i_sec_sub = 0; i_sec_sub < 3; i_sec_sub++)
-        {
-            Int_t i_sector = i_sec_block + 6*i_sec_sub;
-            for(Int_t i_stack = 0; i_stack < 5; i_stack++)
-            {
-                Int_t iPad = i_sec_sub*5 + i_stack + 1;*/
+      
                 vec_can_pvdca_vs_sector ->SetTicks(1,1);
                 vec_can_pvdca_vs_sector ->SetGrid(0,0);
                 vec_can_pvdca_vs_sector ->SetFillColor(10);
@@ -5261,10 +4888,7 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_hists_pv_dca(TString out_dir, TString out_f
                 vec_can_pvdca_vs_sector ->SetBottomMargin(0.2);
                 vec_can_pvdca_vs_sector ->SetLeftMargin(0.2);
 				
-              //  h_dummy_Delta_vs_impact->Draw();
-
-               // for(Int_t i_layer = 0; i_layer < 6; i_layer++)
-               // {
+             
                  //   Int_t i_detector = i_layer + 6*i_stack + 30*i_sector;
                     // printf("detector: %d \n",i_detector);
                     vec_tp_pvdca_vs_sector ->SetLineColor(arr_color_layer[1]);
@@ -5277,14 +4901,7 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_hists_pv_dca(TString out_dir, TString out_f
    			 		vec_tp_pvdca_vs_sector->SetTitle("");
 
 
-             /*       HistName = "";
-                    sprintf(NoP,"%4.0f",(Double_t)i_detector);
-                    HistName += NoP;*/
-                    //plotTopLegend((char*)HistName.Data(),0.24,0.89-i_layer*0.07,0.045,arr_color_layer[i_layer],0.0,42,1,1); // char* label,Float_t x=-1,Float_t y=-1, Float_t size=0.06,Int_t color=1,Float_t angle=0.0, Int_t font = 42, Int_t NDC = 1, Int_t align = 1
-               // }
-            //}
-        //}
-    //}
+            
 	HistName = out_dir;
     HistName += "/";
     HistName += out_file_name_calib;
@@ -5304,3 +4921,5 @@ void Ali_TRD_ST_Analyze::Draw_n_Save_hists_pv_dca(TString out_dir, TString out_f
     
     printf("All data written \n");
 }
+
+

@@ -6,8 +6,8 @@ R__LOAD_LIBRARY(TRD_Kalman_Tracking_cxx.so);
 R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 // Environment variables
-#define ENV_PI
-//#define ENV_ALEX
+//#define ENV_PI
+#define ENV_ALEX
 //#define ENV_PI_SVEN
 
 void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot = -1, Double_t track_path = 1000.0, Double_t beam_path = 0.0)
@@ -21,6 +21,11 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     // .x Macro_TRD_tracking.cc("run0_test.txt",-1,1000.0,0.0) -> calibrated run0 files
 
     // .x Macro_TRD_tracking.cc("Split_tracklets_calib_A_V0_1681-1700.txt",-1,1000.0,0.0)
+    // .x Macro_TRD_tracking.cc("new_trkl_test.txt",0,1000.0,0.0)
+    // .x Macro_TRD_tracking.cc("List_PbPb2018_test.txt",0,1000.0,0.0)
+    // .x Macro_TRD_tracking.cc("List_pPb2016_test.txt",0,1000.0,0.0)
+    // .x Macro_TRD_tracking.cc("List_ppSim_test.txt",0,1000.0,0.0)
+
 
     gROOT->SetStyle("Plain");
     gStyle->SetOptFit(11);
@@ -38,7 +43,7 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     gStyle->SetCanvasBorderMode(0);
 
 
-    gSystem ->Load("TRD_Kalman_Tracking_cxx.so");
+    //gSystem ->Load("TRD_Kalman_Tracking_cxx.so");
     gSystem ->Load("TRD_ST_Analyze_tracklets_cxx.so");
 
     //------------------------------------
@@ -73,11 +78,11 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     Int_t KF_tracker                = 1; // Kalman filter tracker
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
-    Int_t graphics                  = 0; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
+    Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
     Int_t draw_tracklets_TPC_match  = 0; // Draw tracklets matched with TPC tracks
-    Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
+    Int_t draw_all_TPC_tracks       = 1; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
-    Int_t draw_all_tracklets        = 0; // Draw all TRD tracklets
+    Int_t draw_all_tracklets        = 1; // Draw all TRD tracklets
     Int_t draw_found_tracklets      = 1; // Draws tracklets found by tracker
     Int_t draw_matched_TPC_track    = 0; // Draw TPC to TRD matched TPC track
     Int_t draw_matched_TRD_track    = 0; // Draw TPC to TRD matched Kalman/TF track
@@ -85,6 +90,7 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     Int_t calibrate_gain            = 0; // Calibrate TRD chamber gain
     Int_t Bethe_flag                = 1; // 1: Bethe Bloch for gain calib || 0: TPC dEdx for gain calib
     Int_t animate_beams             = 0; // 1 for beam animation
+    Int_t calibrate_vD              = 0;
 
     //------------------------------------
 
@@ -123,6 +129,7 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
         stop_event  = (event_plot+1);
     }
 
+
     for(Long64_t event = start_event; event < stop_event; event++)
     {
 
@@ -142,6 +149,7 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
         TRD_ST_Analyze ->Loop_event(event,graphics);
         //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
 
+
         TRD_ST_Analyze ->Draw_event(event,graphics,draw_all_TPC_tracks,draw_all_tracklets,track_path);  // ->draws TPC tracks
         //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
         if(graphics && animate_beams) TRD_ST_Analyze ->Animate_beams(beam_path);
@@ -152,6 +160,7 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
 
         TRD_ST_Analyze ->set_TPC_helix_params(event);
 
+
         //------------------------------------------------------------
         //Kalman Filter tracker
         if(KF_tracker)
@@ -159,7 +168,6 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
             tracker_found_tracklets_KF = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,use_prim_vertex); // 0 = no primary vertex, 1 = primary vertex used
             vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks; // TPC track matched tracklets
             vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
-
             mHelices_tracker_KF = kalid.get_Kalman_helix_params();
             mChi_2s_tracker_KF = kalid.get_Kalman_chi_2();
 
@@ -179,25 +187,7 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
         //------------------------------------------------------------
 
 
-        //------------------------------------------------------------
-        //TensorFlow tracker
-   /*     if(TF_tracker)
-        {
-            tftracker.Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets);
-            mHelices_tracker_TF = tftracker.get_Kalman_helix_params();
-            tracker_found_tracklets_TF = tftracker.get_Tracklets();
-
-            TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_tracker_TF);
-            TRD_ST_Analyze ->set_Kalman_TRD_tracklets(tracker_found_tracklets_TF);
-
-            if(graphics && draw_found_tracklets) TRD_ST_Analyze ->Draw_Kalman_Tracklets(tracker_found_tracklets_TF); // Draws the Kalman matched TRD tracklets
-            if(graphics && draw_all_TRD_tracks)  TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kRed,3.0,500.0); // -1 -> all kalman tracks drawn
-            TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics,draw_matched_TPC_track,draw_matched_TRD_track,kRed+1);
-        }
-        //------------------------------------------------------------
-
- */      
-        //TRD_ST_Analyze ->Calibrate(graphics);
+        if(calibrate_vD) TRD_ST_Analyze ->Calibrate(graphics);
         TRD_ST_Analyze ->Calc_Kalman_efficiency();
 
         TRD_ST_Analyze ->set_self_event_info();
@@ -212,8 +202,9 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
         //Ali_TRD_ST_Tracklets* last_tracklet;
 
     }
-	
-    //TRD_ST_Analyze ->Draw_n_Save_Calibration(output_dir,out_file_name_calib);
+
+    if(calibrate_vD) TRD_ST_Analyze ->Draw_n_Save_Calibration(output_dir,out_file_name_calib);
+
     if(calibrate_gain) TRD_ST_Analyze ->Draw_Save_Gain_calib();
     TRD_ST_Analyze ->Write();
 

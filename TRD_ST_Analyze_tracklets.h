@@ -107,8 +107,8 @@ private:
     Ali_TRD_Photon* TRD_Photon;
     Ali_TRD_Nuclear_interaction* TRD_Nuclear_interaction;
 
-    //Ali_Kalman_Track* TRD_Kalman_track_out;
-    //Ali_TPC_Track* TPC_track_out;
+    Ali_Kalman_Track* TRD_Kalman_track_out;
+    Ali_TPC_Track* TPC_track_out;
     Ali_TRD_Self_Event*   TRD_Self_Event_out;
     Ali_TRD_Photon* TRD_Photon_out;
     Ali_TRD_Nuclear_interaction* TRD_Nuclear_interaction_out;
@@ -315,11 +315,6 @@ public:
     //static void sum_distance_circ_point_2D(Int_t &, Double_t *, Double_t & sum, Double_t * par, Int_t );
     TProfile* Calibrate_gain(Long64_t i_event, Int_t Bethe_flag);
     void Draw_Save_Gain_calib();
-
-    TVector3 fDCA_Helix_Estimate_xy_z(Ali_Helix* helixA, Ali_Helix* helixB, Float_t &pathA, Float_t &pathB, Float_t &dcaAB_xy, Float_t &dcaAB_z);
-    void fHelixAtoPointdca_xy_z(TVector3 space_vec, Ali_Helix* helixA, Float_t &pathA, Float_t &dcaAB_xy,Float_t &dcaAB_z);
-
-
 
     ClassDef(Ali_TRD_ST_Analyze, 1)
 };
