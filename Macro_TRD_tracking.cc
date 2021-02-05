@@ -91,6 +91,7 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     Int_t Bethe_flag                = 1; // 1: Bethe Bloch for gain calib || 0: TPC dEdx for gain calib
     Int_t animate_beams             = 0; // 1 for beam animation
     Int_t calibrate_vD              = 0;
+    Int_t draw_MC_tracks            = 1; // Draw Monte Carlo event
 
     //------------------------------------
 
@@ -151,6 +152,7 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
 
 
         TRD_ST_Analyze ->Draw_event(event,graphics,draw_all_TPC_tracks,draw_all_tracklets,track_path);  // ->draws TPC tracks
+        if(graphics && draw_MC_tracks) TRD_ST_Analyze ->Draw_MC_event(event,graphics);
         //cout<<TRD_ST_Analyze->Tracklets[2]->get_TRD_index()<<endl;
         if(graphics && animate_beams) TRD_ST_Analyze ->Animate_beams(beam_path);
 

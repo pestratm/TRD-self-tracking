@@ -55,6 +55,7 @@ using namespace std;
 #include "Ali_TRD_Self_EventLinkDef.h" 
 
 
+ClassImp(Ali_MC_particle)
 ClassImp(Ali_TRD_ST_Tracklets)
 ClassImp(Ali_TRD_ST_TPC_Track)
 ClassImp(Ali_TRD_ST_Event)
@@ -94,6 +95,7 @@ private:
     Ali_TRD_ST_Tracklets* TRD_ST_Tracklet;
     Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track;
     Ali_TRD_ST_Event*     TRD_ST_Event;
+    Ali_MC_particle*      TRD_MC_Track;
 
     Ali_TRD_ST_Tracklets* TRD_ST_Tracklet_out;
     Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track_out;
@@ -266,6 +268,8 @@ public:
     void Init_tree(TString SEList);
     Int_t Loop_event(Long64_t i_event, Int_t graphics);
     Int_t Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets, Double_t track_path);
+    vector<Double_t> Get_Helix_params_from_kine(TLorentzVector TLV_particle, TVector3 TV3_vertex, Double_t charge);
+    Int_t Draw_MC_event(Long64_t i_event, Int_t graphics);
     void Animate_beams(Double_t beam_path);
     Int_t Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window, Int_t graphics);
     void Draw_hist_TPC_tracklet_diffs();

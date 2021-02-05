@@ -3008,6 +3008,118 @@ void Ali_TRD_ST_Analyze::Draw_TPC_track(Int_t i_track, Int_t color, Double_t lin
 
 
 //----------------------------------------------------------------------------------------
+vector<Double_t>  Ali_TRD_ST_Analyze::Get_Helix_params_from_kine(TLorentzVector TLV_particle, TVector3 TV3_vertex, Double_t charge)
+{
+    // Returns helix parameters from kinematic input, Lorentz vector and vertex + charge
+
+    Double_t x[3];
+    Double_t p[3];
+    x[0] = TV3_vertex.X();
+    x[1] = TV3_vertex.Y();
+    x[2] = TV3_vertex.Z();
+    p[0] = TLV_particle.Px();
+    p[1] = TLV_particle.Py();
+    p[2] = TLV_particle.Pz();
+    //calculation of Helixparameter taken from http://alidoc.cern.ch/AliRoot/v5-09-36/_ali_helix_8cxx_source.html
+    //AliHelix::AliHelix(Double_t x[3], Double_t p[3], Double_t charge, Double_t conversion)
+    vector<Double_t> fHelix;
+    fHelix.resize(8);
+    Double_t pt = TMath::Sqrt(p[0] * p[0] + p[1] * p[1]);
+    //
+
+    Double_t b_field	=	0.5;
+    Double_t b_fak = b_field * 3. / 1000.;
+
+    Double_t curvature = ((charge/pt) * b_fak);
+
+    fHelix[4] = curvature; // C
+    fHelix[3] = p[2] / pt; // tgl
+    //
+    Double_t xc, yc, rc;
+    rc = 1 / fHelix[4];
+    xc = x[0] - rc * p[1] / pt;
+    yc = x[1] + rc * p[0] / pt;
+    //
+    fHelix[5] = x[0]; // x0
+    fHelix[0] = x[1]; // y0
+    fHelix[1] = x[2]; // z0
+    //
+    //fHelix[6] = xc;
+    //fHelix[7] = yc;
+    //fHelix[8] = TMath::Abs(rc);
+    //
+    fHelix[5] = xc;
+    fHelix[0] = yc;
+
+    fHelix[6] = pt;
+    fHelix[7] = p[2];
+    //
+    if(TMath::Abs(p[1]) < TMath::Abs(p[0]))
+    {
+        fHelix[2] = TMath::ASin(p[1] / pt);
+        //Helix[2]=asinf(p[1]/pt);
+        if (charge * yc < charge * x[1])
+            fHelix[2] = TMath::Pi() - fHelix[2];
+    } else
+    {
+        fHelix[2] = TMath::ACos(p[0] / pt);
+        //fHelix[2]=acosf(p[0]/pt);
+        if (charge * xc > charge * x[0])
+            fHelix[2] = -fHelix[2];
+    }
+
+    return fHelix;
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+Int_t Ali_TRD_ST_Analyze::Draw_MC_event(Long64_t i_event, Int_t graphics)
+{
+    // Draw Monte Carlo tracks
+    printf("Ali_TRD_ST_Analyze::Draw_MC_event \n");
+    UShort_t NumTracks            = TRD_ST_Event ->getMCparticles(); // number of tracks in this event
+    Int_t arr_index_daughters[5] = {-1};
+    for(Int_t i_track = 0; i_track < NumTracks; i_track++)
+    {
+        TRD_MC_Track = TRD_ST_Event ->getMCparticle(i_track);
+
+        TVector3       TV3_MC_particle_vertex = TRD_MC_Track ->get_TV3_particle_vertex();
+        TLorentzVector TLV_MC_particle        = TRD_MC_Track ->get_TLV_particle();
+        Int_t          MC_PDG_code            = TRD_MC_Track ->get_PDGcode();
+        Int_t          MC_index_mother        = TRD_MC_Track ->get_index_mother();
+        Int_t          MC_index_particle      = TRD_MC_Track ->get_index_particle();
+        Int_t          MC_N_daughters         = TRD_MC_Track ->get_N_daughters();
+
+        for(Int_t i_daughter = 0; i_daughter < MC_N_daughters; i_daughter++)
+        {
+            arr_index_daughters[i_daughter] = TRD_MC_Track ->get_arr_index_daughters(i_daughter);
+        }
+
+        //Double_t charge = TMath::Sign(1.0,MC_PDG_code);
+        Double_t charge = 1.0;
+        if(MC_PDG_code == 111) charge = 0.0; // pi0
+        if(MC_PDG_code == 211) charge = 1.0; // pi+
+        if(MC_PDG_code == -211) charge = -1.0; // pi-
+        if(MC_PDG_code == 22) charge = 0.0; // gamma
+        if(MC_PDG_code == 2212) charge = 1.0; // proton
+        if(MC_PDG_code == -2212) charge = -1.0; // anti-proton
+        if(MC_PDG_code == 2112) charge = 0.0; // neutron
+        if(MC_PDG_code == 321) charge = 1.0; // K+
+        if(MC_PDG_code == -321) charge = -1.0; // K-
+
+
+        vector<Double_t> fhelix = Get_Helix_params_from_kine(TLV_MC_particle,TV3_MC_particle_vertex,charge);
+        printf("i_MC_track: %d, PDG code: %d, momentum: %4.3f \n",i_track,MC_PDG_code,TLV_MC_particle.P());
+
+    }
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
 Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets, Double_t track_path)
 {
     printf("Ali_TRD_ST_Analyze::Draw_event \n");
