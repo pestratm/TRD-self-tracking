@@ -1919,6 +1919,8 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                         if(AP_value < AP_cut_value && dot_product_dir_vertex > 0.7)
                         {
                             Double_t dca_min  = 999.0;
+                            Double_t dca_min_xy  = 999.0;
+                            Double_t dca_min_z  = 999.0;
                             Double_t path_min = -999.0;
                             Int_t    i_track_min = -1;
 
