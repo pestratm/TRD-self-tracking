@@ -100,6 +100,7 @@ Ali_TRD_ST_Analyze::Ali_TRD_ST_Analyze(TString out_dir, TString out_file_name, I
     TRD_ST_Tracklet_out   = new Ali_TRD_ST_Tracklets();
     TRD_ST_TPC_Track_out  = new Ali_TRD_ST_TPC_Track();
     TRD_ST_Event_out      = new Ali_TRD_ST_Event();
+    TRD_ST_TPC_Track_MC   = new Ali_TRD_ST_TPC_Track();
 
     //TRD self tracking output data containers for photons and nuclear interactions
     TRD_Self_Event = new Ali_TRD_Self_Event();
@@ -3413,10 +3414,174 @@ vector<Double_t>  Ali_TRD_ST_Analyze::Get_Helix_params_from_kine(TLorentzVector 
 
 
 //----------------------------------------------------------------------------------------
-Int_t Ali_TRD_ST_Analyze::Draw_MC_event(Long64_t i_event, Int_t graphics)
+void Ali_TRD_ST_Analyze::Draw_MC_track(Int_t i_track, Int_t color, Double_t line_width, Double_t max_path)
+{
+    //printf("Ali_TRD_ST_Analyze::Draw_MC_track \n");
+
+    Double_t track_pos[3];
+    Double_t radius_helix;
+
+
+#if defined(USEEVE)
+    vec_TPL3D_helix_MC.resize(i_track+1);
+    vec_TPL3D_helix_MC[i_track] = new TEveLine();
+#endif
+    //for(Int_t i_param=0;i_param<6;i_param++)
+    //    cout<<TRD_ST_TPC_Track_MC ->getHelix_param(i_param)<<" ";
+    //cout<<endl;
+    for(Double_t track_path = 0; track_path < max_path; track_path += 1.0)
+    {
+        TRD_ST_TPC_Track_MC ->Evaluate(track_path,track_pos);
+        radius_helix = TMath::Sqrt( TMath::Power(track_pos[0],2) + TMath::Power(track_pos[1],2) );
+        if(radius_helix > 370.0) break;
+        if(fabs(track_pos[2]) > 360.0) break;
+#if defined(USEEVE)
+        vec_TPL3D_helix_MC[i_track]        ->SetNextPoint(track_pos[0],track_pos[1],track_pos[2]);
+#endif
+        //if(i_track == 0) printf("track_path: %4.3f, pos: {%4.2f, %4.2f, %4.2f} \n",track_path,track_pos[0],track_pos[1],track_pos[2]);
+    }
+
+#if defined(USEEVE)
+    HistName = "track ";
+    HistName += i_track;
+    vec_TPL3D_helix_MC[i_track]    ->SetName(HistName.Data());
+    vec_TPL3D_helix_MC[i_track]    ->SetLineStyle(1);
+    vec_TPL3D_helix_MC[i_track]    ->SetLineWidth(line_width);
+    vec_TPL3D_helix_MC[i_track]    ->SetMainColor(color);
+    vec_TPL3D_helix_MC[i_track]    ->SetMainAlpha(1.0);
+
+    gEve->AddElement(vec_TPL3D_helix_MC[i_track]);
+#endif
+
+    //printf("%s Ali_TRD_ST_Analyze::Draw_TPC_track, i_track: %d %s \n",KRED,i_track,KNRM,1000.0);
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Scan_MC_Event(Int_t graphics)
+{
+    // Scan Monte Carlo event for interesting topology
+    //printf("Ali_TRD_ST_Analyze::Scan_MC_Event \n");
+    UShort_t NumTracks            = TRD_ST_Event ->getMCparticles(); // number of tracks in this event
+    Int_t arr_index_daughters_pi0[5]   = {-1};
+    Int_t arr_index_daughters_gamma[5] = {-1};
+    Int_t i_MC_draw_track = 0;
+
+    //Ali_MC_particle*      TRD_MC_Track_pi0;
+    //Ali_MC_particle*      TRD_MC_Track_gammas[2];
+    //Ali_MC_particle*      TRD_MC_Track_electrons[4];
+
+    Int_t N_pi0_found = 0;
+    for(Int_t i_track_A = 0; i_track_A < NumTracks; i_track_A++)
+    {
+        TRD_MC_Track_pi0 = TRD_ST_Event ->getMCparticle(i_track_A);
+
+        TVector3       TV3_MC_particle_vertex = TRD_MC_Track_pi0 ->get_TV3_particle_vertex();
+        TLorentzVector TLV_MC_particle        = TRD_MC_Track_pi0 ->get_TLV_particle();
+        Int_t          MC_PDG_code            = TRD_MC_Track_pi0 ->get_PDGcode();
+        Int_t          MC_index_mother        = TRD_MC_Track_pi0 ->get_index_mother();
+        Int_t          MC_index_particle      = TRD_MC_Track_pi0 ->get_index_particle();
+        Int_t          MC_N_daughters         = TRD_MC_Track_pi0 ->get_N_daughters();
+
+        if(MC_PDG_code == 111 && fabs(TLV_MC_particle.Eta()) < 0.82) // pi0
+        {
+            printf(" \n");
+            printf("------------------------- \n");
+            printf("pi0 found, MC_index_particle: %d, N_daughters: %d \n",MC_index_particle,MC_N_daughters);
+            //if(N_pi0_found > 0) break;
+            N_pi0_found++;
+            if(MC_N_daughters == 2) // two gammas
+            {
+                for(Int_t i_daughter = 0; i_daughter < MC_N_daughters; i_daughter++)
+                {
+                    arr_index_daughters_pi0[i_daughter] = TRD_MC_Track_pi0 ->get_arr_index_daughters(i_daughter);
+                }
+
+                Int_t MC_PDG_code_gammas[2];
+                for(Int_t i_gamma = 0; i_gamma < 2; i_gamma++)
+                {
+                    for(Int_t i_track_scan = 0; i_track_scan < NumTracks; i_track_scan++)
+                    {
+                        TRD_MC_Track_gammas[i_gamma] = TRD_ST_Event ->getMCparticle(i_track_scan);
+                        Int_t MC_index_particle_scan =  TRD_MC_Track_gammas[i_gamma]->get_index_particle();
+                        if(MC_index_particle_scan == arr_index_daughters_pi0[i_gamma])
+                        {
+                            MC_PDG_code_gammas[i_gamma] =  TRD_MC_Track_gammas[i_gamma]->get_PDGcode();
+                            printf("  -> i_gamma: %d, MC code: %d \n",i_gamma,MC_PDG_code_gammas[i_gamma]);
+                            if(MC_PDG_code_gammas[i_gamma] == 22)
+                            {
+                                printf("   --> Gamma found, i_gamma: %d, PDG code: %d \n",i_gamma,MC_PDG_code_gammas[i_gamma]);
+                                Int_t MC_N_daughters_gamma =  TRD_MC_Track_gammas[i_gamma]->get_N_daughters();
+                                if(MC_N_daughters_gamma == 2) // electron and positron
+                                {
+                                    for(Int_t i_daughter_gamma = 0; i_daughter_gamma < MC_N_daughters_gamma; i_daughter_gamma++)
+                                    {
+                                        arr_index_daughters_gamma[i_daughter_gamma] =  TRD_MC_Track_gammas[i_gamma]->get_arr_index_daughters(i_daughter_gamma);
+                                    }
+
+                                    Int_t MC_PDG_code_electrons[2];
+                                    for(Int_t i_electron = 0; i_electron < 2; i_electron++)
+                                    {
+                                        for(Int_t i_track_scanB = 0; i_track_scanB < NumTracks; i_track_scanB++)
+                                        {
+                                            TRD_MC_Track_electrons[i_electron+2*i_gamma] = TRD_ST_Event ->getMCparticle(i_track_scanB);
+                                            Int_t MC_index_particle_scanB =  TRD_MC_Track_electrons[i_electron+2*i_gamma]->get_index_particle();
+                                            if(MC_index_particle_scanB == arr_index_daughters_gamma[i_electron])
+                                            {
+                                                MC_PDG_code_electrons[i_electron] =  TRD_MC_Track_electrons[i_electron+2*i_gamma]->get_PDGcode();
+                                                if(MC_PDG_code_electrons[i_electron] == 11 || MC_PDG_code_electrons[i_electron] == -11) // electron or positron
+                                                {
+                                                    TLV_MC_particle        = TRD_MC_Track_electrons[i_electron+2*i_gamma]->get_TLV_particle();
+                                                    TV3_MC_particle_vertex = TRD_MC_Track_electrons[i_electron+2*i_gamma]->get_TV3_particle_vertex();
+                                                    Double_t radius = TMath::Sqrt( TMath::Power(TV3_MC_particle_vertex[0],2) + TMath::Power(TV3_MC_particle_vertex[1],2) );
+                                                    printf("      --> Electron/positron found, i_electron: %d, PDG code: %d, P: %4.3f GeV/c, eta: %4.3f, radius: %4.3f \n",i_electron,MC_PDG_code_electrons[i_electron],TLV_MC_particle.P(),TLV_MC_particle.Eta(),radius);
+                                                    if(TLV_MC_particle.P() > 0.002)
+                                                    {
+                                                        Double_t charge = 1.0;
+                                                        if(MC_PDG_code_electrons[i_electron] == 11) charge = -1.0;
+                                                        vector<Double_t> fhelix = Get_Helix_params_from_kine(TLV_MC_particle,TV3_MC_particle_vertex,-1.0*charge);
+                                                        TRD_ST_TPC_Track_MC ->setHelix(fhelix[0],fhelix[1],fhelix[2],fhelix[3],fhelix[4],fhelix[5],fhelix[6],fhelix[7],0.0);
+#if defined(USEEVE)
+                                                        if(graphics)
+                                                        {
+                                                            //if(i_MC_draw_track == 0)
+                                                            Draw_MC_track(i_MC_draw_track,kMagenta,3,500.0);
+                                                            i_MC_draw_track++;
+                                                        }
+#endif
+                                                    }
+
+
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+            }
+
+            printf("------------------------- \n");
+        } // end of pi0 found
+
+    }
+}
+//----------------------------------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------------------------------
+void Ali_TRD_ST_Analyze::Draw_MC_event(Long64_t i_event, Int_t graphics)
 {
     // Draw Monte Carlo tracks
-    printf("Ali_TRD_ST_Analyze::Draw_MC_event \n");
+    //printf("Ali_TRD_ST_Analyze::Draw_MC_event \n");
     UShort_t NumTracks            = TRD_ST_Event ->getMCparticles(); // number of tracks in this event
     Int_t arr_index_daughters[5] = {-1};
     for(Int_t i_track = 0; i_track < NumTracks; i_track++)
@@ -3438,6 +3603,8 @@ Int_t Ali_TRD_ST_Analyze::Draw_MC_event(Long64_t i_event, Int_t graphics)
         //Double_t charge = TMath::Sign(1.0,MC_PDG_code);
         Double_t charge = 1.0;
         if(MC_PDG_code == 111) charge = 0.0; // pi0
+        if(MC_PDG_code == 11) charge = -1.0; // e-
+        if(MC_PDG_code == -11) charge = -1.0; // e+
         if(MC_PDG_code == 211) charge = 1.0; // pi+
         if(MC_PDG_code == -211) charge = -1.0; // pi-
         if(MC_PDG_code == 22) charge = 0.0; // gamma
@@ -3448,10 +3615,39 @@ Int_t Ali_TRD_ST_Analyze::Draw_MC_event(Long64_t i_event, Int_t graphics)
         if(MC_PDG_code == -321) charge = -1.0; // K-
 
 
-        vector<Double_t> fhelix = Get_Helix_params_from_kine(TLV_MC_particle,TV3_MC_particle_vertex,charge);
-        printf("i_MC_track: %d, PDG code: %d, momentum: %4.3f \n",i_track,MC_PDG_code,TLV_MC_particle.P());
+        if(
+           (charge > 0.0 || charge < 0.0)
+           && TLV_MC_particle.P() > 0.0
+           && fabs(TLV_MC_particle.Eta()) < 0.85
+          )
+        {
+            vector<Double_t> fhelix = Get_Helix_params_from_kine(TLV_MC_particle,TV3_MC_particle_vertex,-1.0*charge);
+            TRD_ST_TPC_Track_MC ->setHelix(fhelix[0],fhelix[1],fhelix[2],fhelix[3],fhelix[4],fhelix[5],fhelix[6],fhelix[7],0.0);
+#if defined(USEEVE)
+            if(graphics)
+            {
+                if(TLV_MC_particle.P() > 0.2 &&
+                   (
+                    //MC_PDG_code == 11 || MC_PDG_code == -11 ||
+                    MC_PDG_code == 211 || MC_PDG_code == -211
+                    //|| MC_PDG_code == 2212 || MC_PDG_code == -2212
+                    //|| MC_PDG_code == 321 || MC_PDG_code == -321
+                   ))
+                {
+                    //if(i_MC_draw_track == 0)
+                    Draw_MC_track(i_MC_draw_track,kYellow,2,500.0);
+                    i_MC_draw_track++;
+                }
+            }
+#endif
+        }
+        //printf("i_MC_track: %d, PDG code: %d, momentum: %4.3f \n",i_track,MC_PDG_code,TLV_MC_particle.P());
 
     }
+
+#if defined(USEEVE)
+    if(graphics) gEve->Redraw3D(kTRUE);
+#endif
 }
 //----------------------------------------------------------------------------------------
 
@@ -3508,7 +3704,9 @@ Int_t Ali_TRD_ST_Analyze::Draw_event(Long64_t i_event, Int_t graphics, Int_t dra
         if(momentum < 0.3) continue;
 
 
-        if(graphics && draw_tracks) Draw_TPC_track(i_track,track_color,3,track_path);
+        if(graphics && draw_tracks
+           //&& fabs(nsigma_TPC_pi) < 0.1
+          ) Draw_TPC_track(i_track,track_color,3,track_path);
     }
 
     //--------------------------------------------------

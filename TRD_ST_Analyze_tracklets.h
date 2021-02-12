@@ -96,6 +96,10 @@ private:
     Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track;
     Ali_TRD_ST_Event*     TRD_ST_Event;
     Ali_MC_particle*      TRD_MC_Track;
+    Ali_MC_particle*      TRD_MC_Track_pi0;
+    Ali_MC_particle*      TRD_MC_Track_gammas[2];
+    Ali_MC_particle*      TRD_MC_Track_electrons[4];
+    Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track_MC;
 
     Ali_TRD_ST_Tracklets* TRD_ST_Tracklet_out;
     Ali_TRD_ST_TPC_Track* TRD_ST_TPC_Track_out;
@@ -165,6 +169,8 @@ private:
     vector<TEveLine*> vec_TPL3D_helix_kalman;
     vector<TEveLine*> vec_TPL3D_helix_kalman_inner;
     vector<TEveLine*> vec_TPL3D_helix_kalman_hull;
+
+    vector<TEveLine*> vec_TPL3D_helix_MC;
 
     vector< vector<TEveLine*> > vec_TEveLine_tracklets;
     vector< vector<TEveLine*> > vec_TEveLine_tracklets_match;
@@ -259,6 +265,8 @@ private:
     vector <vector <Double_t>> vec_trd_TRD_pp_geom;
     vector<Int_t> vec_flag_good_photon_track;
 
+    Int_t i_MC_draw_track = 0;
+
     //TFile* out_gain;
 
 public:
@@ -267,9 +275,10 @@ public:
 
     void Init_tree(TString SEList);
     Int_t Loop_event(Long64_t i_event, Int_t graphics);
+    void Scan_MC_Event(Int_t graphics);
     Int_t Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets, Double_t track_path);
     vector<Double_t> Get_Helix_params_from_kine(TLorentzVector TLV_particle, TVector3 TV3_vertex, Double_t charge);
-    Int_t Draw_MC_event(Long64_t i_event, Int_t graphics);
+    void Draw_MC_event(Long64_t i_event, Int_t graphics);
     void Animate_beams(Double_t beam_path);
     Int_t Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window, Int_t graphics);
     void Draw_hist_TPC_tracklet_diffs();
@@ -304,6 +313,7 @@ public:
     void Plot_AP();
     void Plot_pT_TPC_vs_Kalman();
     void Draw_TPC_track(Int_t i_track, Int_t color, Double_t line_width, Double_t max_path);
+    void Draw_MC_track(Int_t i_track, Int_t color, Double_t line_width, Double_t max_path);
     TH1D* get_layer_radii_hist() {return h_layer_radii_det;}
     Long64_t get_N_Events() {return N_Events;}
     void set_input_lists(TString input_dir_lists_in) {input_dir_lists = input_dir_lists_in;}
