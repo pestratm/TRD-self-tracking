@@ -50,7 +50,7 @@ public:
         fDigitsInputFile(0),
 	fDigitsOutputFileName(""), fDigitsOutputFile(0),
         fMCEvent(0),fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),
-        TRD_ST_Tracklet(0),TRD_ST_MC_particle(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0),fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),N_time_bins(24),
+        TRD_ST_Tracklet(0),TRD_ST_MC_particle(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0),fEventNoInFile(-2), N_good_events(0), N_total_events(0), fDigitsLoadedFlag(kFALSE),N_time_bins(24),
         aliHelix(),fListOfHistos(),fTree(),fPIDResponse(),EsdTrackCuts(),TV3_SVD_tracklet_offset(),TV3_SVD_tracklet_dir(),
         vec_self_tracklet_fit_points(),vec_ADC_val(),vec_TV3_TRD_center_offset(),vec_TV3_TRD_center(),TV3_trkl_offset(),TV3_trkl_dir()
     {
@@ -128,7 +128,8 @@ public:
         TTree* Tree_TRD_ST_Event;
 
 	Int_t fEventNoInFile;
-	Int_t N_good_events;
+        Int_t N_good_events;
+        Int_t N_total_events;
         Int_t fDigitsLoadedFlag;
         Int_t N_time_bins;
 

@@ -11,6 +11,11 @@ class AliAnalysisAlien;
 
 
 #if ROOT_VERSION_CODE >= ROOT_VERSION(6,00,0)
+#include "AliMCEventHandler.h"
+#include "AliESDInputHandler.h"
+#include "AliAODInputHandler.h"
+#include "AliAnalysisAlien.h"
+#include "AliAnalysisManager.h"
 #include "Ali_make_tracklets_from_digits.h"
 #endif
 //#include "Ali_make_tracklets_from_digits.cxx"
@@ -32,7 +37,7 @@ void runGridESD_make_tracklets()
 
     TString fname="TRD_tracklets";
 
-    Int_t beamtime = 2; // 0: p-Pb 2016, 1: Pb-Pb 2018, 2: p-p simulation
+    Int_t beamtime = 4; // 0: p-Pb 2016, 1: Pb-Pb 2018, 2: p-p simulation
 
     Bool_t      isMC=kFALSE;                                  //Monte Carlo or "real" data
     Int_t sub=702;
@@ -53,6 +58,17 @@ void runGridESD_make_tracklets()
         isMC=kTRUE;
         sRunPeriod = "LHC18r";
     }
+    if(beamtime == 3) // p-Pb simulation
+    {
+        sub = 910;
+        isMC=kTRUE;
+        sRunPeriod = "LHC16q";
+    }
+    if(beamtime == 4) // p-Pb 2016, one full run
+    {
+        sub = 7021;
+        sRunPeriod = "LHC16q";
+    }
 
 
 
@@ -63,7 +79,7 @@ void runGridESD_make_tracklets()
     const char *cGridMode = "full";                          // grid mode; test, full or terminate (for merging)
     Bool_t useJDL = kTRUE;
     const char *cTaskName = "TRD_Make_Tracklets"; // name of the task
-    Bool_t local = kTRUE;                                    // kTRUE for local analysis, kFALSE for grid analysis
+    Bool_t local = kFALSE;                                    // kTRUE for local analysis, kFALSE for grid analysis
 
 
     /// since we will compile a class, tell root where to look for headers
@@ -73,6 +89,7 @@ void runGridESD_make_tracklets()
 #else
     gROOT->ProcessLine(".include $ROOTSYS/include");
     gROOT->ProcessLine(".include $ALICE_ROOT/include");
+    gROOT->ProcessLine(".include $ALICE_PHYSICS/include");
 #endif
 
     /// get beam type (default: pp)
@@ -91,8 +108,29 @@ void runGridESD_make_tracklets()
     //mgr->SetInputEventHandler(aodH);
 
     /// centrality selection (multiplicity task)
-    TMacro multSelection(gSystem->ExpandPathName("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C"));
-    AliMultSelectionTask* multSelectionTask = reinterpret_cast<AliMultSelectionTask*>(multSelection.Exec());
+    //TMacro multSelection(gSystem->ExpandPathName("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C"));
+    //AliMultSelectionTask* multSelectionTask = reinterpret_cast<AliMultSelectionTask*>(multSelection.Exec());
+
+
+    //---------------------------------------------------------------
+    // Centrality
+    //gROOT->LoadMacro("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C");
+    //AddTaskMultSelection();
+    //---------------------------------------------------------------
+
+
+    // -----------------------------------------
+    //               MULT SELECTION
+    // -----------------------------------------
+    //#if !defined (__CINT__) || defined (__CLING__)
+    //AliMultSelectionTask *multSelTask=reinterpret_cast<AliMultSelectionTask*>(gInterpreter->ExecuteMacro("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C()"));
+    //#else
+    //gROOT->LoadMacro("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C");
+    //AddTaskMultSelection();
+    //#endif
+
+
+
 
     // load the macro and add the task
     TMacro PIDadd(gSystem->ExpandPathName("$ALICE_ROOT/ANALYSIS/macros/AddTaskPIDResponse.C"));
@@ -168,6 +206,10 @@ void runGridESD_make_tracklets()
             {
                 pChain->Add("/misc/alidata131/alice_u/oschmidt/condor/sim_pp/chunk_982/AliESDs.root");
             }
+            if(sub == 910)
+            {
+                pChain->Add("/misc/alidata100/alice_u/kroesen/tmp/AliESDs.root");
+            }
         }
 
         mgr->StartAnalysis("local",pChain);
@@ -228,7 +270,26 @@ void runGridESD_make_tracklets()
                 265422, 265421, 265420, 265419, 265388, 265387, 265385, 265384, 265383, 265381, 265378, 265377,
                 265344, 265343, 265342, 265339, 265336, 265334, 265332, 265309}; // 31 runs in total
 
-                for(Int_t irun = 26; irun < 27; irun++)
+                for(Int_t irun = 0; irun < 1; irun++)
+                {
+                    Printf("%d %d",irun,runnumbers[irun]);
+                    alienHandler->AddRunNumber(runnumbers[irun]);
+                }
+            }
+            if(sub == 7021)
+            {
+                // Full production for p-Pb, only one run: 265501
+                alienHandler->SetGridDataDir("/alice/data/2016/LHC16q"); // OK
+                alienHandler->SetGridWorkingDir(Form("%s/sub%d/",fname.Data(),sub)); // No idea
+                alienHandler->SetDataPattern("*pass2_TRD/*/AliESDs.root"); // OK
+                alienHandler->SetAnalysisMacro(Form("TaskTrackAna%d.C",sub));
+                alienHandler->SetExecutable(Form("TaskTrackAna%d.sh",sub));
+                alienHandler->SetJDLName(Form("TaskTrackAna%d.jdl",sub));
+                alienHandler->SetRunPrefix("000");
+
+                Int_t runnumbers[] = {265501}; // 1 run in total
+
+                for(Int_t irun = 0; irun < 1; irun++)
                 {
                     Printf("%d %d",irun,runnumbers[irun]);
                     alienHandler->AddRunNumber(runnumbers[irun]);
@@ -261,7 +322,7 @@ void runGridESD_make_tracklets()
         // number of files per subjob
         alienHandler->SetSplitMaxInputFileNumber(50); //40
         // specify how many seconds your job may take
-        alienHandler->SetTTL(39999);
+        alienHandler->SetTTL(99999); // 39999
 
         alienHandler->SetOutputToRunNo(kTRUE);
         alienHandler->SetKeepLogs(kTRUE);

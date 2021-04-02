@@ -160,7 +160,7 @@ fDigitsInputFileName("TRD.Digits.root"),
 fDigitsInputFile(0),
 fDigitsOutputFileName(""), fDigitsOutputFile(0),
 fMCEvent(0),fDigMan(0),fGeo(0),AS_Event(0),AS_Track(0),AS_Tracklet(0),AS_offline_Tracklet(0),AS_Digit(0),Tree_AS_Event(0),
-TRD_ST_Tracklet(0),TRD_ST_MC_particle(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0), fEventNoInFile(-2), N_good_events(0), fDigitsLoadedFlag(kFALSE),N_time_bins(24),
+TRD_ST_Tracklet(0),TRD_ST_MC_particle(0),TRD_ST_TPC_Track(0),TRD_ST_Event(0),Tree_TRD_ST_Event(0), fEventNoInFile(-2), N_good_events(0), N_total_events(0), fDigitsLoadedFlag(kFALSE),N_time_bins(24),
 fListOfHistos(0x0),fTree(0x0), fPIDResponse(0), EsdTrackCuts(0),aliHelix(),TV3_SVD_tracklet_offset(),TV3_SVD_tracklet_dir(),
 vec_self_tracklet_fit_points(),vec_ADC_val(),vec_TV3_TRD_center_offset(),vec_TV3_TRD_center(),TV3_trkl_offset(),TV3_trkl_dir()
 {
@@ -226,7 +226,21 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
 
 
     if(!EsdTrackCuts) EsdTrackCuts = new AliESDtrackCuts();
-    if(!fGeo) fGeo = new AliTRDgeometry;
+
+
+    //-------------------------
+    // From Ruben 11.03.2021
+    auto man = AliCDBManager::Instance();
+    man->SetDefaultStorage("local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB");
+    man->SetRun(99999999);
+    AliGeomManager::LoadGeometry(0);
+    AliGeomManager::ApplyAlignObjsFromCDB("TRD");
+    if(!fGeo) fGeo = new AliTRDgeometry();
+    //-------------------------
+
+
+
+    //if(!fGeo) fGeo = new AliTRDgeometry;
     if(!fDigMan)
     {
         fDigMan = new AliTRDdigitsManager;
@@ -567,6 +581,10 @@ Bool_t Ali_make_tracklets_from_digits::UserNotify()
         cout << "Alignment file from database loaded" << endl;
     }
 
+
+
+
+
     cout << "Open calibration file" << endl;
     //TRD_calibration_file_AA = TFile::Open("alien::///alice/cern.ch/user/a/aschmah/Data/TRD_Calib_vDfit_and_LAfit_3456.root");
     TRD_calibration_file_AA = fLocalMode ? TFile::Open("Data/TRD_Calib_vDfit_and_LAfit_23_11_2020.root ") : TFile::Open("alien::///alice/cern.ch/user/a/aschmah/Data/TRD_Calib_vDfit_and_LAfit_23_11_2020.root ");
@@ -740,6 +758,10 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 	return;
     }
 
+    N_total_events++;
+    Int_t N_batch = 9; // 9,8,7,6,5,4,3,2,1
+    if(!((N_total_events+N_batch)%9 == 0)) return; // take  only every 9th event
+
     //-----------------------------------------------------------------
     // Check if TRD digits (raw data) are available for this ESD event
     if(!ReadDigits()) return;
@@ -757,53 +779,57 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     //-----------------------------------------------------------------
 
 
-
     //-----------------------------------------------------------------
     // Monte Carlo
     // https://alice-doc.github.io/alice-analysis-tutorial/analysis/MC.html
     TRD_ST_Event ->clearMCparticleList();
     fMCEvent = MCEvent();
-    Int_t N_MC_tracks = fMCEvent->GetNumberOfTracks();
-    //printf("N_MC_track: %d \n",N_MC_tracks);
-    for(Int_t i_MC_track = 0; i_MC_track < N_MC_tracks; i_MC_track++)
+    if(fMCEvent)
     {
-        TParticle* particle = (TParticle*)fMCEvent->Particle(i_MC_track);
-        Int_t    MC_PDG_code = particle ->GetPdgCode();
-        if(!(MC_PDG_code == 990 || MC_PDG_code == 9990 || MC_PDG_code == 110 || MC_PDG_code == 41
-             || MC_PDG_code == 41 || MC_PDG_code == 39))
+        Int_t N_MC_tracks = fMCEvent->GetNumberOfTracks();
+        //printf("N_MC_track: %d \n",N_MC_tracks);
+        TRD_ST_Event ->set_flag_Data_MC(0);
+        if(N_MC_tracks > 0) TRD_ST_Event ->set_flag_Data_MC(1);
+        for(Int_t i_MC_track = 0; i_MC_track < N_MC_tracks; i_MC_track++)
         {
-            Double_t MC_PDGmass       = particle ->GetMass();
-            Double_t MC_Px            = particle ->Px();
-            Double_t MC_Py            = particle ->Py();
-            Double_t MC_Pz            = particle ->Pz();
-            Double_t MC_Vx            = particle ->Vx();
-            Double_t MC_Vy            = particle ->Vy();
-            Double_t MC_Vz            = particle ->Vz();
-
-
-            Int_t    MC_First_Mother  = particle ->GetFirstMother();
-            Int_t    MC_Second_Mother = particle ->GetSecondMother();
-            Int_t    MC_N_daughters   = particle ->GetNDaughters();
-         
-            TVector3 TV3_MC_particle_vertex(MC_Vx,MC_Vy,MC_Vz);
-            TLorentzVector TLV_MC_particle;
-            TLV_MC_particle.SetXYZM(MC_Px,MC_Py,MC_Pz,MC_PDGmass);
-
-            //printf("i_MC_track: %d, PDG_code: %d, mass: %4.3f, momentum: {%4.3f, %4.3f, %4.3f}, vertex: {%4.3f, %4.3f, %4.3f}, 1st mother: %d, 2nd mother: %d, N_dauthers: %d \n",i_MC_track,MC_PDG_code,MC_PDGmass,MC_Px,MC_Py,MC_Pz,MC_Vx,MC_Vy,MC_Vz,MC_First_Mother,MC_Second_Mother,MC_N_daughters);
-
-            TRD_ST_MC_particle = TRD_ST_Event ->createMCparticle(); // Monte Carlo particles
-            TRD_ST_MC_particle ->set_TV3_particle_vertex(TV3_MC_particle_vertex);
-            TRD_ST_MC_particle ->set_TLV_particle(TLV_MC_particle);
-            TRD_ST_MC_particle ->set_PDGcode(MC_PDG_code);
-            TRD_ST_MC_particle ->set_index_mother(MC_First_Mother);
-            TRD_ST_MC_particle ->set_index_particle(i_MC_track);
-            TRD_ST_MC_particle ->set_N_daughters(MC_N_daughters);
-            for(Int_t i_daughter = 0; i_daughter < MC_N_daughters; i_daughter++)
+            TParticle* particle = (TParticle*)fMCEvent->Particle(i_MC_track);
+            Int_t    MC_PDG_code = particle ->GetPdgCode();
+            if(!(MC_PDG_code == 990 || MC_PDG_code == 9990 || MC_PDG_code == 110 || MC_PDG_code == 41
+                 || MC_PDG_code == 41 || MC_PDG_code == 39))
             {
-                TRD_ST_MC_particle ->set_arr_index_daughters(i_daughter,particle->GetDaughter(i_daughter));
+                Double_t MC_PDGmass       = particle ->GetMass();
+                Double_t MC_Px            = particle ->Px();
+                Double_t MC_Py            = particle ->Py();
+                Double_t MC_Pz            = particle ->Pz();
+                Double_t MC_Vx            = particle ->Vx();
+                Double_t MC_Vy            = particle ->Vy();
+                Double_t MC_Vz            = particle ->Vz();
+
+
+                Int_t    MC_First_Mother  = particle ->GetFirstMother();
+                Int_t    MC_Second_Mother = particle ->GetSecondMother();
+                Int_t    MC_N_daughters   = particle ->GetNDaughters();
+
+                TVector3 TV3_MC_particle_vertex(MC_Vx,MC_Vy,MC_Vz);
+                TLorentzVector TLV_MC_particle;
+                TLV_MC_particle.SetXYZM(MC_Px,MC_Py,MC_Pz,MC_PDGmass);
+
+                //printf("i_MC_track: %d, PDG_code: %d, mass: %4.3f, momentum: {%4.3f, %4.3f, %4.3f}, vertex: {%4.3f, %4.3f, %4.3f}, 1st mother: %d, 2nd mother: %d, N_daugthers: %d \n",i_MC_track,MC_PDG_code,MC_PDGmass,MC_Px,MC_Py,MC_Pz,MC_Vx,MC_Vy,MC_Vz,MC_First_Mother,MC_Second_Mother,MC_N_daughters);
+
+                TRD_ST_MC_particle = TRD_ST_Event ->createMCparticle(); // Monte Carlo particles
+                TRD_ST_MC_particle ->set_TV3_particle_vertex(TV3_MC_particle_vertex);
+                TRD_ST_MC_particle ->set_TLV_particle(TLV_MC_particle);
+                TRD_ST_MC_particle ->set_PDGcode(MC_PDG_code);
+                TRD_ST_MC_particle ->set_index_mother(MC_First_Mother);
+                TRD_ST_MC_particle ->set_index_particle(i_MC_track);
+                TRD_ST_MC_particle ->set_N_daughters(MC_N_daughters);
+                for(Int_t i_daughter = 0; i_daughter < MC_N_daughters; i_daughter++)
+                {
+                    if(MC_N_daughters > 4) break;
+                    TRD_ST_MC_particle ->set_arr_index_daughters(i_daughter,particle->GetDaughter(i_daughter));
+                }
+
             }
-
-
         }
     }
     //-----------------------------------------------------------------
@@ -860,6 +886,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     AS_Event ->setT0zVertex(T0zVertex);
     AS_Event ->setEventNumber(eventNumber);
 
+
     AliMultSelection *MultSelection = (AliMultSelection*) fESD->FindListObject("MultSelection");
     if(MultSelection)
     {
@@ -912,7 +939,6 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     //------------------------------------------
 
 
-
     //-----------------------------------------------------------------
     //cout << "" << endl;
     //cout << "" << endl;
@@ -923,7 +949,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 
 
     //-----------------------------------------------------------------
-    Double_t TRD_time_per_bin        = 0.1;   // 100 ns = 0.1 mus
+    Double_t TRD_time_per_bin        = 0.1;   // 100 ns = 0.1 mus, always constant, independent from number of time bins.
     Double_t TRD_drift_velocity      = 1.56;  // 1.56 cm/mus, this value is too high for p+Pb, database values are now used
     Double_t TPC_TRD_matching_window = 10.0;  // Matching window between TRD digits (pad position) and TPC track in cm
     Double_t TPC_min_radius_plot     = 114.0/2.0; // Minimum radius for TPC track to be plotted
@@ -946,16 +972,19 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     //printf("   ------------> TC_tofHits: \n");
     // AliCDBEntry->GetObject()->IsA()->GetName()   only root 5
     Int_t N_entries_TOF = TC_tofHits ->GetEntries();
-    Double_t TOF_R = ((AliESDTOFHit*)TC_tofHits ->First())->GetR();
-    //cout << "N_tracks: " << N_tracks <<  ", TC_tofHits: " << TC_tofHits << ", IsA: " << TC_tofHits ->First()->IsA()->GetName() << ", TOF_R: " << TOF_R << ", N_entries_TOF: " << N_entries_TOF << endl;
-    for(Int_t i_tof = 0; i_tof < N_entries_TOF; i_tof++)
+    if(N_entries_TOF > 0)
     {
-        Double_t TOF_Z       = ((AliESDTOFHit*)TC_tofHits->At(i_tof))->GetZ();
-        Int_t    TOF_channel = ((AliESDTOFHit*)TC_tofHits->At(i_tof))->GetTOFchannel();
-        Double_t TOF_time    = ((AliESDTOFHit*)TC_tofHits->At(i_tof))->GetTime();
-        //printf("i_tof: %d, TOF_Z: %4.3f, TOF_channel: %d, TOF_time: %d \n",i_tof,TOF_Z,TOF_channel,TOF_time);
+        Double_t TOF_R = ((AliESDTOFHit*)TC_tofHits ->First())->GetR();
+        //cout << "N_tracks: " << N_tracks <<  ", TC_tofHits: " << TC_tofHits << ", IsA: " << TC_tofHits ->First()->IsA()->GetName() << ", TOF_R: " << TOF_R << ", N_entries_TOF: " << N_entries_TOF << endl;
+        for(Int_t i_tof = 0; i_tof < N_entries_TOF; i_tof++)
+        {
+            Double_t TOF_Z       = ((AliESDTOFHit*)TC_tofHits->At(i_tof))->GetZ();
+            Int_t    TOF_channel = ((AliESDTOFHit*)TC_tofHits->At(i_tof))->GetTOFchannel();
+            Double_t TOF_time    = ((AliESDTOFHit*)TC_tofHits->At(i_tof))->GetTime();
+            //printf("i_tof: %d, TOF_Z: %4.3f, TOF_channel: %d, TOF_time: %d \n",i_tof,TOF_Z,TOF_channel,TOF_time);
+        }
     }
-    //printf(" \n");
+        //printf(" \n");
 
 
     //-----------------------------------------------------------------
@@ -1031,7 +1060,6 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     //-----------------------------------------------------------------
 
 
-
     Int_t N_good_tracks = 0;
 
 
@@ -1059,6 +1087,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     Double_t sum_full_ADC_digit_det[540];
     memset(sum_full_ADC_digit_det, 0, sizeof(sum_full_ADC_digit_det)); // for automatically-allocated arrays
 
+
     //cout << "Loop over all TRD detectors" << endl;
     for(Int_t i_det = 0; i_det < 540; i_det++)
     {
@@ -1085,7 +1114,11 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 
         //printf("i_det(start from 0): %d, vD_calib: %4.5f, LA_calib: %4.5f \n",i_det,vD_calib,LA_calib);
 
-	//printf("i_det: %d, N_columns: %d, N_rows: %d, N_times: %d, i_sector: %d, i_stack: %d, i_layer: %d \n",i_det,N_columns,N_rows,N_times,i_sector,i_stack,i_layer);
+        Float_t              TRD_time0                = fGeo         ->GetTime0(i_layer); // in cm
+        AliTRDpadPlane*      padplane                 = fGeo         ->GetPadPlane(i_det);
+
+        //printf(" \n");
+        //printf("i_det: %d, N_columns: %d, N_rows: %d, N_times: %d, i_sector: %d, i_stack: %d, i_layer: %d, TRD_time0: %4.3f \n",i_det,N_columns,N_rows,N_times,i_sector,i_stack,i_layer,TRD_time0);
 
 	if(N_columns > max_N_columns) max_N_columns = N_columns;
 	if(N_rows    > max_N_rows)    max_N_rows    = N_rows;
@@ -1128,8 +1161,6 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 
 			//----------------------
 			// Calculate global position for fired TRD pad
-			Float_t              TRD_time0                = fGeo         ->GetTime0(i_layer); // in cm
-                        AliTRDpadPlane*      padplane                 = fGeo         ->GetPadPlane(i_det);
 			Double_t             TRD_col_end              = padplane     ->GetColEnd();
 			Double_t             TRD_row_end              = padplane     ->GetRowEnd();            // fPadRow[fNrows-1] - fLengthOPad + fPadRowSMOffset;
 			Double_t             TRD_row_start            = padplane     ->GetRow0();              // fPadRow[0] + fPadRowSMOffset
@@ -1147,12 +1178,13 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
                         Double_t             TRD_drift_time           = ((Double_t)i_time)*TRD_time_per_bin*vD_calib; // 100 ns per time bin, 1.56 cm/mus drift velocity, 3 cm drift length at maximum
                         Double_t             TRD_drift_time_uncalib   = ((Double_t)i_time)*TRD_time_per_bin*1.56; // 100 ns per time bin, 1.56 cm/mus drift velocity, 3 cm drift length at maximum
 
-                        //printf("TRD_tim0: %4.3f, vdrift: %4.3f \n",TRD_time0,ChamberVdrift->GetValue(i_det));
+                        //printf("TRD_time0: %4.3f, vdrift: %4.3f \n",TRD_time0,ChamberVdrift->GetValue(i_det));
 
                         //Float_t lorentz_angle_corr_y = ChamberExB->GetValue(i_det)*TRD_drift_time;
                         Float_t lorentz_angle_corr_y = -TMath::Tan(LA_calib)*TRD_drift_time;
                         TRD_loc_Y -= Sign_magnetic_field*lorentz_angle_corr_y;
 
+#if  0
                         //printf("LA_calib: %4.3f, LA: %4.3f \n",LA_calib,ChamberExB->GetValue(i_det));
 
 			//cout << "i_time: " << i_time << ", magF: " << magF << ", x: " << TRD_drift_time << ", lorentz_angle_corr_y: " << lorentz_angle_corr_y << endl;
@@ -1164,40 +1196,121 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 			// Determine global position of TRD hit
                         //Double_t             loc[3]           = {TRD_time0 - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0};
                         //Double_t             loc_uncalib[3]   = {TRD_time0 - TRD_drift_time_uncalib,TRD_loc_Y_uncalib,TRD_row_pos - TRD_row_size/2.0};
-                        Double_t             loc_uncalib[3]  = {TRD_time0 - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0};
-                        Double_t             loc[3]          = {TRD_time0 - TRD_drift_time_uncalib,TRD_loc_Y_uncalib,TRD_row_pos - TRD_row_size/2.0};
+                        Double_t             loc_uncalib_old[3]  = {TRD_time0 - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0};
+                        Double_t             loc_old[3]          = {TRD_time0 - TRD_drift_time_uncalib,TRD_loc_Y_uncalib,TRD_row_pos - TRD_row_size/2.0};
 
-                        Double_t             glb[3]           = {0.0,0.0,0.0};
-                        Double_t             glb_uncalib[3]   = {0.0,0.0,0.0};
-                        fGeo ->RotateBack(i_det,loc,glb);
-                        fGeo ->RotateBack(i_det,loc_uncalib,glb_uncalib);
+                        Double_t             glb_old[3]           = {0.0,0.0,0.0};
+                        Double_t             glb_uncalib_old[3]   = {0.0,0.0,0.0};
+                        fGeo ->RotateBack(i_det,loc_old,glb_old);
+
+                        fGeo ->RotateBack(i_det,loc_uncalib_old,glb_uncalib_old);
 
 			// Apply alignment     
-			Double_t glb_align_sec[3];
-                        Double_t glb_align[3];
-                        Double_t glb_align_sec_uncalib[3];
-			Double_t glb_align_uncalib[3];
+			Double_t glb_align_sec_old[3];
+                        Double_t glb_align_old[3];
+                        Double_t glb_align_sec_uncalib_old[3];
+			Double_t glb_align_uncalib_old[3];
 
-                        TM_TRD_rotation_sector[i_sector].LocalToMaster(glb,glb_align_sec);
-                        TM_TRD_rotation_det[i_det].LocalToMaster(glb_align_sec,glb_align);
-                        TM_TRD_rotation_sector[i_sector].LocalToMaster(glb_uncalib,glb_align_sec_uncalib);
-                        TM_TRD_rotation_det[i_det].LocalToMaster(glb_align_sec_uncalib,glb_align_uncalib);
+                        TM_TRD_rotation_sector[i_sector].LocalToMaster(glb_old,glb_align_sec_old);
+                        TM_TRD_rotation_det[i_det].LocalToMaster(glb_align_sec_old,glb_align_old);
 
-			//glb_align[0] = glb[0];
-                        //glb_align[1] = glb[1];
-                        //glb_align[2] = glb[2];
+                        TM_TRD_rotation_sector[i_sector].LocalToMaster(glb_uncalib_old,glb_align_sec_uncalib_old);
+                        TM_TRD_rotation_det[i_det].LocalToMaster(glb_align_sec_uncalib_old,glb_align_uncalib_old);
+#endif
 
+#if 0
 			// Determine global pointing vector of TRD plane (vector perpendicular to plane in global system)  // here no changes
-			Double_t             loc_vec[3]           = {TRD_time0,0.0,(TRD_row_end + TRD_row_start)/2.0};
-			Double_t             glb_vec[3]           = {0.0,0.0,0.0};
-			fGeo ->RotateBack(i_det,loc_vec,glb_vec);
+                        Double_t             loc_vec_old[3]           = {TRD_time0,0.0,(TRD_row_end + TRD_row_start)/2.0};
+			Double_t             glb_vec_old[3]           = {0.0,0.0,0.0};
+			fGeo ->RotateBack(i_det,loc_vec_old,glb_vec_old);
 
 
 			// Apply alignment  // here no changes
-			Double_t glb_vec_align_sec[3];
-			Double_t glb_vec_align[3];
-			TM_TRD_rotation_sector[i_sector].LocalToMaster(glb_vec,glb_vec_align_sec);
-			TM_TRD_rotation_det[i_det].LocalToMaster(glb_vec_align_sec,glb_vec_align);
+			Double_t glb_vec_align_sec_old[3];
+			Double_t glb_vec_align_old[3];
+			TM_TRD_rotation_sector[i_sector].LocalToMaster(glb_vec_old,glb_vec_align_sec_old);
+                        TM_TRD_rotation_det[i_det].LocalToMaster(glb_vec_align_sec_old,glb_vec_align_old);
+                        //printf("      =====>>>>> loc_vec_old: {%4.3f,  %4.3f, %4.3f},  glb_vec_align_old: {%4.3f,  %4.3f, %4.3f}  \n",loc_vec_old[0],loc_vec_old[1],loc_vec_old[2],glb_vec_align_old[0],glb_vec_align_old[1],glb_vec_align_old[2]);
+#endif
+
+
+                        //-------------------------
+                        // calibrated, ignore names...
+                        Double_t loc_uncalib[3]  = {fGeo->AnodePos() - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0 - padplane->GetRowPos(padplane->GetNrows() / 2)};  // RS: I assume this this correct, depends e.g. on units of TRD_time0 and TRD_drift_time
+                        Double_t glb_uncalib[3];
+                        fGeo->GetClusterMatrix(i_det)->LocalToMaster(loc_uncalib,glb_uncalib); // this gives tracking coordinates, i.e. lab coordinates rotated to the sector frame
+                        Double_t glb_align_uncalib[3];
+                        fGeo->RotateBack(i_det,glb_uncalib,glb_align_uncalib);
+                        //printf("glb_align_uncalib: {%4.3f, %4.3f, %4.3f}, glb_align_uncalib_old: {%4.3f, %4.3f, %4.3f} \n",glb_align_uncalib[0],glb_align_uncalib[1],glb_align_uncalib[2],glb_align_uncalib_old[0],glb_align_uncalib_old[1],glb_align_uncalib_old[2]);
+
+                        // uncalibrated
+                        Double_t loc[3]  = {fGeo->AnodePos() - TRD_drift_time_uncalib,TRD_loc_Y_uncalib,TRD_row_pos - TRD_row_size/2.0 - padplane->GetRowPos(padplane->GetNrows() / 2)};  // RS: I assume this this correct, depends e.g. on units of TRD_time0 and TRD_drift_time
+                        Double_t glb[3];
+                        fGeo->GetClusterMatrix(i_det)->LocalToMaster(loc,glb); // this gives tracking coordinates, i.e. lab coordinates rotated to the sector frame
+                        Double_t glb_align[3];
+                        fGeo->RotateBack(i_det,glb,glb_align);
+                        //printf("glb_align: {%4.3f, %4.3f, %4.3f}, glb_align_old: {%4.3f, %4.3f, %4.3f} \n",glb_align[0],glb_align[1],glb_align[2],glb_align_old[0],glb_align_old[1],glb_align_old[2]);
+
+
+                        // Determine global pointing vector of TRD plane (vector perpendicular to plane in global system)  // here no changes
+                        Double_t             loc_vec[3]           = {fGeo->AnodePos(),0.0,(TRD_row_end + TRD_row_start)/2.0 - TRD_row_size/2.0 - padplane->GetRowPos(padplane->GetNrows() / 2)};
+                        Double_t             glb_vec[3]           = {0.0,0.0,0.0};
+                        fGeo->GetClusterMatrix(i_det)->LocalToMaster(loc_vec,glb_vec); // this gives tracking coordinates, i.e. lab coordinates rotated to the sector frame
+                        Double_t glb_vec_align[3];
+                        fGeo->RotateBack(i_det,glb_vec,glb_vec_align);
+
+
+                        //printf("      xxxxxxx>>>>> loc_vec: {%4.3f,  %4.3f, %4.3f},  glb_vec_align: {%4.3f,  %4.3f, %4.3f}  \n",loc_vec[0],loc_vec[1],loc_vec[2],glb_vec_align[0],glb_vec_align[1],glb_vec_align[2]);
+
+
+                        //printf("glb_vec_align: {%4.3f, %4.3f, %4.3f}, glb_vec_align_old: {%4.3f, %4.3f, %4.3f} \n",glb_vec_align[0],glb_vec_align[1],glb_vec_align[2],glb_vec_align_old[0],glb_vec_align_old[1],glb_vec_align_old[2]);
+                        //-------------------------
+
+
+
+
+#if 0
+                        //-------------------------
+                        // From Ruben 11.03.2021
+                        printf(" \n");
+                        Double_t loc_align[3]  = {fGeo->AnodePos() - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0 - padplane->GetRowPos(padplane->GetNrows() / 2)};  // RS: I assume this this correct, depends e.g. on units of TRD_time0 and TRD_drift_time
+                        printf("TRD_time0: %4.3f, TRD_drift_time: %4.3f, AnodePos: %4.3f \n",TRD_time0,TRD_drift_time,fGeo->AnodePos());
+                        printf("loc: {%4.3f, %4.3f, %4.3f} \n",loc_align[0],loc_align[1],loc_align[2]);
+
+                        Double_t glo_align[3];
+                        fGeo->GetClusterMatrix(i_det)->LocalToMaster(loc_align, glo_align); // this gives tracking coordinates, i.e. lab coordinates rotated to the sector frame
+                        printf("sec: {%4.3f, %4.3f, %4.3f} \n",glo_align[0],glo_align[1],glo_align[2]);
+
+                        // if you need really lab coordinates, do
+                        Double_t lab_align[3];
+                        fGeo->RotateBack(i_det,glo_align, lab_align);
+                        printf("glob: {%4.3f, %4.3f, %4.3f} \n",lab_align[0],lab_align[1],lab_align[2]);
+                        printf("My vec: {%4.3f, %4.3f, %4.3f}, Ruben's vec: {%4.3f, %4.3f, %4.3f} \n",glb_align_uncalib[0],glb_align_uncalib[1],glb_align_uncalib[2],lab_align[0],lab_align[1],lab_align[2]);
+                        //-------------------------
+#endif
+
+
+#if 0
+                        // https://github.com/alisw/AliRoot/blob/f194b2fa40d887b6160eb7366c9a3d5806d2e204/GPU/GPUTracking/TRDTracking/GPUTRDTracker.cxx#L553
+                        Double_t xTrkltDet[3] = {0.f};                                            // trklt position in chamber coordinates
+                        Double_t xTrkltSec[3] = {0.f};                                            // trklt position in sector coordinates
+                        Double_t xTrkltGlb[3] = {0.f};                                            // trklt position in global coordinates
+                        Double_t mRadialOffset = 0.0;
+                        xTrkltDet[0] = fGeo->AnodePos() + mRadialOffset; // just the offset point
+                        //xTrkltDet[1] = mTracklets[trkltIdx].GetY();
+                        xTrkltDet[1] = TRD_loc_Y;
+                        //xTrkltDet[2] = pp->GetRowPos(trkltZbin) - pp->GetRowSize(trkltZbin) / 2.f - pp->GetRowPos(pp->GetNrows() / 2);
+                        xTrkltDet[2] = padplane->GetRowPos(i_row) - padplane->GetRowSize(i_row) / 2.f - padplane->GetRowPos(padplane->GetNrows() / 2);
+                        //GPUInfo("Space point local %i: x=%f, y=%f, z=%f", trkltIdx, xTrkltDet[0], xTrkltDet[1], xTrkltDet[2]);
+                        //matrix->LocalToMaster(xTrkltDet, xTrkltSec);
+                        TM_TRD_rotation_sector[i_sector].LocalToMaster(xTrkltDet, xTrkltSec); // sector coordinate system
+                        fGeo ->RotateBack(i_det,xTrkltSec,xTrkltGlb); // global coordinate system
+
+                        printf("My vec: {%4.3f, %4.3f, %4.3f}, Ole's vec: {%4.3f, %4.3f, %4.3f} \n",glb_vec_align[0],glb_vec_align[1],glb_vec_align[2],xTrkltGlb[0],xTrkltGlb[1],xTrkltGlb[2]);
+#endif
+
+
+
 
                         //for(Int_t i = 0; i < 3; i++)
 			//{
@@ -1332,32 +1445,60 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
 		    vec_det_info[2] = i_row;
 		    vec_det_info[3] = i_column;
 
+#if 0
 		    // Determine global position of TRD hit
-		    Double_t             loc_ref[3]           = {TRD_time0 - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0};
+		    Double_t             loc_ref_old[3]           = {TRD_time0 - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0};
 		    //Double_t             loc_ref[3]           = {kX0shift - (TRD_drift_time - TRD_time0),TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0};
 
 		    //printf("fZShiftIdeal: %f, old x: %f, new x: %f \n",fZShiftIdeal,TRD_time0 - TRD_drift_time,kX0shift - (TRD_drift_time - TRD_time0));
 
-		    Double_t             glb_ref[3]           = {0.0,0.0,0.0};
-		    fGeo ->RotateBack(i_det,loc_ref,glb_ref);
+		    Double_t             glb_ref_old[3]           = {0.0,0.0,0.0};
+		    fGeo ->RotateBack(i_det,loc_ref_old,glb_ref_old);
 
                     // Apply alignment
-		    Double_t glb_ref_align_sec[3];
-                    Double_t glb_ref_align[3];
+		    Double_t glb_ref_align_sec_old[3];
+                    Double_t glb_ref_align_old[3];
 
-		    TM_TRD_rotation_sector[i_sector].LocalToMaster(glb_ref,glb_ref_align_sec);
-                    TM_TRD_rotation_det[i_det].LocalToMaster(glb_ref_align_sec,glb_ref_align);
+		    TM_TRD_rotation_sector[i_sector].LocalToMaster(glb_ref_old,glb_ref_align_sec_old);
+                    TM_TRD_rotation_det[i_det].LocalToMaster(glb_ref_align_sec_old,glb_ref_align_old);
 
 		    // Determine global pointing vector of TRD plane (vector perpendicular to plane in global system)
-		    Double_t             loc_vec_ref[3]           = {TRD_time0,0.0,(TRD_row_end + TRD_row_start)/2.0};
-		    Double_t             glb_vec_ref[3]           = {0.0,0.0,0.0};
-		    fGeo ->RotateBack(i_det,loc_vec_ref,glb_vec_ref);
+		    Double_t             loc_vec_ref_old[3]           = {TRD_time0,0.0,(TRD_row_end + TRD_row_start)/2.0};
+		    Double_t             glb_vec_ref_old[3]           = {0.0,0.0,0.0};
+		    fGeo ->RotateBack(i_det,loc_vec_ref_old,glb_vec_ref_old);
 
 		    // Apply alignment
-                    Double_t glb_vec_ref_align_sec[3];
-		    Double_t glb_vec_ref_align[3];
-                    TM_TRD_rotation_sector[i_sector].LocalToMaster(glb_vec_ref,glb_vec_ref_align_sec);
-		    TM_TRD_rotation_det[i_det].LocalToMaster(glb_vec_ref_align_sec,glb_vec_ref_align);
+                    Double_t glb_vec_ref_align_sec_old[3];
+		    Double_t glb_vec_ref_align_old[3];
+                    TM_TRD_rotation_sector[i_sector].LocalToMaster(glb_vec_ref_old,glb_vec_ref_align_sec_old);
+                    TM_TRD_rotation_det[i_det].LocalToMaster(glb_vec_ref_align_sec_old,glb_vec_ref_align_old);
+
+                    //printf("      =====>>>>> loc_vec_ref_old: {%4.3f,  %4.3f, %4.3f},  glb_vec_ref_align_old: {%4.3f,  %4.3f, %4.3f}  \n",loc_vec_ref_old[0],loc_vec_ref_old[1],loc_vec_ref_old[2],glb_vec_ref_align_old[0],glb_vec_ref_align_old[1],glb_vec_ref_align_old[2]);
+#endif
+
+                    //----------------
+                    Double_t loc_ref[3]  = {fGeo->AnodePos() - TRD_drift_time,TRD_loc_Y,TRD_row_pos - TRD_row_size/2.0 - padplane->GetRowPos(padplane->GetNrows() / 2)};  // RS: I assume this this correct, depends e.g. on units of TRD_time0 and TRD_drift_time
+                    Double_t glb_ref[3];
+                    fGeo->GetClusterMatrix(i_det)->LocalToMaster(loc_ref,glb_ref); // this gives tracking coordinates, i.e. lab coordinates rotated to the sector frame
+                    Double_t glb_ref_align[3];
+                    fGeo->RotateBack(i_det,glb_ref,glb_ref_align);
+
+                    Double_t loc_vec_ref[3]  = {fGeo->AnodePos(),0.0,(TRD_row_end + TRD_row_start)/2.0 - TRD_row_size/2.0 - padplane->GetRowPos(padplane->GetNrows() / 2)};  // RS: I assume this this correct, depends e.g. on units of TRD_time0 and TRD_drift_time
+                    Double_t glb_vec_ref[3];
+                    fGeo->GetClusterMatrix(i_det)->LocalToMaster(loc_vec_ref,glb_vec_ref); // this gives tracking coordinates, i.e. lab coordinates rotated to the sector frame
+                    Double_t glb_vec_ref_align[3];
+                    fGeo->RotateBack(i_det,glb_vec_ref,glb_vec_ref_align);
+
+                    //printf("      xxxxxxx>>>>> loc_vec_ref: {%4.3f,  %4.3f, %4.3f},  glb_vec_ref_align: {%4.3f,  %4.3f, %4.3f}  \n",loc_vec_ref[0],loc_vec_ref[1],loc_vec_ref[2],glb_vec_ref_align[0],glb_vec_ref_align[1],glb_vec_ref_align[2]);
+
+
+
+                    //printf("   --> glb_vec_ref_align_old: {%4.3f, %4.3f, %4.3f}, new: {%4.3f, %4.3f, %4.3f} \n",glb_vec_ref_align_old[0],glb_vec_ref_align_old[1],glb_vec_ref_align_old[2],glb_vec_ref_align[0],glb_vec_ref_align[1],glb_vec_ref_align[2]);
+                    //printf("   --> glb_ref_align_old: {%4.3f, %4.3f, %4.3f}, new: {%4.3f, %4.3f, %4.3f} \n",glb_ref_align_old[0],glb_ref_align_old[1],glb_ref_align_old[2],glb_ref_align[0],glb_ref_align[1],glb_ref_align[2]);
+                    //----------------
+
+
+
 
 		    TVector3 TV3_TRD_hit_middle, TV3_TRD_hit_det_angle_middle;
 		    TV3_TRD_hit_middle.SetXYZ(glb_ref_align[0],glb_ref_align[1],glb_ref_align[2]);
@@ -1657,7 +1798,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
         } // end tracklet loop
     } // end detector loop
 
-    printf("Tracklet information filled \n");
+    //printf("Tracklet information filled \n");
     //-----------------------------------
 
 
@@ -1700,7 +1841,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
         TRD_ST_TPC_Track ->setHelix(helix_par[0],helix_par[1],helix_par[2],helix_par[3],helix_par[4],helix_par[5],helix_par[6],helix_par[7],helix_par[8]);
 
     }
-    printf("Track information filled \n");
+    //printf("Track information filled \n");
     //------------------------------------------
 
 
@@ -1710,7 +1851,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     Tree_TRD_ST_Event ->Fill(); // new tracklets tree to be filled
     //Long64_t size_of_tree = Tree_TRD_ST_Event ->GetEntries();
     //printf("Event: %d, tree filled, size of tree: %lld \n",N_good_events,size_of_tree);
-    printf("Tree filled \n");
+    //printf("Tree filled \n");
     //-----------------------------------
 
 
@@ -1720,7 +1861,7 @@ void Ali_make_tracklets_from_digits::UserExec(Option_t *)
     AliInfoF("Processing event %i", fEventNoInFile);
     AliInfoF("Memory: RSS: %3ld VMEM: %3ld",procInfo.fMemResident/1024,procInfo.fMemVirtual/1024);
 #endif
-    printf("Event: %d \n",N_good_events);
+    printf("Good event: %d, total event: %d \n",N_good_events,N_total_events);
 
     if (fLocalMode) {
       ProcInfo_t procInfo;
@@ -1865,7 +2006,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
 
     // Fill all the information in the hierachy of detectors and time bins
     Int_t    N_TRD_digits  = AS_Event ->getNumTRD_digits();
-    printf(" --> N_TRD_digits: %d \n",N_TRD_digits);
+    //printf(" --> N_TRD_digits: %d \n",N_TRD_digits);
 
     for(Int_t i_digit = 0; i_digit < N_TRD_digits; i_digit++)
     {
@@ -2050,7 +2191,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
             } // end of digit max loop
         } // end of timebin loop
     }
-    printf("arrangement of clusters done \n");
+    //printf("arrangement of clusters done \n");
     //-------------------------------------------------------
 
 
@@ -2205,7 +2346,7 @@ void Ali_make_tracklets_from_digits::Make_clusters_and_get_tracklets_fit(Double_
         } // end of time loop
     }
 
-    printf("connection of clusters within detector done \n");
+    //printf("connection of clusters within detector done \n");
     //-------------------------------------------------------
 
 
