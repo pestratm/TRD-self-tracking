@@ -1673,7 +1673,12 @@ Int_t Ali_TRD_ST_Analyze::Calculate_secondary_vertices(Int_t graphics, Int_t fla
                 pathA_est = -9999.0;
                 pathB_est = -9999.0;
             }
-            fHelixABdca(vec_helices[i_track_A],vec_helices[i_track_B],pathA,pathB,dcaAB,pathA_est,pathB_est);
+
+
+            if(flag_TRD_TPC_tracks == 1) // for TPC
+            {
+                fHelixABdca(vec_helices[i_track_A],vec_helices[i_track_B],pathA,pathB,dcaAB,pathA_est,pathB_est);
+            }
             //printf("  --> track A,B: {%d, %d}, dcaAB: %4.3f \n",i_track_A,i_track_B,dcaAB);
 
             //if(dcaAB < 5.0)

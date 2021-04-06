@@ -25,6 +25,8 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     // .x Macro_TRD_tracking.cc("List_PbPb2018_test.txt",0,1000.0,0.0)
     // .x Macro_TRD_tracking.cc("List_pPb2016_test.txt",0,1000.0,0.0)
     // .x Macro_TRD_tracking.cc("List_ppSim_test.txt",0,1000.0,0.0)
+    // .x Macro_TRD_tracking.cc("List_Martin.txt",0,1000.0,0.0)
+    // .x Macro_TRD_tracking.cc("List_test_new_align.txt",0,1000.0,0.0)
 
 
     gROOT->SetStyle("Plain");
@@ -91,8 +93,8 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     Int_t Bethe_flag                = 1; // 1: Bethe Bloch for gain calib || 0: TPC dEdx for gain calib
     Int_t animate_beams             = 0; // 1 for beam animation
     Int_t calibrate_vD              = 0;
-    Int_t is_MC_event               = 1;
-    Int_t draw_MC_tracks            = 1; // Draw Monte Carlo event
+    Int_t is_MC_event               = 0;
+    Int_t draw_MC_tracks            = 0; // Draw Monte Carlo event
 
     //------------------------------------
 
