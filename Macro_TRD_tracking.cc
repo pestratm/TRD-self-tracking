@@ -12,6 +12,7 @@ R__LOAD_LIBRARY(TRD_ST_Analyze_tracklets_cxx.so);
 
 void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot = -1, Double_t track_path = 1000.0, Double_t beam_path = 0.0)
 {
+	
     // event_plot: -1 -> loop over all events, other wise plot or loop over single event
 
     // First compile type root and then:
@@ -81,14 +82,14 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     Int_t TF_tracker                = 0; // Tensorflow tracker
 
     Int_t graphics                  = 1; // 0 = no 3D graphics, 1 = 3D graphics (#define USEEVE in TRD_ST_Analyze_tracklets needs to be defined too)
-    Int_t draw_tracklets_TPC_match  = 0; // Draw tracklets matched with TPC tracks
-    Int_t draw_all_TPC_tracks       = 1; // Draw all TPC tracks
+    Int_t draw_tracklets_TPC_match  = 1; // Draw tracklets matched with TPC tracks
+    Int_t draw_all_TPC_tracks       = 0; // Draw all TPC tracks
     Int_t draw_all_TRD_tracks       = 0; // Draw all TRD tracks
-    Int_t draw_all_tracklets        = 1; // Draw all TRD tracklets
-    Int_t draw_found_tracklets      = 1; // Draws tracklets found by tracker
-    Int_t draw_matched_TPC_track    = 0; // Draw TPC to TRD matched TPC track
-    Int_t draw_matched_TRD_track    = 0; // Draw TPC to TRD matched Kalman/TF track
-    Int_t draw_secondary_vertices   = 1; // Draws tracks and secondary vertices
+    Int_t draw_all_tracklets        = 0; // Draw all TRD tracklets
+    Int_t draw_found_tracklets      = 0; // Draws tracklets found by tracker
+    Int_t draw_matched_TPC_track    = 1; // Draw TPC to TRD matched TPC track
+    Int_t draw_matched_TRD_track    = 1; // Draw TPC to TRD matched Kalman/TF track
+    Int_t draw_secondary_vertices   = 0; // Draws tracks and secondary vertices
     Int_t calibrate_gain            = 0; // Calibrate TRD chamber gain
     Int_t Bethe_flag                = 1; // 1: Bethe Bloch for gain calib || 0: TPC dEdx for gain calib
     Int_t animate_beams             = 0; // 1 for beam animation
@@ -101,7 +102,6 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
     printf("TRD_ST_Analyze_tracklets started \n");
     Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,out_file_name,graphics);
     //Ali_TRD_ST_Analyze*  TRD_ST_Analyze = new Ali_TRD_ST_Analyze(output_dir,"test.root",graphics);
-
     TRD_ST_Analyze ->set_input_lists(inlists_dir);
     TRD_ST_Analyze ->set_input_dir(input_dir);
     TRD_ST_Analyze ->Init_tree(input_list.Data());
@@ -112,6 +112,9 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
 
     TRD_Kalman_Trackfinder kalid;
     kalid.set_layer_radii_hist(h_layer_radii);
+    kalid.set_detector_geom();
+    kalid.set_pad_geom();
+    kalid.Initialize_Tree();  
 
     //------------------------------------------------------------
     //Tensorflow tracker
@@ -133,9 +136,11 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
         stop_event  = (event_plot+1);
     }
 
-
     for(Long64_t event = start_event; event < stop_event; event++)
     {
+		
+		cout << "Event no.: " << event << endl;
+		//if(event==475)continue;
 
         if (event != 0  &&  event % 50 == 0)
             cout << "." << flush;
@@ -144,7 +149,10 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
             printf("event: %lld out of %lld, %4.2f%% total done \n",event,N_Events,((Double_t)event/(Double_t)N_Events)*100.0);
         }
 
-        vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets_KF;
+		
+        pair<vector< vector<Ali_TRD_ST_Tracklets*> >, vector< vector<Ali_TRD_ST_Tracklets*> >> tracker_found_tracklets_KF;
+        vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets_KF_uncorr;
+        vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets_KF_corr;
         vector<vector<Double_t>>                mHelices_tracker_KF;
         vector<Double_t>                        mChi_2s_tracker_KF;
         vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets_TF;
@@ -166,28 +174,35 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
 
         TRD_ST_Analyze ->set_TPC_helix_params(event);
 
+		/*for(Int_t i_det = 539 ; i_det<540; i_det++){
+			if(i_det%6!=5)continue;
+			if(graphics) TRD_ST_Analyze->Draw_detector(i_det);
+		}*/
 
         //------------------------------------------------------------
         //Kalman Filter tracker
         if(KF_tracker)
         {
             tracker_found_tracklets_KF = kalid.Kalman_Trackfind(TRD_ST_Analyze->Tracklets,TRD_ST_Analyze->Number_Tracklets,use_prim_vertex); // 0 = no primary vertex, 1 = primary vertex used
+            tracker_found_tracklets_KF_uncorr = tracker_found_tracklets_KF.first;	//uncorrected tracklets
+            tracker_found_tracklets_KF_corr = tracker_found_tracklets_KF.second;	//corrected tracklets
             vector< vector<Ali_TRD_ST_Tracklets*> > matched_tracks=TRD_ST_Analyze->matched_tracks; // TPC track matched tracklets
             vector< vector<Ali_TRD_ST_Tracklets*> > matched_beautiful_tracks;
             mHelices_tracker_KF = kalid.get_Kalman_helix_params();
             mChi_2s_tracker_KF = kalid.get_Kalman_chi_2();
-
             //printf("size of mHelices_tracker: %d \n",(Int_t)mHelices_tracker_KF.size());
 
             //add here chi2 or use different new class already? Ali_Helix replace with new?
-
             TRD_ST_Analyze ->set_Kalman_helix_params(mHelices_tracker_KF);
             TRD_ST_Analyze ->set_Kalman_chi_2(mChi_2s_tracker_KF);
-            TRD_ST_Analyze ->set_Kalman_TRD_tracklets(tracker_found_tracklets_KF);
+            TRD_ST_Analyze ->set_Kalman_TRD_tracklets(tracker_found_tracklets_KF_uncorr);
+            TRD_ST_Analyze ->set_Kalman_TRD_tracklets_corr(tracker_found_tracklets_KF_corr);
+            TRD_ST_Analyze ->Do_TPC_TRD_matching_Kalman(event,3.0,10.0,graphics*draw_tracklets_TPC_match); // for new 
             TRD_ST_Analyze ->flag_TRD_tracks_with_shared_tracklets();
-
-            if(graphics && draw_found_tracklets) TRD_ST_Analyze ->Draw_Kalman_Tracklets(tracker_found_tracklets_KF); // Draws the Kalman matched TRD tracklets
+            
+            if(graphics && draw_found_tracklets) TRD_ST_Analyze ->Draw_Kalman_Tracklets(tracker_found_tracklets_KF_corr); // Draws the Kalman matched TRD tracklets
             if(graphics && draw_all_TRD_tracks)  TRD_ST_Analyze ->Draw_Kalman_Helix_Tracks(-1,kGreen,3.0,500.0); // -1 -> all kalman tracks drawn
+            //cout << "Match TPC Kalman" << endl;
             TRD_ST_Analyze ->Match_kalman_tracks_to_TPC_tracks(graphics,draw_matched_TPC_track,draw_matched_TRD_track,kGreen+1);
         }
         //------------------------------------------------------------
@@ -195,18 +210,18 @@ void Macro_TRD_tracking(TString input_list = "run0_test.txt", Int_t event_plot =
 
         if(calibrate_vD) TRD_ST_Analyze ->Calibrate(graphics);
         TRD_ST_Analyze ->Calc_Kalman_efficiency();
-
+        
         TRD_ST_Analyze ->set_self_event_info();
-
-        Int_t found_good_AP_vertex_TPC = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,0,0); // (0 = no graphics), (0 = TRD, 1 = TPC), flag_fill_tree (0 don't fill)
-        Int_t found_good_AP_vertex_TRD = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,1,1); // (0 = no graphics), (0 = TRD, 1 = TPC), flag_fill_tree (0 don't fill)
+        
+        //Int_t found_good_AP_vertex_TPC = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,0,0); // (0 = no graphics), (0 = TRD, 1 = TPC), flag_fill_tree (0 don't fill)
+        //Int_t found_good_AP_vertex_TRD = TRD_ST_Analyze ->Calculate_secondary_vertices(graphics*draw_secondary_vertices,1,1); // (0 = no graphics), (0 = TRD, 1 = TPC), flag_fill_tree (0 don't fill)
         //if(found_good_AP_vertex) printf(" ----> Good AP vertex found in event: %lld \n",event);
-
         //vector< vector<Ali_TRD_ST_Tracklets*> > tracker_found_tracklets=kalid.found_tracks;
         //vector<Double_t> track_accuracy;
 
         //Ali_TRD_ST_Tracklets* last_tracklet;
 
+		cout << "Event finished" << endl;
     }
 
     if(calibrate_vD) TRD_ST_Analyze ->Draw_n_Save_Calibration(output_dir,out_file_name_calib);

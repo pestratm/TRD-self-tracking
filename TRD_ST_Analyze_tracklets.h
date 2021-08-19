@@ -172,6 +172,8 @@ private:
 
     vector<TEveLine*> vec_TPL3D_helix_MC;
 
+	//TEveLine *TEveLine_det;
+
     vector< vector<TEveLine*> > vec_TEveLine_tracklets;
     vector< vector<TEveLine*> > vec_TEveLine_tracklets_match;
     vector< vector<TEveLine*> > vec_TEveLine_self_matched_tracklets;
@@ -216,6 +218,7 @@ private:
 
     // TRD 3D graphics
     vector< vector<TH1D*> > vec_TH1D_TRD_geometry; // store for all 540 chambers the 8 corner vertices per detector
+    vector< vector<TH1D*> > vec_TH1D_TRD_geometry_new_align; 
 
     vector<vector<Double_t>> mHelices_kalman; // Kalman helix parameters, based on AliHelix
     vector<Double_t> mChi_2s_kalman; // Kalman helix parameters, based on AliHelix
@@ -226,7 +229,9 @@ private:
     vector<Ali_Helix*> vec_helices_TRD;
     vector<Ali_Helix*> vec_helices_TPC;
     Ali_Helix* TPC_single_helix;
+    Ali_Helix* Kalman_single_helix;
     vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets;
+    vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_corr;
 
     TFile* layer_radii_file;
     TH1D* h_layer_radii_det;
@@ -235,6 +240,15 @@ private:
     TH2D* h2D_TRD_det_coordinates;
 
     vector< vector<TH2D*> > vec_h2D_pT_vs_TPC_TRD_residuals;
+    TH1D *hist_phi;
+    TH2D *hist_dcax_dcay;
+    TH2D *hist_pt_dca_phi;
+    TH2D *hist_pt_dca_x;
+    TH2D *hist_pt_dca_y;
+    TH2D *hist_pt_dca_xy;
+    TH2D *hist_pt_dca_z;
+    TH2D *hist_pt_dca;
+    TH2D *hist_dEdx_dca;
     TString input_dir;
     TString input_dir_lists;
     TProfile* tp_efficiency_matching_vs_pT;
@@ -277,10 +291,12 @@ public:
     Int_t Loop_event(Long64_t i_event, Int_t graphics);
     void Scan_MC_Event(Int_t graphics);
     Int_t Draw_event(Long64_t i_event, Int_t graphics, Int_t draw_tracks, Int_t draw_tracklets, Double_t track_path);
+    void Draw_detector(Int_t i_detector);
     vector<Double_t> Get_Helix_params_from_kine(TLorentzVector TLV_particle, TVector3 TV3_vertex, Double_t charge);
     void Draw_MC_event(Long64_t i_event, Int_t graphics);
     void Animate_beams(Double_t beam_path);
     Int_t Do_TPC_TRD_matching(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window, Int_t graphics);
+    Int_t Do_TPC_TRD_matching_Kalman(Long64_t i_event, Double_t xy_matching_window, Double_t z_matching_window, Int_t graphics);
     void Draw_hist_TPC_tracklet_diffs();
     TH1I* get_h_good_bad_TRD_chambers();
 
@@ -296,6 +312,7 @@ public:
     void set_Kalman_chi_2(vector<Double_t> mChi_2s_in);
     Int_t set_TPC_helix_params(Long64_t i_event);
     void set_Kalman_TRD_tracklets(vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_in);
+    void set_Kalman_TRD_tracklets_corr(vector< vector<Ali_TRD_ST_Tracklets*> > vec_kalman_TRD_trackets_corr_in);
     void Calc_Kalman_efficiency();
     void flag_TRD_tracks_with_shared_tracklets();
     void Match_kalman_tracks_to_TPC_tracks(Int_t graphics, Int_t draw_matched_TPC_track, Int_t draw_matched_TRD_track, Int_t color);

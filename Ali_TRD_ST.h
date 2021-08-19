@@ -4,6 +4,8 @@
 #include "TObject.h"
 #include "TClonesArray.h"
 
+#include "TVector3.h"
+#include "TLorentzVector.h"
 
 //----------------------------------------------------------------------------------------
 class Ali_MC_particle : public TObject
@@ -42,7 +44,7 @@ public:
         Int_t      get_N_daughters() const                              { return N_daughters;                }
 
         void       set_arr_index_daughters(Int_t index, Int_t index_daughter_in)  { arr_index_daughters[index] = index_daughter_in; }
-        Double_t   get_arr_index_daughters(Int_t index) const                { return arr_index_daughters[index];      }
+        Int_t      get_arr_index_daughters(Int_t index) const                { return arr_index_daughters[index];      }
 
 
         ClassDef(Ali_MC_particle,1);
@@ -127,20 +129,20 @@ private:
     UShort_t       NITScls; // Number of TRD clusters
     UShort_t       status; // status of track: bit 0: ITS refit, bit1: TPC refit
     Float_t        TPCchi2; // TPC chi2
-    ULong64_t      TRD_ADC_time_layer[6];
     Float_t        impact_angle_on_TRD; // Track impact angle on TRD
     Float_t        TPCdEdx; // Energy loss information of TPC
     Float_t        TOFsignal; // Time-of-flight
     Float_t        Track_length; // length of track
 
-    Float_t        aliHelix_params[9];
+    Float_t        aliHelix_params[6];
+    Float_t        aliHelix_TRD_params[6];
 
 public:
     Ali_TRD_ST_TPC_Track() :
         nsigma_e_TPC(-3)
         ,nsigma_e_TOF(-3),nsigma_pi_TPC(-3),nsigma_pi_TOF(-3),nsigma_K_TPC(-3),nsigma_K_TOF(-3),nsigma_p_TPC(-3),nsigma_p_TOF(-3),TRD_signal(-3),
-        TRDsumADC(-3),dca(-3),TLV_part(),NTPCcls(-3),NTRDcls(-3),NITScls(-3),status(-3),TPCchi2(-3),TRD_ADC_time_layer(),
-        impact_angle_on_TRD(-3),TPCdEdx(-3),TOFsignal(-3),Track_length(-3),aliHelix_params()
+        TRDsumADC(-3),dca(-3),TLV_part(),NTPCcls(-3),NTRDcls(-3),NITScls(-3),status(-3),TPCchi2(-3),
+        impact_angle_on_TRD(-3),TPCdEdx(-3),TOFsignal(-3),Track_length(-3),aliHelix_params(),aliHelix_TRD_params()
     {
     }
 	~Ali_TRD_ST_TPC_Track()
@@ -166,12 +168,11 @@ public:
 	void setNITScls(UShort_t s)               { NITScls = s;}
 	void setStatus(UShort_t s)                { status = s;}
 	void setTPCchi2(Float_t f)                { TPCchi2 = f;}
-        void setTRD_layer(Int_t i_layer, ULong64_t l)  { TRD_ADC_time_layer[i_layer] = l;}
         void setimpact_angle_on_TRD(Float_t f)           {impact_angle_on_TRD = f;}
 	void setTPCdEdx(Float_t f)                       {TPCdEdx = f;}
 	void setTOFsignal(Float_t f)                     {TOFsignal = f;}
         void setTrack_length(Float_t f)                  {Track_length = f;}
-        void setHelix(Float_t a, Float_t b,Float_t c,Float_t d,Float_t e,Float_t f,Float_t g,Float_t h,Float_t i)
+        void setHelix(Float_t a, Float_t b,Float_t c,Float_t d,Float_t e,Float_t f)
         {
             aliHelix_params[0] = a;
             aliHelix_params[1] = b;
@@ -179,10 +180,17 @@ public:
             aliHelix_params[3] = d;
             aliHelix_params[4] = e;
             aliHelix_params[5] = f;
-            aliHelix_params[6] = g;
-            aliHelix_params[7] = h;
-            aliHelix_params[8] = i;
         }
+        void setHelix_TRD(Float_t a, Float_t b,Float_t c,Float_t d,Float_t e,Float_t f)
+        {
+            aliHelix_TRD_params[0] = a;
+            aliHelix_TRD_params[1] = b;
+            aliHelix_TRD_params[2] = c;
+            aliHelix_TRD_params[3] = d;
+            aliHelix_TRD_params[4] = e;
+            aliHelix_TRD_params[5] = f;
+        }
+
 
 	// getters
 
@@ -204,18 +212,20 @@ public:
 	UShort_t getNITScls() const               { return NITScls;    }
 	UShort_t getStatus() const               { return status;    }
 	Float_t  getTPCchi2() const              { return TPCchi2; }
-        ULong64_t getTRD_layer(Int_t i_layer) const   { return TRD_ADC_time_layer[i_layer]; }
         Float_t   getimpact_angle_on_TRD() const    { return impact_angle_on_TRD; }
 	Float_t   getTPCdEdx() const                { return TPCdEdx; }
 	Float_t   getTOFsignal() const              { return TOFsignal; }
         Float_t   getTrack_length() const           { return Track_length; }
         Float_t   getHelix_param(Int_t i_param) const              {return aliHelix_params[i_param]; }
+        Float_t   getHelix_TRD_param(Int_t i_param) const              {return aliHelix_TRD_params[i_param]; }
 
         
 
 
         void Evaluate(Double_t t, // helix evaluation, taken from AliHelix
                      Double_t r[3]);  //radius vector
+                     
+        void Evaluate_TRD(Double_t t, Double_t r[3]);
 
 
         ClassDef(Ali_TRD_ST_TPC_Track,1);  // A simple track of a particle
@@ -237,6 +247,22 @@ void Ali_TRD_ST_TPC_Track::Evaluate(Double_t t,Double_t r[3])  //radius vector
   r[0] = aliHelix_params[5] + sn/aliHelix_params[4];
   r[1] = aliHelix_params[0] - cs/aliHelix_params[4];
   r[2] = aliHelix_params[1] + aliHelix_params[3]*t;
+}
+//________________________________________________________________________
+
+//________________________________________________________________________
+void Ali_TRD_ST_TPC_Track::Evaluate_TRD(Double_t t,Double_t r[3])  //radius vector
+{
+  //--------------------------------------------------------------------
+  // Calculate position of a point on a track and some derivatives at given phase
+  //--------------------------------------------------------------------
+  float phase=aliHelix_TRD_params[4]*t+aliHelix_TRD_params[2];
+  Double_t sn=sinf(phase), cs=cosf(phase);
+  //  Double_t sn=TMath::Sin(phase), cs=TMath::Cos(phase);
+
+  r[0] = aliHelix_TRD_params[5] + sn/aliHelix_TRD_params[4];
+  r[1] = aliHelix_TRD_params[0] - cs/aliHelix_TRD_params[4];
+  r[2] = aliHelix_TRD_params[1] + aliHelix_TRD_params[3]*t;
 }
 //________________________________________________________________________
 
